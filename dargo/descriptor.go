@@ -41,6 +41,43 @@ package dargo
 
 import "reflect"
 
+const (
+	NORMAL = iota
+	LOCAL = iota
+)
+
+// description of a dargo service description
 type Descriptor interface {
-    create(myType reflect.Type) interface{}
+	// create creates the instance of the type
+    create(myType reflect.Type) (interface{}, error)
+    
+    // Returns all interfaces advertised by this service
+    getAdvertisedInterfaces() ([]interface{}, error)
+    
+    // Returns the scope of this service
+    getScope() string
+    
+    // Returns the name of this service (or nil)
+    getName() string
+    
+    // Returns the qualifiers of this service
+    getQualifiers() []string
+    
+    // One of NORMAL or LOCAL
+    getVisibility() int
+    
+    // returns the metadata for this service
+    getMetadata() map[string][]string
+    
+    // Returns the rank of this descriptor
+    getRank() int32
+    
+    // Sets the rank of this service
+    setRank(int32)
+    
+    // The serviceid, or -1 if this does not have a serviceid
+    getServiceId() int64
+    
+    // The locator id for this service, or -1 if there is not associated locator id
+    getLocatorId() int64
 }

@@ -39,19 +39,6 @@ package dargo
  * holder.
  */
 
-import "reflect"
-import "errors"
-import "fmt"
-
-// Bind the descriptor to the interface type  toMe must be an interface
-func Bind(desc *Descriptor, toMe reflect.Type, name string, metadata map[string][]string) error {
-	kind := toMe.Kind();
+type ServiceLocator interface {
 	
-	fmt.Println("kind=", kind.String())
-	
-	if (kind != reflect.Interface) {
-		return errors.New("toMe must be an interface")
-	}
-	
-	return nil
 }
