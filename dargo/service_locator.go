@@ -39,6 +39,12 @@ package dargo
  * holder.
  */
 
+import "reflect"
+
+// ServiceLocator The main registry for dargo.  Use it to get context sensitive lookups
+// for application services
 type ServiceLocator interface {
+	getService(toMe reflect.Type) (*interface{}, error)
 	
+	getName() string
 }
