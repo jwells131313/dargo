@@ -77,6 +77,8 @@ func (factory *locatorFactory) FindOrCreateRootLocator(givenName string) (api.Se
 	
 	globalFactory.currentID++
 	
+	factory.locators[givenName] = created
+	
 	return created, false
 }
 
