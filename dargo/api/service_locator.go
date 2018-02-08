@@ -1,4 +1,4 @@
-package dargo
+package api
 /*
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *
@@ -41,47 +41,12 @@ package dargo
 
 import "reflect"
 
-// Values for the visibility field of the Descriptor
-const (
-	// Indicates that this is normal descriptor, visibile to children
-	NORMAL = iota
+// ServiceLocator The main registry for dargo.  Use it to get context sensitive lookups
+// for application services
+type ServiceLocator interface {
+	GetService(toMe reflect.Type) (*interface{}, error)
 	
-	// Indicates taht this is a local descriptor, only visible to its own locator
-	LOCAL = iota
-)
-
-// Descriptor description of a dargo service description
-type Descriptor interface {
-	// create creates the instance of the type
-    create(myType reflect.Type) (interface{}, error)
-    
-    // Returns all interfaces advertised by this service
-    getAdvertisedInterfaces() ([]interface{}, error)
-    
-    // Returns the scope of this service
-    getScope() string
-    
-    // Returns the name of this service (or nil)
-    getName() string
-    
-    // Returns the qualifiers of this service
-    getQualifiers() []string
-    
-    // One of NORMAL or LOCAL
-    getVisibility() int
-    
-    // returns the metadata for this service
-    getMetadata() map[string][]string
-    
-    // Returns the rank of this descriptor
-    getRank() int32
-    
-    // Sets the rank of this service
-    setRank(int32)
-    
-    // The serviceid, or -1 if this does not have a serviceid
-    getServiceId() int64
-    
-    // The locator id for this service, or -1 if there is not associated locator id
-    getLocatorId() int64
+	GetName() string
+	
+	GetID() int64
 }

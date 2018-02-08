@@ -1,4 +1,4 @@
-package dargo
+package api
 /*
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *
@@ -40,11 +40,18 @@ package dargo
  */
 
 import "reflect"
+import "errors"
+import "fmt"
 
-// ServiceLocator The main registry for dargo.  Use it to get context sensitive lookups
-// for application services
-type ServiceLocator interface {
-	getService(toMe reflect.Type) (*interface{}, error)
+// Bind the descriptor to the interface type  toMe must be an interface
+func Bind(desc *Descriptor, toMe reflect.Type, name string, metadata map[string][]string) error {
+	kind := toMe.Kind();
 	
-	getName() string
+	fmt.Println("kind=", kind.String())
+	
+	if (kind != reflect.Interface) {
+		return errors.New("toMe must be an interface")
+	}
+	
+	return nil
 }

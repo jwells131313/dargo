@@ -1,4 +1,4 @@
-package dargo
+package utilities
 /*
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *
@@ -38,20 +38,49 @@ package dargo
  * only if the new code is made subject to such option by the copyright
  * holder.
  */
+import (
+	"../internal"
+    "../api"
+    "strconv"
+)
 
-import "reflect"
-import "errors"
-import "fmt"
+type LocatorFactory struct {
+	locators map[string]*internal.ServiceLocatorImpl
+	currentID int64
+	generation int64
+}
 
-// Bind the descriptor to the interface type  toMe must be an interface
-func Bind(desc *Descriptor, toMe reflect.Type, name string, metadata map[string][]string) error {
-	kind := toMe.Kind();
+var globalFactory *LocatorFactory = &LocatorFactory {
+	locators: make(map[string]*internal.ServiceLocatorImpl),
+	currentID: 0,
+	generation: 0,
+}
+
+
+func (factory *LocatorFactory) FindOrCreateRootLocator(givenName string) (api.ServiceLocator, bool) {
+	existing, ok := factory.locators[givenName]
 	
-	fmt.Println("kind=", kind.String())
-	
-	if (kind != reflect.Interface) {
-		return errors.New("toMe must be an interface")
+	if ok {
+		return existing, true
 	}
 	
-	return nil
+	if givenName == "" {
+		givenName = "__Generated_Service_Locator_Name_" +
+		    strconv.FormatInt(globalFactory.generation, 10)
+		globalFactory.generation++
+	}
+	
+	created := &internal.ServiceLocatorImpl{
+		Name: givenName,
+		ID: globalFactory.currentID,
+	}
+	
+	globalFactory.currentID++
+	
+	return created, false
 }
+
+func GetSystemLocatorFactory() (api.ServiceLocatorFactory, error) {
+	return globalFactory, nil
+}
+

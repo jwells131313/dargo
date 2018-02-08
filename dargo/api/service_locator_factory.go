@@ -1,4 +1,4 @@
-package dargo
+package api
 /*
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *
@@ -39,26 +39,11 @@ package dargo
  * holder.
  */
 
-import "testing"
-import "reflect"
-
-type shape interface {
-	
-}
-
-func TestBinder(t *testing.T) {
-  desc := new(Descriptor)
-  name := "Nick Foles"
-  
-  Bind(desc, reflect.TypeOf(new(shape)).Elem(), name, nil)
-}
-
-func TestPointerBinderFailure(t *testing.T) {
-  desc := new(Descriptor)
-  name := "Nick Foles"
-  
-  error := Bind(desc, reflect.TypeOf(new(shape)), name, nil)
-  if (error == nil) {
-  	t.Errorf("Should have been a failure because reflect.TypeOf(new(shape)) is a pointer")
-  }
+// ServiceLocatorFactory Creates service locator implementations
+type ServiceLocatorFactory interface {
+	// FindOrCreateRootLocator finds or creates a ServiceLocator with
+	// the given name.  If name is nil a unique name will be generated
+	// Will return the found or created ServiceLocator and returns
+	// true if the locator was found, false if it was created
+	FindOrCreateRootLocator(name string) (ServiceLocator, bool)
 }

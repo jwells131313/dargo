@@ -1,4 +1,4 @@
-package internal
+package api
 /*
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *
@@ -39,25 +39,26 @@ package internal
  * holder.
  */
 
-import (
-  "reflect"
-)
+import "testing"
+import "reflect"
 
-// ServiceLocatorImpl An internal implementation of ServiceLocator
-type ServiceLocatorImpl struct {
-	Name string
-	ID int64
+type shape interface {
+	
 }
 
-func (locator *ServiceLocatorImpl) GetService(toMe reflect.Type) (*interface{}, error) {
-	return nil, nil
+func TestBinder(t *testing.T) {
+  desc := new(Descriptor)
+  name := "Nick Foles"
+  
+  Bind(desc, reflect.TypeOf(new(shape)).Elem(), name, nil)
 }
 
-func (locator *ServiceLocatorImpl) GetName() string {
-	return locator.Name
+func TestPointerBinderFailure(t *testing.T) {
+  desc := new(Descriptor)
+  name := "Nick Foles"
+  
+  error := Bind(desc, reflect.TypeOf(new(shape)), name, nil)
+  if (error == nil) {
+  	t.Errorf("Should have been a failure because reflect.TypeOf(new(shape)) is a pointer")
+  }
 }
-
-func (locator *ServiceLocatorImpl) GetID() int64 {
-	return 0
-}
-
