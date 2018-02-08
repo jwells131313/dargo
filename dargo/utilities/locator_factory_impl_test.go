@@ -1,4 +1,4 @@
-package internal
+package utilities
 /*
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *
@@ -40,27 +40,62 @@ package internal
  */
 
 import (
-  "reflect"
+    "testing"
+    "strings"
 )
 
-// ServiceLocatorImpl An internal implementation of ServiceLocator
-type ServiceLocatorImpl struct {
-	Name string
-	ID int64
+func TestLocatorFactoryWithName(t *testing.T) {
+	slFactory, _ := GetSystemLocatorFactory()
+	
+	locator, found := slFactory.FindOrCreateRootLocator("test1")
+	
+	lName := locator.GetName()
+	
+	if lName != "test1" {
+		t.Errorf("Name returned from factory is incorrect, expected test1 got %s", lName)
+	}
+	
+	if found == true {
+		t.Errorf("This should have been a fresh locator, but created returned false")
+	}
 }
 
-// GetService gets the service associated with the type
-func (locator *ServiceLocatorImpl) GetService(toMe reflect.Type) (*interface{}, error) {
-	return nil, nil
-}
-
-// GetName gets the name associated with this locator
-func (locator *ServiceLocatorImpl) GetName() string {
-	return locator.Name
-}
-
-// GetID gets the id associated with this locator
-func (locator *ServiceLocatorImpl) GetID() int64 {
-	return locator.ID
+func TestLocatorFactoryWithNoName(t *testing.T) {
+	slFactory, _ := GetSystemLocatorFactory()
+	
+	locator, found := slFactory.FindOrCreateRootLocator("")
+	
+	lName := locator.GetName()
+	
+	if !strings.Contains(lName, "__Generated_Service_Locator_Name_") {
+		t.Errorf("Name returned from factory is incorrect, expected test1 got %s", lName)
+	}
+	
+	if found == true {
+		t.Errorf("This should have been a fresh locator, but created returned false")
+	}
+	
+	locator2, found2 := slFactory.FindOrCreateRootLocator("")
+	
+	lName2 := locator2.GetName()
+	
+	if !strings.Contains(lName2, "__Generated_Service_Locator_Name_") {
+		t.Errorf("Name returned from factory is incorrect, expected test1 got %s", lName2)
+	}
+	
+	if found2 == true {
+		t.Errorf("This should have been a fresh locator, but created returned false")
+	}
+	
+	if lName == lName2 {
+		t.Errorf("Generated names should not match (%s/%s)", lName, lName2)
+	}
+	
+	id1 := locator.GetID()
+	id2 := locator2.GetID()
+	
+	if id1 == id2 {
+		t.Errorf("The id's of returned locators should never match (%v/%v)", id1, id2)
+	}
 }
 

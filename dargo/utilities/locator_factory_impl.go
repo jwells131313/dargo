@@ -44,20 +44,20 @@ import (
     "strconv"
 )
 
-type LocatorFactory struct {
+type locatorFactory struct {
 	locators map[string]*internal.ServiceLocatorImpl
 	currentID int64
 	generation int64
 }
 
-var globalFactory *LocatorFactory = &LocatorFactory {
+var globalFactory = &locatorFactory {
 	locators: make(map[string]*internal.ServiceLocatorImpl),
 	currentID: 0,
 	generation: 0,
 }
 
 
-func (factory *LocatorFactory) FindOrCreateRootLocator(givenName string) (api.ServiceLocator, bool) {
+func (factory *locatorFactory) FindOrCreateRootLocator(givenName string) (api.ServiceLocator, bool) {
 	existing, ok := factory.locators[givenName]
 	
 	if ok {
@@ -80,6 +80,7 @@ func (factory *LocatorFactory) FindOrCreateRootLocator(givenName string) (api.Se
 	return created, false
 }
 
+// GetSystemLocatorFactory gets the system implementation of the ServiceLocatorFactory
 func GetSystemLocatorFactory() (api.ServiceLocatorFactory, error) {
 	return globalFactory, nil
 }
