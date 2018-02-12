@@ -1,4 +1,4 @@
-package api
+package internal
 /*
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *
@@ -40,53 +40,45 @@ package api
  */
 
 import (
-	"reflect"
+	"../api"
 )
 
-// Values for the visibility field of the Descriptor
-const (
-	// Indicates that this is normal descriptor, visibile to children
-	NORMAL = iota
-	
-	// Indicates taht this is a local descriptor, only visible to its own locator
-	LOCAL = iota
-)
+// PerLookupContext is the context implementation for PerLookup
+type PerLookupContext struct {
+}
 
-// Descriptor description of a dargo service description
-type Descriptor interface {
-	// Create create creates the instance of the type
-    Create() (interface{}, error)
-    
-    // Destroy destroys this service
-    Destroy(interface{}) error
-    
-    // GetAdvertisedInterfaces Returns all interfaces advertised by this service
-    GetAdvertisedInterfaces() []reflect.Type
-    
-    // GetScope Returns the scope of this service
-    GetScope() string
-    
-    // GetName Returns the name of this service (or nil)
-    GetName() string
-    
-    // GetQualifiers Returns the qualifiers of this service
-    GetQualifiers() []string
-    
-    // GetVisibility One of NORMAL or LOCAL
-    GetVisibility() int
-    
-    // GetMetadata returns the metadata for this service
-    GetMetadata() map[string][]string
-    
-    // GetRank Returns the rank of this descriptor
-    GetRank() int32
-    
-    // SetRank Sets the rank of this service
-    SetRank(rank int32)
-    
-    // GetServiceID The serviceid, or -1 if this does not have a serviceid
-    GetServiceID() int64
-    
-    // GetLocatorID The locator id for this service, or -1 if there is not associated locator id
-    GetLocatorID() int64
+// GetScope always returns PerLookup
+func (context *PerLookupContext) GetScope() string {
+	return api.PerLookup
+}
+
+// FindOrCreate always returns a new instance for PerLookup
+func (context *PerLookupContext) FindOrCreate(desc api.Descriptor) (interface{}, error) {
+	return desc.Create()
+}
+
+// ContainsKey always returns false for PerLookup
+func (context *PerLookupContext) ContainsKey(desc api.Descriptor) bool {
+	return false
+}
+
+// DestroyOne should always call the destructor
+func (context *PerLookupContext) DestroyOne(desc api.Descriptor) error {
+	// do nothing, special case
+	return nil
+}
+
+// GetSupportsNilCreation returns true for PerLookup
+func (context *PerLookupContext) GetSupportsNilCreation() bool {
+	return true
+}
+
+// IsActive always returns true for PerLookup
+func (context *PerLookupContext) IsActive() bool {
+	return true
+}
+
+// Shutdown does nothing in the PerLookup scope
+func (context *PerLookupContext) Shutdown() {
+	// do nothing
 }

@@ -39,54 +39,18 @@ package api
  * holder.
  */
 
-import (
-	"reflect"
-)
-
-// Values for the visibility field of the Descriptor
-const (
-	// Indicates that this is normal descriptor, visibile to children
-	NORMAL = iota
-	
-	// Indicates taht this is a local descriptor, only visible to its own locator
-	LOCAL = iota
-)
-
-// Descriptor description of a dargo service description
-type Descriptor interface {
-	// Create create creates the instance of the type
-    Create() (interface{}, error)
-    
-    // Destroy destroys this service
-    Destroy(interface{}) error
-    
-    // GetAdvertisedInterfaces Returns all interfaces advertised by this service
-    GetAdvertisedInterfaces() []reflect.Type
-    
-    // GetScope Returns the scope of this service
-    GetScope() string
-    
-    // GetName Returns the name of this service (or nil)
-    GetName() string
-    
-    // GetQualifiers Returns the qualifiers of this service
-    GetQualifiers() []string
-    
-    // GetVisibility One of NORMAL or LOCAL
-    GetVisibility() int
-    
-    // GetMetadata returns the metadata for this service
-    GetMetadata() map[string][]string
-    
-    // GetRank Returns the rank of this descriptor
-    GetRank() int32
-    
-    // SetRank Sets the rank of this service
-    SetRank(rank int32)
-    
-    // GetServiceID The serviceid, or -1 if this does not have a serviceid
-    GetServiceID() int64
-    
-    // GetLocatorID The locator id for this service, or -1 if there is not associated locator id
-    GetLocatorID() int64
+// DynamicConfigurationService This service is bound into every
+// service locator and can be used to add application services
+// to the context sensitive registry
+type DynamicConfigurationService interface {
+	CreateDynamicConfiguration() (DynamicConfiguration, error)	
 }
+
+// DynamicConfiguration use this to add and remove descriptors to
+// the service locator
+type DynamicConfiguration interface {
+	Bind(desc Descriptor) (Descriptor, error)
+	
+	Commit() error
+}
+

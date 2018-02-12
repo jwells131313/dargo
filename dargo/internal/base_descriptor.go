@@ -1,4 +1,4 @@
-package api
+package internal
 /*
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *
@@ -43,50 +43,64 @@ import (
 	"reflect"
 )
 
-// Values for the visibility field of the Descriptor
-const (
-	// Indicates that this is normal descriptor, visibile to children
-	NORMAL = iota
-	
-	// Indicates taht this is a local descriptor, only visible to its own locator
-	LOCAL = iota
-)
+// BaseDescriptor a base descriptor, without the create and delete
+type BaseDescriptor struct {
+	myContracts []reflect.Type
+	scope string
+	name string
+	qualifiers []string
+	visibility int
+	metadata map[string][]string
+	rank int32
+	serviceid int64
+	locatorid int64
+}
 
-// Descriptor description of a dargo service description
-type Descriptor interface {
-	// Create create creates the instance of the type
-    Create() (interface{}, error)
-    
-    // Destroy destroys this service
-    Destroy(interface{}) error
-    
-    // GetAdvertisedInterfaces Returns all interfaces advertised by this service
-    GetAdvertisedInterfaces() []reflect.Type
-    
-    // GetScope Returns the scope of this service
-    GetScope() string
-    
-    // GetName Returns the name of this service (or nil)
-    GetName() string
-    
-    // GetQualifiers Returns the qualifiers of this service
-    GetQualifiers() []string
-    
-    // GetVisibility One of NORMAL or LOCAL
-    GetVisibility() int
-    
-    // GetMetadata returns the metadata for this service
-    GetMetadata() map[string][]string
-    
-    // GetRank Returns the rank of this descriptor
-    GetRank() int32
-    
-    // SetRank Sets the rank of this service
-    SetRank(rank int32)
-    
-    // GetServiceID The serviceid, or -1 if this does not have a serviceid
-    GetServiceID() int64
-    
-    // GetLocatorID The locator id for this service, or -1 if there is not associated locator id
-    GetLocatorID() int64
+// GetAdvertisedInterfaces Returns all interfaces advertised by this service
+func (base *BaseDescriptor) GetAdvertisedInterfaces() ([]reflect.Type, error) {
+	return base.myContracts, nil
+}
+
+// GetScope Returns the scope of this service
+func (base *BaseDescriptor) GetScope() string {
+	return base.scope
+}
+
+// GetName Returns the name of this service (or nil)
+func (base *BaseDescriptor) GetName() string {
+	return base.name
+}
+
+// GetQualifiers Returns the qualifiers of this service
+func (base *BaseDescriptor) GetQualifiers() []string {
+	return base.qualifiers
+}
+
+// GetVisibility One of NORMAL or LOCAL
+func (base *BaseDescriptor) GetVisibility() int {
+	return base.visibility
+}
+
+// GetMetadata returns the metadata for this service
+func (base *BaseDescriptor) GetMetadata() map[string][]string {
+	return base.metadata
+}
+
+// GetRank Returns the rank of this descriptor
+func (base *BaseDescriptor) GetRank() int32 {
+	return base.rank
+}
+// SetRank Sets the rank of this service
+func (base *BaseDescriptor) setRank(rank int32) {
+	base.rank = rank
+}
+
+// GetServiceID The serviceid, or -1 if this does not have a serviceid
+func (base *BaseDescriptor) GetServiceID() int64 {
+	return base.serviceid
+}
+
+// GetLocatorID The locator id for this service, or -1 if there is not associated locator id
+func (base *BaseDescriptor) GetLocatorID() int64 {
+	return base.locatorid
 }

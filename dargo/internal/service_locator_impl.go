@@ -41,12 +41,15 @@ package internal
 
 import (
   "reflect"
+  "../api"
 )
 
 // ServiceLocatorImpl An internal implementation of ServiceLocator
 type ServiceLocatorImpl struct {
 	Name string
 	ID int64
+	
+	AllDescriptors []api.Descriptor
 }
 
 // GetService gets the service associated with the type
