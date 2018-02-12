@@ -49,4 +49,6 @@ type ServiceLocator interface {
 	GetName() string
 	
 	GetID() int64
+	
+	Shutdown()
 }

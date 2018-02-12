@@ -1,4 +1,4 @@
-package internal
+package test_files
 /*
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *
@@ -39,35 +39,6 @@ package internal
  * holder.
  */
 
-import (
-  "reflect"
-  "../api"
-)
-
-// ServiceLocatorImpl An internal implementation of ServiceLocator
-type ServiceLocatorImpl struct {
-	Name string
-	ID int64
-	
-	AllDescriptors []api.Descriptor
+type EchoApplication interface {
+	Echo(input string) string
 }
-
-// GetService gets the service associated with the type
-func (locator *ServiceLocatorImpl) GetService(toMe reflect.Type) (*interface{}, error) {
-	return nil, nil
-}
-
-// GetName gets the name associated with this locator
-func (locator *ServiceLocatorImpl) GetName() string {
-	return locator.Name
-}
-
-// GetID gets the id associated with this locator
-func (locator *ServiceLocatorImpl) GetID() int64 {
-	return locator.ID
-}
-
-func (locator *ServiceLocatorImpl) Shutdown() {
-	// do nothing
-}
-

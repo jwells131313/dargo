@@ -1,4 +1,4 @@
-package internal
+package test_files
 /*
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *
@@ -40,34 +40,34 @@ package internal
  */
 
 import (
-  "reflect"
-  "../api"
+    "testing"
+    "../utilities"
+    "reflect"
+    "../api"
 )
 
-// ServiceLocatorImpl An internal implementation of ServiceLocator
-type ServiceLocatorImpl struct {
-	Name string
-	ID int64
+// TestBasicServiceLocatorLookup.  This uses the raw DynamicConfigurationService
+// in order to add a service (echo) and then look up the service
+func TestBasicServiceLocatorLookup(t *testing.T) {
+	locatorFactory, err1 := utilities.GetSystemLocatorFactory()
+	if err1 != nil {
+		t.Errorf("There was an error getting the system locator factor")
+	}
 	
-	AllDescriptors []api.Descriptor
-}
-
-// GetService gets the service associated with the type
-func (locator *ServiceLocatorImpl) GetService(toMe reflect.Type) (*interface{}, error) {
-	return nil, nil
-}
-
-// GetName gets the name associated with this locator
-func (locator *ServiceLocatorImpl) GetName() string {
-	return locator.Name
-}
-
-// GetID gets the id associated with this locator
-func (locator *ServiceLocatorImpl) GetID() int64 {
-	return locator.ID
-}
-
-func (locator *ServiceLocatorImpl) Shutdown() {
-	// do nothing
+	locator, found := locatorFactory.FindOrCreateRootLocator("BasicServiceLocatorLookup")
+	defer locator.Shutdown()
+	
+	if found != false {
+		t.Errorf("There was an error creating BasicServiceLocatorLookup service locator ", locator)
+	}
+	
+	dynamicConfigurationServiceRaw, err2 := locator.GetService(reflect.TypeOf(new(api.DynamicConfigurationService)).Elem())
+	if dynamicConfigurationServiceRaw == nil {
+		t.Log("Could not find the DynamicConfigurationService.  Continuing until fixed")
+	}
+	if err2 != nil {
+		t.Errorf("There was an error getting the service", err2)
+	}
+	
 }
 
