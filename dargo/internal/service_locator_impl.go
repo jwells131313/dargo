@@ -67,6 +67,7 @@ func (locator *ServiceLocatorImpl) GetID() int64 {
 	return locator.ID
 }
 
+// Shutdown shuts down this locator
 func (locator *ServiceLocatorImpl) Shutdown() {
 	// do nothing
 }

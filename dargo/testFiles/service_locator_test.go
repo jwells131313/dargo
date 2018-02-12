@@ -1,4 +1,4 @@
-package test_files
+package testFiles
 /*
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *
@@ -39,6 +39,35 @@ package test_files
  * holder.
  */
 
-type EchoApplication interface {
-	Echo(input string) string
+import (
+    "testing"
+    "../utilities"
+    "reflect"
+    "../api"
+)
+
+// TestBasicServiceLocatorLookup.  This uses the raw DynamicConfigurationService
+// in order to add a service (echo) and then look up the service
+func TestBasicServiceLocatorLookup(t *testing.T) {
+	locatorFactory, err1 := utilities.GetSystemLocatorFactory()
+	if err1 != nil {
+		t.Errorf("There was an error getting the system locator factor")
+	}
+	
+	locator, found := locatorFactory.FindOrCreateRootLocator("BasicServiceLocatorLookup")
+	defer locator.Shutdown()
+	
+	if found != false {
+		t.Errorf("There was an error creating BasicServiceLocatorLookup service locator ", locator)
+	}
+	
+	dynamicConfigurationServiceRaw, err2 := locator.GetService(reflect.TypeOf(new(api.DynamicConfigurationService)).Elem())
+	if dynamicConfigurationServiceRaw == nil {
+		t.Log("Could not find the DynamicConfigurationService.  Continuing until fixed")
+	}
+	if err2 != nil {
+		t.Errorf("There was an error getting the service", err2)
+	}
+	
 }
+

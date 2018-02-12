@@ -1,4 +1,4 @@
-package test_files
+package testFiles
 /*
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *
@@ -39,11 +39,7 @@ package test_files
  * holder.
  */
 
-type EchoImpl struct {
-	
+// EchoApplication a very simple application service
+type EchoApplication interface {
+	Echo(input string) string
 }
-
-func (ei *EchoImpl) Echo(input string) string {
-	return input
-}
-
