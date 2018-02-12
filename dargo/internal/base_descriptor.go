@@ -104,3 +104,58 @@ func (base *BaseDescriptor) GetServiceID() int64 {
 func (base *BaseDescriptor) GetLocatorID() int64 {
 	return base.locatorid
 }
+
+// SetAdvertisedInterfaces sets all interfaces advertised by this service
+func (base *BaseDescriptor) SetAdvertisedInterfaces(v []reflect.Type) {
+	b := make([]reflect.Type, len(v))
+	copy(b, v)
+	
+	base.myContracts = b
+	
+}
+
+// SetScope sets the scope of this service
+func (base *BaseDescriptor) SetScope(v string) {
+	base.scope = v
+}
+
+// SetName sets the name of this service (or nil)
+func (base *BaseDescriptor) SetName(v string) {
+	base.name = v
+}
+
+// SetQualifiers sets the qualifiers of this service
+func (base *BaseDescriptor) SetQualifiers(v []string) {
+	b := make([]string, len(v))
+	copy(b, v)
+	
+	base.qualifiers = b
+}
+
+// SetVisibility setsOne of NORMAL or LOCAL
+func (base *BaseDescriptor) SetVisibility(v int) {
+	base.visibility = v
+}
+
+// SetMetadata sets the metadata for this service
+func (base *BaseDescriptor) SetMetadata(v map[string][]string) {
+	b := make(map[string][]string)
+	
+	for k, v1 := range v {
+		v2 := make([]string, len(v1))
+		
+		b[k] = v2
+	}
+	
+	base.metadata = b
+}
+
+// SetServiceID sets the serviceid
+func (base *BaseDescriptor) SetServiceID(v int64) {
+	base.serviceid = v
+}
+
+// SetLocatorID sets the locator id for this service
+func (base *BaseDescriptor) SetLocatorID(v int64) {
+	base.locatorid = v
+}
