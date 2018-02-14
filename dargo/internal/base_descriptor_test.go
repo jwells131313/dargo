@@ -83,6 +83,56 @@ func TestBaseDescriptorSetVisibility(t *testing.T) {
 	}
 }
 
+func TestBaseDescriptorSetQualifiers(t *testing.T) {
+	base := &BaseDescriptor{}
+	
+	inputQualifiers := []string { "Red", "Secure" }
+	
+	base.SetQualifiers(inputQualifiers)
+	
+	outputQualifiers := base.GetQualifiers()
+	
+	if compareSlices(inputQualifiers, outputQualifiers) == false {
+		t.Errorf("Input and output Qualifiers didn't match")
+	}
+	
+	// Make sure modifying output slice doesn't do anything to internals
+	outputQualifiers = append(outputQualifiers, "Plastic")
+	outputQualifiers2 := base.GetQualifiers()
+	
+	if compareSlices(outputQualifiers, outputQualifiers2) == true {
+		t.Errorf("Should not have been able to modify internal qualifiers")
+	}
+}
+
+func TestBaseDescriptorSetName(t *testing.T) {
+	base := &BaseDescriptor{}
+	
+	bob := "Bob"
+	
+	base.SetName(bob)
+	
+	lname := base.GetName()
+	
+	if strings.Compare(bob, lname) != 0 {
+		t.Errorf("SetName did not work in BaseDescriptor")
+	}
+}
+
+func TestBaseDescriptorSetScope(t *testing.T) {
+	base := &BaseDescriptor{}
+	
+	one := "Singleton"
+	
+	base.SetScope(one)
+	
+	lscope := base.GetScope()
+	
+	if strings.Compare(one, lscope) != 0 {
+		t.Errorf("SetName did not work in BaseDescriptor")
+	}
+}
+
 func compareSlices(a []string, b []string) bool {
 	if len(a) != len(b) {
 		return false
