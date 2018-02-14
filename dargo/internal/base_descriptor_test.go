@@ -3,6 +3,7 @@ package internal
 import (
     "testing"
     "strings"
+    "../api"
 )
 
 func TestBaseDescriptorSetLocatorID(t *testing.T) {
@@ -61,8 +62,6 @@ func TestBaseDescriptorSetMetadata(t *testing.T) {
 	
 	fooSlice = append(fooSlice, "d")
 	
-	
-	
 	if compareSlices(fooSlice, fooResult) == true {
 		t.Errorf("Should now be different, confirming internal copy %v/%v", fooSlice, fooResult)
 	}
@@ -70,8 +69,18 @@ func TestBaseDescriptorSetMetadata(t *testing.T) {
 	if compareSlices(fooSliceCopy, fooResult) == false {
 		t.Errorf("Confirming that the internal metadata did not change %v/%v", fooSliceCopy, fooResult)
 	}
+}
+
+func TestBaseDescriptorSetVisibility(t *testing.T) {
+	base := &BaseDescriptor{}
 	
+	base.SetVisibility(api.LOCAL)
 	
+	lvis := base.GetVisibility()
+	
+	if lvis != api.LOCAL {
+		t.Errorf("SetServiceID did not work in BaseDescriptor")
+	}
 }
 
 func compareSlices(a []string, b []string) bool {

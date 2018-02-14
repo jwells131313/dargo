@@ -58,7 +58,7 @@ type BaseDescriptor struct {
 
 // GetAdvertisedInterfaces Returns all interfaces advertised by this service
 func (base *BaseDescriptor) GetAdvertisedInterfaces() ([]reflect.Type, error) {
-	return base.myContracts, nil
+	return copyAdvertised(base.myContracts), nil
 }
 
 // GetScope Returns the scope of this service
@@ -73,7 +73,7 @@ func (base *BaseDescriptor) GetName() string {
 
 // GetQualifiers Returns the qualifiers of this service
 func (base *BaseDescriptor) GetQualifiers() []string {
-	return base.qualifiers
+	return copyStringArray(base.qualifiers)
 }
 
 // GetVisibility One of NORMAL or LOCAL
@@ -107,10 +107,7 @@ func (base *BaseDescriptor) GetLocatorID() int64 {
 
 // SetAdvertisedInterfaces sets all interfaces advertised by this service
 func (base *BaseDescriptor) SetAdvertisedInterfaces(v []reflect.Type) {
-	b := make([]reflect.Type, len(v))
-	copy(b, v)
-	
-	base.myContracts = b
+	base.myContracts = copyAdvertised(v)
 	
 }
 
@@ -126,10 +123,7 @@ func (base *BaseDescriptor) SetName(v string) {
 
 // SetQualifiers sets the qualifiers of this service
 func (base *BaseDescriptor) SetQualifiers(v []string) {
-	b := make([]string, len(v))
-	copy(b, v)
-	
-	base.qualifiers = b
+	base.qualifiers = copyStringArray(v)
 }
 
 // SetVisibility setsOne of NORMAL or LOCAL
@@ -163,4 +157,18 @@ func copyMetadata(input map[string][]string) map[string][]string {
 	}
 	
 	return b
+}
+
+func copyStringArray(input []string) []string {
+	retVal := make([]string, len(input))
+	copy(retVal, input)
+	
+	return retVal
+}
+
+func copyAdvertised(input []reflect.Type) []reflect.Type {
+	retVal := make([]reflect.Type, len(input))
+	copy(retVal, input)
+	
+	return retVal
 }
