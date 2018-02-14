@@ -56,7 +56,7 @@ func TestBaseDescriptorSetMetadata(t *testing.T) {
 		t.Errorf("barSlice and barResult were not the same %v/%v", barSlice, barResult)
 	}
 	
-	var fooSliceCopy []string = make([]string, len(fooSlice))
+	var fooSliceCopy = make([]string, len(fooSlice))
 	copy(fooSliceCopy, fooSlice)
 	
 	fooSlice = append(fooSlice, "d")

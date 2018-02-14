@@ -83,7 +83,7 @@ func (base *BaseDescriptor) GetVisibility() int {
 
 // GetMetadata returns the metadata for this service
 func (base *BaseDescriptor) GetMetadata() map[string][]string {
-	return base.metadata
+	return copyMetadata(base.metadata)
 }
 
 // GetRank Returns the rank of this descriptor
@@ -139,16 +139,7 @@ func (base *BaseDescriptor) SetVisibility(v int) {
 
 // SetMetadata sets the metadata for this service
 func (base *BaseDescriptor) SetMetadata(v map[string][]string) {
-	b := make(map[string][]string)
-	
-	for k, v1 := range v {
-		v2 := make([]string, len(v1))
-		copy (v2, v1)
-		
-		b[k] = v2
-	}
-	
-	base.metadata = b
+	base.metadata = copyMetadata(v)
 }
 
 // SetServiceID sets the serviceid
@@ -159,4 +150,17 @@ func (base *BaseDescriptor) SetServiceID(v int64) {
 // SetLocatorID sets the locator id for this service
 func (base *BaseDescriptor) SetLocatorID(v int64) {
 	base.locatorid = v
+}
+
+func copyMetadata(input map[string][]string) map[string][]string {
+	b := make(map[string][]string)
+	
+	for k, v1 := range input {
+		v2 := make([]string, len(v1))
+		copy (v2, v1)
+		
+		b[k] = v2
+	}
+	
+	return b
 }
