@@ -143,6 +143,7 @@ func (base *BaseDescriptor) SetMetadata(v map[string][]string) {
 	
 	for k, v1 := range v {
 		v2 := make([]string, len(v1))
+		copy (v2, v1)
 		
 		b[k] = v2
 	}
