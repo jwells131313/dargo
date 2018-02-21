@@ -53,7 +53,7 @@ type ServiceLocatorImpl struct {
 }
 
 // GetService gets the service associated with the type
-func (locator *ServiceLocatorImpl) GetService(toMe reflect.Type) (*interface{}, error) {
+func (locator *ServiceLocatorImpl) GetService(toMe reflect.Type) (interface{}, error) {
 	return nil, nil
 }
 

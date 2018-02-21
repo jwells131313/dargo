@@ -90,8 +90,9 @@ func (base *BaseDescriptor) GetMetadata() map[string][]string {
 func (base *BaseDescriptor) GetRank() int32 {
 	return base.rank
 }
+
 // SetRank Sets the rank of this service
-func (base *BaseDescriptor) setRank(rank int32) {
+func (base *BaseDescriptor) SetRank(rank int32) {
 	base.rank = rank
 }
 

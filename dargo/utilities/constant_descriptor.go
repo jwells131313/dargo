@@ -41,6 +41,7 @@ package utilities
 
 import (
 	"../internal"
+	"../api"
 )
 
 type constantDescriptor struct {
@@ -48,14 +49,16 @@ type constantDescriptor struct {
 	myConstant interface{}
 }
 
-/*
-func NewConstantDescriptor(constant interface{},
-	contracts []interface{},
-    name string,
-    qualifiers []string) api.Descriptor, error {
-    	return nil, nil
+// NewConstantDescriptor creates a writeable descriptor with the hard-coded
+// constant given.  This descriptor will have no other fields set other
+// than scope, which will be PerLookup
+func NewConstantDescriptor(constant interface{}) (api.WriteableDescriptor, error) {
+	retVal := &constantDescriptor{}
+	retVal.myConstant = constant
+	retVal.SetScope("PerLookup")
+	
+    return retVal, nil
 }
-*/
 
 func (desc *constantDescriptor) Create() (interface{}, error) {
 	return desc.myConstant, nil
