@@ -57,8 +57,8 @@ type BaseDescriptor struct {
 }
 
 // GetAdvertisedInterfaces Returns all interfaces advertised by this service
-func (base *BaseDescriptor) GetAdvertisedInterfaces() ([]reflect.Type, error) {
-	return copyAdvertised(base.myContracts), nil
+func (base *BaseDescriptor) GetAdvertisedInterfaces() []reflect.Type {
+	return copyAdvertised(base.myContracts)
 }
 
 // GetScope Returns the scope of this service

@@ -4,6 +4,7 @@ import (
     "testing"
     "strings"
     "../api"
+    "reflect"
 )
 
 func TestBaseDescriptorSetLocatorID(t *testing.T) {
@@ -131,6 +132,38 @@ func TestBaseDescriptorSetScope(t *testing.T) {
 	if strings.Compare(one, lscope) != 0 {
 		t.Errorf("SetName did not work in BaseDescriptor")
 	}
+}
+
+type iFace1 interface {}
+type iFace2 interface {}
+
+func TestBaseDescriptorSetContracts(t *testing.T) {
+	base := &BaseDescriptor{}
+	
+	var t1,t2 reflect.Type
+	
+	t1 = reflect.TypeOf(new(iFace1))
+	t2 = reflect.TypeOf(new(iFace2))
+	
+	contracts := []reflect.Type { t1, t2 }
+	
+	base.SetAdvertisedInterfaces(contracts)
+	
+	rContracts := base.GetAdvertisedInterfaces()
+	
+	if len(contracts) != len(rContracts) {
+		t.Errorf("Returned contracts have different lenghts %d/%d", len(contracts), len(rContracts))
+	}
+	
+	for index := range contracts {
+		expected := contracts[index]
+		got := rContracts[index]
+		
+		if expected != got {
+			t.Errorf("Failure at index %d, contracts not the same %v/%v", index, expected, got)
+		}
+	}
+	
 }
 
 func compareSlices(a []string, b []string) bool {

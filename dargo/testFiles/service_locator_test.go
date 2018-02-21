@@ -58,7 +58,7 @@ func TestBasicServiceLocatorLookup(t *testing.T) {
 	defer locator.Shutdown()
 	
 	if found != false {
-		t.Errorf("There was an error creating BasicServiceLocatorLookup service locator ", locator)
+		t.Errorf("There was an error creating BasicServiceLocatorLookup service locator %v", locator)
 	}
 	
 	dynamicConfigurationServiceRaw, err2 := locator.GetService(reflect.TypeOf(new(api.DynamicConfigurationService)).Elem())
@@ -66,7 +66,7 @@ func TestBasicServiceLocatorLookup(t *testing.T) {
 		t.Log("Could not find the DynamicConfigurationService.  Continuing until fixed")
 	}
 	if err2 != nil {
-		t.Errorf("There was an error getting the service", err2)
+		t.Errorf("There was an error getting the service %v", err2)
 	}
 	
 }
