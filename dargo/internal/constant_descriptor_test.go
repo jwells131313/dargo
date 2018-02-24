@@ -58,7 +58,7 @@ func TestConstantDescriptor(t *testing.T) {
 	
 	fCreate := cDesc.GetCreateFunction()
 	
-	i2, err2 := fCreate()
+	i2, err2 := fCreate(nil)
 	if err2 != nil {
 		t.Errorf("Could not call create method from descriptor %v", err2)
 	}
@@ -82,7 +82,7 @@ func TestSystemDescriptor(t *testing.T) {
 	
 	fCreate := sDesc.GetCreateFunction()
 	
-	i2, err2 := fCreate()
+	i2, err2 := fCreate(nil)
 	if err2 != nil {
 		t.Errorf("Could not call create method from descriptor %v", err2)
 	}

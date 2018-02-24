@@ -46,8 +46,8 @@ import (
 )
 
 type systemDescriptor struct {
-    creator func() (interface{}, error)
-    destroyer func(interface{}) error
+    creator func(api.ServiceLocator) (interface{}, error)
+    destroyer func(api.ServiceLocator, interface{}) error
 	myContracts []reflect.Type
 	scope string
 	name string
@@ -83,11 +83,11 @@ func CopyDescriptor(desc api.Descriptor, locatoridP, serviceidP int64) api.Descr
 }
 
 // Create create creates the instance of the type
-func (base *systemDescriptor) GetCreateFunction() func() (interface{}, error) {
+func (base *systemDescriptor) GetCreateFunction() func(api.ServiceLocator) (interface{}, error) {
 	return base.creator
 }
 
-func (base *systemDescriptor) GetDestroyFunction() func(interface{}) error {
+func (base *systemDescriptor) GetDestroyFunction() func(api.ServiceLocator, interface{}) error {
 	return base.destroyer
 }
 

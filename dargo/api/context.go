@@ -52,16 +52,16 @@ const (
 type Context interface {
 	GetScope() string
 	
-	FindOrCreate(desc Descriptor) (interface{}, error)
+	FindOrCreate(locator ServiceLocator, desc Descriptor) (interface{}, error)
 	
-	ContaintsKey(desc Descriptor) bool
+	ContaintsKey(locator ServiceLocator, desc Descriptor) bool
 	
-	DestroyOne(desc Descriptor) error
+	DestroyOne(locator ServiceLocator, desc Descriptor) error
 	
-	GetSupportsNilCreation() bool
+	GetSupportsNilCreation(locator ServiceLocator) bool
 	
-	IsActive() bool
+	IsActive(locator ServiceLocator) bool
 	
-	Shutdown()
+	Shutdown(locator ServiceLocator)
 }
 

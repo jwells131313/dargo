@@ -59,14 +59,14 @@ func NewConstantDescriptor(constant interface{}) api.WriteableDescriptor {
     return retVal
 }
 
-func (desc *constantDescriptor) GetCreateFunction() func() (interface{}, error) {
-	return func() (interface{}, error) {
+func (desc *constantDescriptor) GetCreateFunction() func(api.ServiceLocator) (interface{}, error) {
+	return func(api.ServiceLocator) (interface{}, error) {
 		return desc.myConstant, nil
 	}
 }
 
-func (desc *constantDescriptor) GetDestroyFunction() func(interface{}) error {
-	return func(interface{}) error {
+func (desc *constantDescriptor) GetDestroyFunction() func(api.ServiceLocator, interface{}) error {
+	return func(api.ServiceLocator, interface{}) error {
 		return nil
 	}
 }

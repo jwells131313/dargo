@@ -55,10 +55,10 @@ const (
 // Descriptor description of a dargo service description
 type Descriptor interface {
 	// GetCreateFunction create creates the instance of the type
-    GetCreateFunction() func() (interface{}, error)
+    GetCreateFunction() func(ServiceLocator) (interface{}, error)
     
     // GetDestroyFunction destroys this service
-    GetDestroyFunction() func(interface{}) error
+    GetDestroyFunction() func(ServiceLocator, interface{}) error
     
     // GetAdvertisedInterfaces Returns all interfaces advertised by this service
     GetAdvertisedInterfaces() []reflect.Type

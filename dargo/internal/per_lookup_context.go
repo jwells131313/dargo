@@ -48,40 +48,40 @@ type PerLookupContext struct {
 }
 
 // GetScope always returns PerLookup
-func (context *PerLookupContext) GetScope() string {
+func (context *PerLookupContext) GetScope(_ api.ServiceLocator) string {
 	return api.PerLookup
 }
 
 // FindOrCreate always returns a new instance for PerLookup
-func (context *PerLookupContext) FindOrCreate(desc api.Descriptor) (interface{}, error) {
-	var f func() (interface{}, error)
+func (context *PerLookupContext) FindOrCreate(locator api.ServiceLocator, desc api.Descriptor) (interface{}, error) {
+	var f func(api.ServiceLocator) (interface{}, error)
 	f = desc.GetCreateFunction()
 	
-	return f()
+	return f(locator)
 }
 
 // ContainsKey always returns false for PerLookup
-func (context *PerLookupContext) ContainsKey(desc api.Descriptor) bool {
+func (context *PerLookupContext) ContainsKey(_ api.ServiceLocator, desc api.Descriptor) bool {
 	return false
 }
 
 // DestroyOne should always call the destructor
-func (context *PerLookupContext) DestroyOne(desc api.Descriptor) error {
+func (context *PerLookupContext) DestroyOne(_ api.ServiceLocator, desc api.Descriptor) error {
 	// do nothing, special case
 	return nil
 }
 
 // GetSupportsNilCreation returns true for PerLookup
-func (context *PerLookupContext) GetSupportsNilCreation() bool {
+func (context *PerLookupContext) GetSupportsNilCreation(_ api.ServiceLocator) bool {
 	return true
 }
 
 // IsActive always returns true for PerLookup
-func (context *PerLookupContext) IsActive() bool {
+func (context *PerLookupContext) IsActive(_ api.ServiceLocator) bool {
 	return true
 }
 
 // Shutdown does nothing in the PerLookup scope
-func (context *PerLookupContext) Shutdown() {
+func (context *PerLookupContext) Shutdown(_ api.ServiceLocator) {
 	// do nothing
 }
