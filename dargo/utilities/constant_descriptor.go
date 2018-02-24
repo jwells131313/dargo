@@ -60,11 +60,17 @@ func NewConstantDescriptor(constant interface{}) (api.WriteableDescriptor, error
     return retVal, nil
 }
 
-func (desc *constantDescriptor) Create() (interface{}, error) {
-	return desc.myConstant, nil
+func (desc *constantDescriptor) GetCreateFunction() func() (interface{}, error) {
+	return func() (interface{}, error) {
+		return desc.myConstant, nil
+	}
 }
 
-func (desc *constantDescriptor) Destroy(interface{}) error {
-	return nil
+func (desc *constantDescriptor) GetDestroyFunction() func(interface{}) error {
+	return func(interface{}) error {
+		return nil
+	}
 }
+
+
 

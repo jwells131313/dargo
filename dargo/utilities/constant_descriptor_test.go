@@ -20,9 +20,11 @@ func TestConstantDescriptor(t *testing.T) {
 	
 	cDesc.SetAdvertisedInterfaces(contracts)
 	
-	i2, err2 := cDesc.Create()
+	fCreate := cDesc.GetCreateFunction()
+	
+	i2, err2 := fCreate()
 	if err2 != nil {
-		t.Errorf("Could not create the thing from the constant descriptor %v", err)
+		t.Errorf("Could not call create method from descriptor %v", err2)
 	}
 	
 	if i1 != i2 {

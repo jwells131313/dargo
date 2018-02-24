@@ -54,7 +54,10 @@ func (context *PerLookupContext) GetScope() string {
 
 // FindOrCreate always returns a new instance for PerLookup
 func (context *PerLookupContext) FindOrCreate(desc api.Descriptor) (interface{}, error) {
-	return desc.Create()
+	var f func() (interface{}, error)
+	f = desc.GetCreateFunction()
+	
+	return f()
 }
 
 // ContainsKey always returns false for PerLookup

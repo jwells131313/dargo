@@ -61,6 +61,8 @@ func NewServiceLocator(lName string, lID int64) api.ServiceLocator {
 		allDescriptors: make([]api.Descriptor, 10),
 	}
 	
+	
+	
 	return retVal
 }
 
