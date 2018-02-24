@@ -61,12 +61,14 @@ type systemDescriptor struct {
 
 // CopyDescriptor Makes a full copy of the incoming descriptor and returns
 // a strictly read only copy of the descriptor (except where it is normally
-// writeable such as Rank)
-func CopyDescriptor(desc api.Descriptor) api.Descriptor {
+// writeable such as Rank).  The locatorid and serviceid comes from the
+// locator actually creating this service, and so is not copied over
+// from the original descriptor
+func CopyDescriptor(desc api.Descriptor, locatoridP, serviceidP int64) api.Descriptor {
 	retVal := &systemDescriptor{}
 	
-	retVal.locatorid = desc.GetLocatorID()
-	retVal.serviceid = desc.GetServiceID()
+	retVal.locatorid = locatoridP
+	retVal.serviceid = serviceidP
 	retVal.rank = desc.GetRank()
 	retVal.metadata = copyMetadata(desc.GetMetadata())
 	retVal.visibility = desc.GetVisibility()

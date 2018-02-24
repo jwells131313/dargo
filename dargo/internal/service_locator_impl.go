@@ -58,11 +58,14 @@ func NewServiceLocator(lName string, lID int64) api.ServiceLocator {
 	retVal := &ServiceLocatorImpl {
 		name: lName,
 		id: lID,
-		allDescriptors: make([]api.Descriptor, 10),
+		allDescriptors: make([]api.Descriptor, 2),
 	}
 	
 	cDesc := NewConstantDescriptor(retVal)
-	cDesc.SetRank(1)
+	cDesc.AddAdvertisedInterface(reflect.TypeOf(retVal))
+	
+	sDesc := CopyDescriptor(cDesc, lID, 0)
+	retVal.allDescriptors[0] = sDesc
 	
 	return retVal
 }

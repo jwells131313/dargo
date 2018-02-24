@@ -78,7 +78,7 @@ func TestSystemDescriptor(t *testing.T) {
 	
 	cDesc.SetAdvertisedInterfaces(contracts)
 	
-	sDesc := CopyDescriptor(cDesc)
+	sDesc := CopyDescriptor(cDesc, 0, 0)
 	
 	fCreate := sDesc.GetCreateFunction()
 	

@@ -48,7 +48,10 @@ type WriteableDescriptor interface {
 	Descriptor
 	
 	// SetAdvertisedInterfaces sets all interfaces advertised by this service
-    SetAdvertisedInterfaces([]reflect.Type) 
+    SetAdvertisedInterfaces([]reflect.Type)
+    
+    // Adds a single advertised interface
+    AddAdvertisedInterface(reflect.Type)
     
     // SetScope sets the scope of this service
     SetScope(string) 

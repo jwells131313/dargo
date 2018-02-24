@@ -112,6 +112,11 @@ func (base *BaseDescriptor) SetAdvertisedInterfaces(v []reflect.Type) {
 	
 }
 
+// AddAdvertisedInterface adds the given type to the set of interfaces of this descriptor
+func (base *BaseDescriptor) AddAdvertisedInterface(v reflect.Type) {
+	base.myContracts = append(base.myContracts, v)
+}
+
 // SetScope sets the scope of this service
 func (base *BaseDescriptor) SetScope(v string) {
 	base.scope = v
