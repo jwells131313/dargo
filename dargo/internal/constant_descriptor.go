@@ -1,4 +1,4 @@
-package utilities
+package internal
 /*
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *
@@ -40,24 +40,23 @@ package utilities
  */
 
 import (
-	"../internal"
 	"../api"
 )
 
 type constantDescriptor struct {
-	internal.BaseDescriptor
+	BaseDescriptor
 	myConstant interface{}
 }
 
 // NewConstantDescriptor creates a writeable descriptor with the hard-coded
 // constant given.  This descriptor will have no other fields set other
 // than scope, which will be PerLookup
-func NewConstantDescriptor(constant interface{}) (api.WriteableDescriptor, error) {
+func NewConstantDescriptor(constant interface{}) api.WriteableDescriptor {
 	retVal := &constantDescriptor{}
 	retVal.myConstant = constant
 	retVal.SetScope("PerLookup")
 	
-    return retVal, nil
+    return retVal
 }
 
 func (desc *constantDescriptor) GetCreateFunction() func() (interface{}, error) {

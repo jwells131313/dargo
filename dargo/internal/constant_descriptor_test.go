@@ -40,51 +40,55 @@ package internal
  */
 
 import (
-	"fmt"
-	"reflect"
-	"../api"
+    "testing"
+    "reflect"
 )
 
-// ServiceLocatorImpl An internal implementation of ServiceLocator
-type ServiceLocatorImpl struct {
-	name string
-	id int64
-	
-	allDescriptors []api.Descriptor
-}
+type iFace3 interface {}
 
-// NewServiceLocator creates a new ServiceLocator with the given name and ID
-func NewServiceLocator(lName string, lID int64) api.ServiceLocator {
-	retVal := &ServiceLocatorImpl {
-		name: lName,
-		id: lID,
-		allDescriptors: make([]api.Descriptor, 10),
+func TestConstantDescriptor(t *testing.T) {
+	i1 := new(iFace3)
+	
+	cDesc := NewConstantDescriptor(i1)
+	
+	var contracts []reflect.Type
+	contracts = []reflect.Type { reflect.TypeOf(i1) }
+	
+	cDesc.SetAdvertisedInterfaces(contracts)
+	
+	fCreate := cDesc.GetCreateFunction()
+	
+	i2, err2 := fCreate()
+	if err2 != nil {
+		t.Errorf("Could not call create method from descriptor %v", err2)
 	}
 	
-	cDesc := NewConstantDescriptor(retVal)
-	cDesc.SetRank(1)
+	if i1 != i2 {
+		t.Errorf("Did not get my original constant back! %v/%v", i1, i2)
+	}
+}
+
+func TestSystemDescriptor(t *testing.T) {
+	i1 := new(iFace3)
 	
-	return retVal
-}
-
-// GetService gets the service associated with the type
-func (locator *ServiceLocatorImpl) GetService(toMe reflect.Type) (interface{}, error) {
-	fmt.Println("Looking for something of type", toMe)
-	return nil, nil
-}
-
-// GetName gets the name associated with this locator
-func (locator *ServiceLocatorImpl) GetName() string {
-	return locator.name
-}
-
-// GetID gets the id associated with this locator
-func (locator *ServiceLocatorImpl) GetID() int64 {
-	return locator.id
-}
-
-// Shutdown shuts down this locator
-func (locator *ServiceLocatorImpl) Shutdown() {
-	// do nothing
+	cDesc := NewConstantDescriptor(i1)
+	
+	var contracts []reflect.Type
+	contracts = []reflect.Type { reflect.TypeOf(i1) }
+	
+	cDesc.SetAdvertisedInterfaces(contracts)
+	
+	sDesc := CopyDescriptor(cDesc)
+	
+	fCreate := sDesc.GetCreateFunction()
+	
+	i2, err2 := fCreate()
+	if err2 != nil {
+		t.Errorf("Could not call create method from descriptor %v", err2)
+	}
+	
+	if i1 != i2 {
+		t.Errorf("Did not get my original constant back! %v/%v", i1, i2)
+	}
 }
 
