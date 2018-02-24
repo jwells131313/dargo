@@ -40,31 +40,44 @@ package internal
  */
 
 import (
-  "reflect"
-  "../api"
+	"fmt"
+	"reflect"
+	"../api"
 )
 
 // ServiceLocatorImpl An internal implementation of ServiceLocator
 type ServiceLocatorImpl struct {
-	Name string
-	ID int64
+	name string
+	id int64
 	
-	AllDescriptors []api.Descriptor
+	allDescriptors []api.Descriptor
+}
+
+// NewServiceLocator creates a new ServiceLocator with the given name and ID
+func NewServiceLocator(lName string, lID int64) api.ServiceLocator {
+	retVal := &ServiceLocatorImpl {
+		name: lName,
+		id: lID,
+		allDescriptors: make([]api.Descriptor, 10),
+	}
+	
+	return retVal
 }
 
 // GetService gets the service associated with the type
 func (locator *ServiceLocatorImpl) GetService(toMe reflect.Type) (interface{}, error) {
+	fmt.Println("Looking for something of type", toMe)
 	return nil, nil
 }
 
 // GetName gets the name associated with this locator
 func (locator *ServiceLocatorImpl) GetName() string {
-	return locator.Name
+	return locator.name
 }
 
 // GetID gets the id associated with this locator
 func (locator *ServiceLocatorImpl) GetID() int64 {
-	return locator.ID
+	return locator.id
 }
 
 // Shutdown shuts down this locator

@@ -45,7 +45,7 @@ import (
 )
 
 func TestLocatorFactoryWithName(t *testing.T) {
-	slFactory, _ := GetSystemLocatorFactory()
+	slFactory := GetSystemLocatorFactory()
 	
 	locator, found := slFactory.FindOrCreateRootLocator("test1")
 	
@@ -61,7 +61,7 @@ func TestLocatorFactoryWithName(t *testing.T) {
 }
 
 func TestLocatorFactoryWithNoName(t *testing.T) {
-	slFactory, _ := GetSystemLocatorFactory()
+	slFactory := GetSystemLocatorFactory()
 	
 	locator, found := slFactory.FindOrCreateRootLocator("")
 	
@@ -100,7 +100,7 @@ func TestLocatorFactoryWithNoName(t *testing.T) {
 }
 
 func TestLocatorFactoryWithSpecificNameTwice(t *testing.T) {
-	slFactory, _ := GetSystemLocatorFactory()
+	slFactory := GetSystemLocatorFactory()
 	
 	locator, found := slFactory.FindOrCreateRootLocator("test2")
 	

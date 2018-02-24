@@ -49,10 +49,7 @@ import (
 // TestBasicServiceLocatorLookup.  This uses the raw DynamicConfigurationService
 // in order to add a service (echo) and then look up the service
 func TestBasicServiceLocatorLookup(t *testing.T) {
-	locatorFactory, err1 := utilities.GetSystemLocatorFactory()
-	if err1 != nil {
-		t.Errorf("There was an error getting the system locator factor")
-	}
+	locatorFactory := utilities.GetSystemLocatorFactory()
 	
 	locator, found := locatorFactory.FindOrCreateRootLocator("BasicServiceLocatorLookup")
 	defer locator.Shutdown()

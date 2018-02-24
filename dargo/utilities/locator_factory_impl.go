@@ -45,13 +45,13 @@ import (
 )
 
 type locatorFactory struct {
-	locators map[string]*internal.ServiceLocatorImpl
+	locators map[string]api.ServiceLocator
 	currentID int64
 	generation int64
 }
 
 var globalFactory = &locatorFactory {
-	locators: make(map[string]*internal.ServiceLocatorImpl),
+	locators: make(map[string]api.ServiceLocator),
 	currentID: 0,
 	generation: 0,
 }
@@ -70,10 +70,7 @@ func (factory *locatorFactory) FindOrCreateRootLocator(givenName string) (api.Se
 		globalFactory.generation++
 	}
 	
-	created := &internal.ServiceLocatorImpl{
-		Name: givenName,
-		ID: globalFactory.currentID,
-	}
+	created := internal.NewServiceLocator(givenName, globalFactory.currentID)
 	
 	globalFactory.currentID++
 	
@@ -83,7 +80,7 @@ func (factory *locatorFactory) FindOrCreateRootLocator(givenName string) (api.Se
 }
 
 // GetSystemLocatorFactory gets the system implementation of the ServiceLocatorFactory
-func GetSystemLocatorFactory() (api.ServiceLocatorFactory, error) {
-	return globalFactory, nil
+func GetSystemLocatorFactory() api.ServiceLocatorFactory {
+	return globalFactory
 }
 
