@@ -44,11 +44,35 @@ import "reflect"
 // ServiceLocator The main registry for dargo.  Use it to get context sensitive lookups
 // for application services
 type ServiceLocator interface {
+	// GetService gets the service that is correct for the current context with the given interface
 	GetService(toMe reflect.Type) (interface{}, error)
 	
+	// GetDescriptors Returns all descriptors that return true when passed through the input function
+	// will not return nil, but may return an empty list
+	GetDescriptors(func (Descriptor) bool) []Descriptor
+	
+	// GetBestDescriptor returns the best descriptor found returning true through the input function
+	// The best descriptor is the one with the highest rank, or if rank is equal the one with the
+	// lowest serviceId or if the serviceId are the same the one with the highest locatorId
+	GetBestDescriptor(func (Descriptor) bool) (Descriptor, bool)
+	
+	// GetDescriptorsWithName Returns all descriptors that return true when passed through the input function
+	// and which have the given name.  Can drastically reduce the number of descriptors passed to the method
+	// will not return nil, but may return an empty list
+	GetDescriptorsWithNameOrType(func (Descriptor) bool, reflect.Type, string) []Descriptor
+	
+	// GetBestDescriptor returns the best descriptor found returning true through the input function
+	// and which have the given name
+	// The best descriptor is the one with the highest rank, or if rank is equal the one with the
+	// lowest serviceId or if the serviceId are the same the one with the highest locatorId
+	GetBestDescriptorWithNameOrType(func (Descriptor) bool, reflect.Type, string) (Descriptor, bool)
+	
+	// GetName gets the name of this ServiceLocator
 	GetName() string
 	
+	// GetID Gets the id of this ServiceLocator
 	GetID() int64
 	
+	// Will shut down all services associated with this ServiceLocator
 	Shutdown()
 }
