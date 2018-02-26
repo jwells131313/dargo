@@ -45,7 +45,9 @@ import "reflect"
 // for application services
 type ServiceLocator interface {
 	// GetService gets the service that is correct for the current context with the given interface
-	GetService(toMe reflect.Type) (interface{}, error)
+	// returns the best implementation of the interface, true if one was found and any other error
+	// if there was an error creating the interface
+	GetService(toMe reflect.Type) (interface{}, bool, error)
 	
 	// GetDescriptors Returns all descriptors that return true when passed through the input function
 	// will not return nil, but may return an empty list

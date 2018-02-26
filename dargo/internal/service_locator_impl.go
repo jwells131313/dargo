@@ -40,7 +40,6 @@ package internal
  */
 
 import (
-	"fmt"
 	"reflect"
 	"../api"
 	"sort"
@@ -54,6 +53,9 @@ type ServiceLocatorImpl struct {
 	allDescriptors []api.Descriptor
 	byName map[string][]api.Descriptor
 	byType map[reflect.Type][]api.Descriptor
+	
+	lastTakenServiceID int64
+	lastChange int64
 }
 
 // NewServiceLocator creates a new ServiceLocator with the given name and ID
@@ -64,13 +66,22 @@ func NewServiceLocator(lName string, lID int64) api.ServiceLocator {
 		allDescriptors: make([]api.Descriptor, 2),
 		byName: make(map[string][]api.Descriptor),
 		byType: make(map[reflect.Type][]api.Descriptor),
+		lastTakenServiceID: 2,
+		lastChange: 0,
 	}
 	
 	cDesc := NewConstantDescriptor(retVal)
-	cDesc.AddAdvertisedInterface(reflect.TypeOf(retVal))
+	cDesc.AddAdvertisedInterface(reflect.TypeOf(new(api.ServiceLocator)).Elem())
 	
-	sDesc := CopyDescriptor(cDesc, lID, 0)
-	retVal.addDescriptorToStructures(sDesc)
+	sDesc0 := CopyDescriptor(cDesc, lID, 0)
+	retVal.addDescriptorToStructures(sDesc0)
+	
+	dcs := NewDynamicConfigurationService(retVal)
+	dDesc := NewConstantDescriptor(dcs)
+	dDesc.AddAdvertisedInterface(reflect.TypeOf(new(api.DynamicConfigurationService)).Elem())
+	
+	sDesc1 := CopyDescriptor(dDesc, lID, 1)
+	retVal.addDescriptorToStructures(sDesc1)
 	
 	return retVal
 }
@@ -101,9 +112,19 @@ func (locator *ServiceLocatorImpl) addDescriptorToStructures(desc api.Descriptor
 }
 
 // GetService gets the service associated with the type
-func (locator *ServiceLocatorImpl) GetService(toMe reflect.Type) (interface{}, error) {
-	fmt.Println("Looking for something of type", toMe)
-	return nil, nil
+func (locator *ServiceLocatorImpl) GetService(toMe reflect.Type) (interface{}, bool, error) {
+	myDescriptor, found := locator.GetBestDescriptorWithNameOrType(func(foo api.Descriptor) bool {
+			return true
+		}, toMe, "")
+	
+	if !found {
+		return nil, false, nil
+	}
+	
+	creator := myDescriptor.GetCreateFunction()
+	retVal, err := creator(locator)
+	
+	return retVal, true, err
 }
 
 // GetDescriptors Returns all descriptors that return true when passed through the input function
@@ -153,6 +174,7 @@ func (locator *ServiceLocatorImpl) GetDescriptorsWithNameOrType(filter func (api
 		}
 	} else if toMe != nil {
 		originalList, found = locator.byType[toMe]
+		
 		if !found {
 			// None with given type, can actually just return now
 			return []api.Descriptor{}

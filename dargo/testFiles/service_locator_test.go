@@ -56,15 +56,25 @@ func TestBasicServiceLocatorLookup(t *testing.T) {
 	
 	if found != false {
 		t.Errorf("There was an error creating BasicServiceLocatorLookup service locator %v", locator)
+		return
 	}
 	
-	dynamicConfigurationServiceRaw, err2 := locator.GetService(reflect.TypeOf(new(api.DynamicConfigurationService)).Elem())
-	if dynamicConfigurationServiceRaw == nil {
-		t.Log("Could not find the DynamicConfigurationService.  Continuing until fixed")
+	dynamicConfigurationServiceRaw, found, err2 := locator.GetService(reflect.TypeOf(new(api.DynamicConfigurationService)).Elem())
+	if !found {
+		t.Errorf("There must always be an implementation of the DCS in any ServiceLocator")
+		return
 	}
 	if err2 != nil {
 		t.Errorf("There was an error getting the service %v", err2)
+		return
 	}
 	
+	dynamicConfigurationService, ok := dynamicConfigurationServiceRaw.(api.DynamicConfigurationService)
+	
+	if !ok {
+		t.Errorf("Could not do the cast")
+		return;
+	}
+	dynamicConfigurationService.CreateDynamicConfiguration()
 }
 
