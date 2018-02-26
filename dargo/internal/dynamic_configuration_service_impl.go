@@ -41,11 +41,22 @@ package internal
 
 import (
 	"../api"
-
+	"sync"
+	"fmt"
 )
 
 type dynamicConfigurationService struct {
 	locator *ServiceLocatorImpl
+}
+
+type dynamicConfiguration struct {
+	locator *ServiceLocatorImpl
+	
+	mux sync.Mutex
+	locatorChangeNumber int64
+	binds []api.Descriptor
+	destroys []func(api.Descriptor) bool
+	closed bool
 }
 
 // NewDynamicConfigurationService Creates a dynamic configuration service with the given locator
@@ -58,6 +69,60 @@ func NewDynamicConfigurationService(l *ServiceLocatorImpl) api.DynamicConfigurat
 }
 
 // CreateDynamicConfiguration creates a dynamic configuration that can be used to bind into the locator
-func (dcs *dynamicConfigurationService) CreateDynamicConfiguration() (api.DynamicConfiguration, error) {
-	return nil, nil
+func (dcs *dynamicConfigurationService) CreateDynamicConfiguration() api.DynamicConfiguration {
+	lChange := dcs.locator.getLastChange()
+	
+	retVal := &dynamicConfiguration {
+		locator : dcs.locator,
+		locatorChangeNumber: lChange,
+		binds: []api.Descriptor{},
+		destroys: []func(api.Descriptor) bool{},
+		closed: false,
+	}
+	
+	return retVal
+}
+
+// Bind adds a descriptor to be bound into the service locator
+// returns the copy of the descriptor that will bound in if
+// commit succeeds
+func (dConfig *dynamicConfiguration) Bind(desc api.Descriptor) api.Descriptor {
+	dConfig.mux.Lock()
+	defer dConfig.mux.Unlock()
+	
+	lID := dConfig.locator.GetID()
+	sID := dConfig.locator.getAndIncrementSID()
+	
+	copied := CopyDescriptor(desc, lID, sID)
+	dConfig.binds = append(dConfig.binds, copied)
+	
+	return copied
+}
+
+// AddRemoveFilter adds a filter that will be run over all
+// existing descriptors to determing which ones to remove
+// from the locator
+func (dConfig *dynamicConfiguration) AddRemoveFilter(killer func(api.Descriptor) bool) {
+	dConfig.mux.Lock()
+	defer dConfig.mux.Unlock()
+	
+	dConfig.destroys = append(dConfig.destroys, killer)
+}
+
+func (dConfig *dynamicConfiguration) Commit() error {
+	dConfig.mux.Lock()
+	defer dConfig.mux.Unlock()
+	if dConfig.closed {
+		return fmt.Errorf("This configuration has been closed possibly because its already been committed")
+	}
+	
+	lChange := dConfig.locator.getLastChange()
+	if dConfig.locatorChangeNumber != lChange {
+		dConfig.closed = true
+		return fmt.Errorf("The locator %s has been changed since this dynamic configuration was created.  Will not commit it",
+			dConfig.locator.GetName())
+	}
+	
+	dConfig.closed = true
+	return dConfig.locator.updateDescriptors(dConfig.binds, dConfig.destroys)
 }

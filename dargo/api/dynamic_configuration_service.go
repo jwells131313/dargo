@@ -43,13 +43,21 @@ package api
 // service locator and can be used to add application services
 // to the context sensitive registry
 type DynamicConfigurationService interface {
-	CreateDynamicConfiguration() (DynamicConfiguration, error)	
+	CreateDynamicConfiguration() DynamicConfiguration	
 }
 
 // DynamicConfiguration use this to add and remove descriptors to
 // the service locator
 type DynamicConfiguration interface {
-	Bind(desc Descriptor) (Descriptor, error)
+	// Bind adds a descriptor to be bound into the service locator
+	// returns the copy of the descriptor that will bound in if
+	// commit succeeds
+	Bind(desc Descriptor) Descriptor
+	
+	// AddRemoveFilter adds a filter that will be run over all
+	// existing descriptors to determing which ones to remove
+	// from the locator
+	AddRemoveFilter(func(Descriptor) bool)
 	
 	Commit() error
 }

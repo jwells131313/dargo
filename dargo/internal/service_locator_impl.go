@@ -44,10 +44,14 @@ import (
 	"../api"
 	"sort"
 	"fmt"
+	"sync"
 )
 
 // ServiceLocatorImpl An internal implementation of ServiceLocator
 type ServiceLocatorImpl struct {
+	countMux, mux sync.Mutex
+	lockCount uint64
+	
 	name string
 	id int64
 	
@@ -122,6 +126,9 @@ func (locator *ServiceLocatorImpl) GetService(toMe reflect.Type) (interface{}, e
 
 // GetServiceWithName gets the service of the given type with the given name
 func (locator *ServiceLocatorImpl) GetServiceWithName(toMe reflect.Type, name string) (interface{}, error) {
+	locator.lock()
+	defer locator.unlock()
+	
 	myDescriptor := locator.getDescriptorOfTypeWithName(toMe, name)
 	
 	if myDescriptor == nil {
@@ -135,6 +142,9 @@ func (locator *ServiceLocatorImpl) GetServiceWithName(toMe reflect.Type, name st
 
 // GetServiceFromDescriptor gets the contextual service from the given descriptor
 func (locator *ServiceLocatorImpl) GetServiceFromDescriptor(desc api.Descriptor) (interface{}, error) {
+	locator.lock()
+	defer locator.unlock()
+	
 	context, err := locator.getActiveContext(desc)
 	if err != nil {
 		return nil, err
@@ -308,5 +318,55 @@ func (locator *ServiceLocatorImpl) GetID() int64 {
 // Shutdown shuts down this locator
 func (locator *ServiceLocatorImpl) Shutdown() {
 	// do nothing
+}
+
+func (locator *ServiceLocatorImpl) getLastChange() int64 {
+	locator.lock()
+	defer locator.unlock()
+	
+	return locator.lastChange
+}
+
+func (locator *ServiceLocatorImpl) getAndIncrementSID() int64 {
+	locator.lock()
+	defer locator.unlock()
+	
+	retVal := locator.lastTakenServiceID
+	locator.lastTakenServiceID = locator.lastTakenServiceID + 1
+	
+	return retVal
+}
+
+func (locator *ServiceLocatorImpl) updateDescriptors(binds []api.Descriptor, unbinds []func(api.Descriptor) bool) error {
+	locator.lock()
+	locator.unlock()
+	
+	return nil
+}
+
+func (locator *ServiceLocatorImpl) lock() {
+	locator.countMux.Lock()
+	defer locator.countMux.Unlock()
+	
+	if locator.lockCount == 0 {
+		locator.lockCount = 1
+		locator.mux.Lock()
+	} else {
+		locator.lockCount = locator.lockCount + 1
+	}
+}
+
+func (locator *ServiceLocatorImpl) unlock() {
+	locator.countMux.Lock()
+	defer locator.countMux.Unlock()
+	
+	if locator.lockCount == 0 {
+		return
+	}
+	
+	locator.lockCount = locator.lockCount - 1
+	if locator.lockCount == 0 {
+		locator.mux.Unlock()
+	}
 }
 
