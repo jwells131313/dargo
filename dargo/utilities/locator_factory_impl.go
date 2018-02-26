@@ -42,9 +42,11 @@ import (
 	"../internal"
     "../api"
     "strconv"
+    "sync"
 )
 
 type locatorFactory struct {
+	mux sync.Mutex
 	locators map[string]api.ServiceLocator
 	currentID int64
 	generation int64
@@ -58,6 +60,9 @@ var globalFactory = &locatorFactory {
 
 
 func (factory *locatorFactory) FindOrCreateRootLocator(givenName string) (api.ServiceLocator, bool) {
+	factory.mux.Lock()
+	defer factory.mux.Unlock()
+	
 	existing, ok := factory.locators[givenName]
 	
 	if ok {
