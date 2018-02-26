@@ -43,6 +43,7 @@ import (
 	"reflect"
 	"../api"
 	"sort"
+	"fmt"
 )
 
 // ServiceLocatorImpl An internal implementation of ServiceLocator
@@ -56,6 +57,8 @@ type ServiceLocatorImpl struct {
 	
 	lastTakenServiceID int64
 	lastChange int64
+	
+	perLookupContext, singletonContext api.Context
 }
 
 // NewServiceLocator creates a new ServiceLocator with the given name and ID
@@ -68,6 +71,7 @@ func NewServiceLocator(lName string, lID int64) api.ServiceLocator {
 		byType: make(map[reflect.Type][]api.Descriptor),
 		lastTakenServiceID: 2,
 		lastChange: 0,
+		perLookupContext: &PerLookupContext{},
 	}
 	
 	cDesc := NewConstantDescriptor(retVal)
@@ -112,19 +116,66 @@ func (locator *ServiceLocatorImpl) addDescriptorToStructures(desc api.Descriptor
 }
 
 // GetService gets the service associated with the type
-func (locator *ServiceLocatorImpl) GetService(toMe reflect.Type) (interface{}, bool, error) {
-	myDescriptor, found := locator.GetBestDescriptorWithNameOrType(func(foo api.Descriptor) bool {
-			return true
-		}, toMe, "")
+func (locator *ServiceLocatorImpl) GetService(toMe reflect.Type) (interface{}, error) {
+	return locator.GetServiceWithName(toMe, "")
+}
+
+// GetServiceWithName gets the service of the given type with the given name
+func (locator *ServiceLocatorImpl) GetServiceWithName(toMe reflect.Type, name string) (interface{}, error) {
+	myDescriptor := locator.getDescriptorOfTypeWithName(toMe, name)
 	
-	if !found {
-		return nil, false, nil
+	if myDescriptor == nil {
+		return nil, nil
 	}
 	
-	creator := myDescriptor.GetCreateFunction()
-	retVal, err := creator(locator)
+	retVal, err := locator.GetServiceFromDescriptor(myDescriptor)
 	
-	return retVal, true, err
+	return retVal, err
+}
+
+// GetServiceFromDescriptor gets the contextual service from the given descriptor
+func (locator *ServiceLocatorImpl) GetServiceFromDescriptor(desc api.Descriptor) (interface{}, error) {
+	context, err := locator.getActiveContext(desc)
+	if err != nil {
+		return nil, err
+	}
+	
+	if context == nil {
+		return nil, fmt.Errorf("No active context was found for %s", desc.GetScope())
+		
+	}
+	
+	retVal, err := context.FindOrCreate(locator, desc)
+	
+	return retVal, err
+}
+
+func (locator *ServiceLocatorImpl) getActiveContext(desc api.Descriptor) (api.Context, error) {
+	scope := desc.GetScope()
+	
+	if api.PerLookup == scope {
+		return locator.perLookupContext, nil
+	}
+	
+	if api.Singleton == scope {
+		return locator.singletonContext, nil
+	}
+	
+	namedDescriptors := locator.getDescriptorsOfTypeWithName(reflect.TypeOf(new(api.Context)).Elem(), scope)
+	for _, contextDescriptor := range namedDescriptors {
+		rawContext, err := locator.GetServiceFromDescriptor(contextDescriptor)
+		if err != nil {
+			return nil, err
+		}
+		
+		context := rawContext.(api.Context)
+		
+		if context.IsActive(locator) {
+			return context, nil
+		}
+	}
+	
+	return nil, nil
 }
 
 // GetDescriptors Returns all descriptors that return true when passed through the input function
@@ -137,9 +188,20 @@ func (locator *ServiceLocatorImpl) GetDescriptors(filter func (api.Descriptor) b
 // GetBestDescriptor returns the best descriptor found returning true through the input function
 // The best descriptor is the one with the highest rank, or if rank is equal the one with the
 // lowest serviceId or if the serviceId are the same the one with the highest locatorId
-func (locator *ServiceLocatorImpl) GetBestDescriptor(filter func (api.Descriptor) bool) (api.Descriptor, bool) {
+func (locator *ServiceLocatorImpl) GetBestDescriptor(filter func (api.Descriptor) bool) api.Descriptor {
 	return locator.GetBestDescriptorWithNameOrType(filter, nil, "")
-	
+}
+
+func (locator *ServiceLocatorImpl) getDescriptorsOfTypeWithName(toMe reflect.Type, name string) []api.Descriptor {
+	return locator.GetDescriptorsWithNameOrType(func(api.Descriptor) bool {
+			return true
+		}, toMe, name)
+}
+
+func (locator *ServiceLocatorImpl) getDescriptorOfTypeWithName(toMe reflect.Type, name string) api.Descriptor {
+	return locator.GetBestDescriptorWithNameOrType(func(api.Descriptor) bool {
+			return true
+		}, toMe, name)
 }
 
 // GetDescriptorsWithNameOrType Returns all descriptors that return true when passed through the input function
@@ -221,16 +283,16 @@ func (locator *ServiceLocatorImpl) GetDescriptorsWithNameOrType(filter func (api
 // and which have the given name
 // The best descriptor is the one with the highest rank, or if rank is equal the one with the
 // lowest serviceId or if the serviceId are the same the one with the highest locatorId
-func (locator *ServiceLocatorImpl) GetBestDescriptorWithNameOrType(filter func (api.Descriptor) bool, toMe reflect.Type, name string) (api.Descriptor, bool) {
+func (locator *ServiceLocatorImpl) GetBestDescriptorWithNameOrType(filter func (api.Descriptor) bool, toMe reflect.Type, name string) api.Descriptor {
 	filteredDescriptors := locator.GetDescriptorsWithNameOrType(filter, toMe, name)
 	if filteredDescriptors == nil {
-		return nil, false
+		return nil
 	}
 	if len(filteredDescriptors) == 0 {
-		return nil, false
+		return nil
 	}
 	
-	return filteredDescriptors[0], true
+	return filteredDescriptors[0]
 }
 
 // GetName gets the name associated with this locator

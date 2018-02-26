@@ -46,10 +46,16 @@ import (
 // Values for the visibility field of the Descriptor
 const (
 	// Indicates that this is normal descriptor, visibile to children
-	NORMAL = iota
+	Normal = iota
 	
 	// Indicates taht this is a local descriptor, only visible to its own locator
-	LOCAL = iota
+	Local = iota
+	
+	// PerLookup Every new lookup is a new service
+	PerLookup = "PerLookup"
+	
+	// Singleton Is created one time only
+	Singleton = "Singleton"
 )
 
 // Descriptor description of a dargo service description

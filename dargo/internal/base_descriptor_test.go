@@ -75,11 +75,11 @@ func TestBaseDescriptorSetMetadata(t *testing.T) {
 func TestBaseDescriptorSetVisibility(t *testing.T) {
 	base := &BaseDescriptor{}
 	
-	base.SetVisibility(api.LOCAL)
+	base.SetVisibility(api.Local)
 	
 	lvis := base.GetVisibility()
 	
-	if lvis != api.LOCAL {
+	if lvis != api.Local {
 		t.Errorf("SetServiceID did not work in BaseDescriptor")
 	}
 }

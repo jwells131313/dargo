@@ -48,7 +48,7 @@ type PerLookupContext struct {
 }
 
 // GetScope always returns PerLookup
-func (context *PerLookupContext) GetScope(_ api.ServiceLocator) string {
+func (context *PerLookupContext) GetScope() string {
 	return api.PerLookup
 }
 

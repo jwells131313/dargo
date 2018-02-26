@@ -39,14 +39,6 @@ package api
  * holder.
  */
 
-const (
-	// PerLookup Every new lookup is a new service
-	PerLookup = "PerLookup"
-	
-	// Singleton Is created one time only
-	Singleton = "Singleton"
-)
-
 // Context Implement this to handle creating and destroying application
 // services in a particular context
 type Context interface {
@@ -54,7 +46,7 @@ type Context interface {
 	
 	FindOrCreate(locator ServiceLocator, desc Descriptor) (interface{}, error)
 	
-	ContaintsKey(locator ServiceLocator, desc Descriptor) bool
+	ContainsKey(locator ServiceLocator, desc Descriptor) bool
 	
 	DestroyOne(locator ServiceLocator, desc Descriptor) error
 	
