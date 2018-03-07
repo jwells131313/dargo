@@ -1,4 +1,5 @@
 package testFiles
+
 /*
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *
@@ -40,25 +41,25 @@ package testFiles
  */
 
 import (
-    "testing"
-    "../utilities"
-    "reflect"
-    "../api"
+	"../api"
+	"../utilities"
+	"reflect"
+	"testing"
 )
 
 // TestBasicServiceLocatorLookup.  This uses the raw DynamicConfigurationService
 // in order to add a service (echo) and then look up the service
 func TestBasicServiceLocatorLookup(t *testing.T) {
 	locatorFactory := utilities.GetSystemLocatorFactory()
-	
+
 	locator, found := locatorFactory.FindOrCreateRootLocator("BasicServiceLocatorLookup")
 	defer locator.Shutdown()
-	
+
 	if found != false {
 		t.Errorf("There was an error creating BasicServiceLocatorLookup service locator %v", locator)
 		return
 	}
-	
+
 	dynamicConfigurationServiceRaw, err2 := locator.GetService(reflect.TypeOf(new(api.DynamicConfigurationService)).Elem())
 	if dynamicConfigurationServiceRaw == nil {
 		t.Errorf("There must always be an implementation of the DCS in any ServiceLocator")
@@ -68,13 +69,18 @@ func TestBasicServiceLocatorLookup(t *testing.T) {
 		t.Errorf("There was an error getting the service %v", err2)
 		return
 	}
-	
+
 	dynamicConfigurationService, ok := dynamicConfigurationServiceRaw.(api.DynamicConfigurationService)
-	
+
 	if !ok {
 		t.Errorf("Could not do the cast")
-		return;
+		return
 	}
-	dynamicConfigurationService.CreateDynamicConfiguration()
-}
 
+	dConfig := dynamicConfigurationService.CreateDynamicConfiguration()
+	if dConfig == nil {
+		t.Errorf("Got a nil dynamic configuration, that's a fail")
+		return
+	}
+
+}

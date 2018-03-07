@@ -1,4 +1,5 @@
 package internal
+
 /*
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *
@@ -40,23 +41,22 @@ package internal
  */
 
 import (
-	"reflect"
 	"../api"
-
+	"reflect"
 )
 
 type systemDescriptor struct {
-    creator func(api.ServiceLocator) (interface{}, error)
-    destroyer func(api.ServiceLocator, interface{}) error
+	creator     func(api.ServiceLocator) (interface{}, error)
+	destroyer   func(api.ServiceLocator, interface{}) error
 	myContracts []reflect.Type
-	scope string
-	name string
-	qualifiers []string
-	visibility int
-	metadata map[string][]string
-	rank int32
-	serviceid int64
-	locatorid int64
+	scope       string
+	name        string
+	qualifiers  []string
+	visibility  int
+	metadata    map[string][]string
+	rank        int32
+	serviceid   int64
+	locatorid   int64
 }
 
 // CopyDescriptor Makes a full copy of the incoming descriptor and returns
@@ -66,7 +66,7 @@ type systemDescriptor struct {
 // from the original descriptor
 func CopyDescriptor(desc api.Descriptor, locatoridP, serviceidP int64) api.Descriptor {
 	retVal := &systemDescriptor{}
-	
+
 	retVal.locatorid = locatoridP
 	retVal.serviceid = serviceidP
 	retVal.rank = desc.GetRank()
@@ -78,7 +78,7 @@ func CopyDescriptor(desc api.Descriptor, locatoridP, serviceidP int64) api.Descr
 	retVal.myContracts = copyAdvertised(desc.GetAdvertisedInterfaces())
 	retVal.destroyer = desc.GetDestroyFunction()
 	retVal.creator = desc.GetCreateFunction()
-	
+
 	return retVal
 }
 
@@ -140,4 +140,3 @@ func (base *systemDescriptor) GetServiceID() int64 {
 func (base *systemDescriptor) GetLocatorID() int64 {
 	return base.locatorid
 }
-

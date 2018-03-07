@@ -1,4 +1,5 @@
 package utilities
+
 /*
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *
@@ -39,48 +40,47 @@ package utilities
  * holder.
  */
 import (
+	"../api"
 	"../internal"
-    "../api"
-    "strconv"
-    "sync"
+	"strconv"
+	"sync"
 )
 
 type locatorFactory struct {
-	mux sync.Mutex
-	locators map[string]api.ServiceLocator
-	currentID int64
+	mux        sync.Mutex
+	locators   map[string]api.ServiceLocator
+	currentID  int64
 	generation int64
 }
 
-var globalFactory = &locatorFactory {
-	locators: make(map[string]api.ServiceLocator),
-	currentID: 0,
+var globalFactory = &locatorFactory{
+	locators:   make(map[string]api.ServiceLocator),
+	currentID:  0,
 	generation: 0,
 }
-
 
 func (factory *locatorFactory) FindOrCreateRootLocator(givenName string) (api.ServiceLocator, bool) {
 	factory.mux.Lock()
 	defer factory.mux.Unlock()
-	
+
 	existing, ok := factory.locators[givenName]
-	
+
 	if ok {
 		return existing, true
 	}
-	
+
 	if givenName == "" {
 		givenName = "__Generated_Service_Locator_Name_" +
-		    strconv.FormatInt(globalFactory.generation, 10)
+			strconv.FormatInt(globalFactory.generation, 10)
 		globalFactory.generation++
 	}
-	
+
 	created := internal.NewServiceLocator(givenName, globalFactory.currentID)
-	
+
 	globalFactory.currentID++
-	
+
 	factory.locators[givenName] = created
-	
+
 	return created, false
 }
 
@@ -88,4 +88,3 @@ func (factory *locatorFactory) FindOrCreateRootLocator(givenName string) (api.Se
 func GetSystemLocatorFactory() api.ServiceLocatorFactory {
 	return globalFactory
 }
-

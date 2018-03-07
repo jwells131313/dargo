@@ -1,4 +1,5 @@
 package api
+
 /*
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *
@@ -46,32 +47,31 @@ import (
 // WriteableDescriptor A writeable version of a descriptor
 type WriteableDescriptor interface {
 	Descriptor
-	
-	// SetAdvertisedInterfaces sets all interfaces advertised by this service
-    SetAdvertisedInterfaces([]reflect.Type)
-    
-    // Adds a single advertised interface
-    AddAdvertisedInterface(reflect.Type)
-    
-    // SetScope sets the scope of this service
-    SetScope(string) 
-    
-    // SetName sets the name of this service (or nil)
-    SetName(string) 
-    
-    // SetQualifiers sets the qualifiers of this service
-    SetQualifiers([]string) 
-    
-    // SetVisibility setsOne of NORMAL or LOCAL
-    SetVisibility(int) 
-    
-    // SetMetadata sets the metadata for this service
-    SetMetadata(map[string][]string) 
-    
-    // SetServiceID sets the serviceid
-    SetServiceID(int64)
-    
-    // SetLocatorID sets the locator id for this service
-    SetLocatorID(int64)
-}
 
+	// SetAdvertisedInterfaces sets all interfaces advertised by this service
+	SetAdvertisedInterfaces([]reflect.Type)
+
+	// Adds a single advertised interface
+	AddAdvertisedInterface(reflect.Type)
+
+	// SetScope sets the scope of this service
+	SetScope(string)
+
+	// SetName sets the name of this service (or nil)
+	SetName(string)
+
+	// SetQualifiers sets the qualifiers of this service
+	SetQualifiers([]string)
+
+	// SetVisibility setsOne of NORMAL or LOCAL
+	SetVisibility(int)
+
+	// SetMetadata sets the metadata for this service
+	SetMetadata(map[string][]string)
+
+	// SetServiceID sets the serviceid
+	SetServiceID(int64)
+
+	// SetLocatorID sets the locator id for this service
+	SetLocatorID(int64)
+}

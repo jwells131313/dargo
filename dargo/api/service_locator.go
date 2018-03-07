@@ -1,4 +1,5 @@
 package api
+
 /*
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *
@@ -48,42 +49,42 @@ type ServiceLocator interface {
 	// returns the best implementation of the interface and any other error
 	// if there was an error creating the interface
 	GetService(toMe reflect.Type) (interface{}, error)
-	
+
 	// GetService gets the service that is correct for the current context with the given interface
 	// returns the best implementation of the interface with the given name
 	// and any other error if there was an error creating the interface
 	GetServiceWithName(toMe reflect.Type, name string) (interface{}, error)
-	
+
 	// GetService gets the service that is correct for the current context with the given
 	// descriptor and any other error if there was an error creating the interface
 	GetServiceFromDescriptor(desc Descriptor) (interface{}, error)
-	
+
 	// GetDescriptors Returns all descriptors that return true when passed through the input function
 	// will not return nil, but may return an empty list
-	GetDescriptors(func (Descriptor) bool) []Descriptor
-	
+	GetDescriptors(func(Descriptor) bool) []Descriptor
+
 	// GetBestDescriptor returns the best descriptor found returning true through the input function
 	// The best descriptor is the one with the highest rank, or if rank is equal the one with the
 	// lowest serviceId or if the serviceId are the same the one with the highest locatorId
-	GetBestDescriptor(func (Descriptor) bool) Descriptor
-	
+	GetBestDescriptor(func(Descriptor) bool) Descriptor
+
 	// GetDescriptorsWithName Returns all descriptors that return true when passed through the input function
 	// and which have the given name.  Can drastically reduce the number of descriptors passed to the method
 	// will not return nil, but may return an empty list
-	GetDescriptorsWithNameOrType(func (Descriptor) bool, reflect.Type, string) []Descriptor
-	
+	GetDescriptorsWithNameOrType(func(Descriptor) bool, reflect.Type, string) []Descriptor
+
 	// GetBestDescriptor returns the best descriptor found returning true through the input function
 	// and which have the given name
 	// The best descriptor is the one with the highest rank, or if rank is equal the one with the
 	// lowest serviceId or if the serviceId are the same the one with the highest locatorId
-	GetBestDescriptorWithNameOrType(func (Descriptor) bool, reflect.Type, string) Descriptor
-	
+	GetBestDescriptorWithNameOrType(func(Descriptor) bool, reflect.Type, string) Descriptor
+
 	// GetName gets the name of this ServiceLocator
 	GetName() string
-	
+
 	// GetID Gets the id of this ServiceLocator
 	GetID() int64
-	
+
 	// Will shut down all services associated with this ServiceLocator
 	Shutdown()
 }

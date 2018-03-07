@@ -1,4 +1,5 @@
 package internal
+
 /*
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *
@@ -41,8 +42,8 @@ package internal
 
 import (
 	"../api"
-	"sync"
 	"fmt"
+	"sync"
 )
 
 type dynamicConfigurationService struct {
@@ -51,35 +52,35 @@ type dynamicConfigurationService struct {
 
 type dynamicConfiguration struct {
 	locator *ServiceLocatorImpl
-	
-	mux sync.Mutex
+
+	mux                 sync.Mutex
 	locatorChangeNumber int64
-	binds []api.Descriptor
-	destroys []func(api.Descriptor) bool
-	closed bool
+	binds               []api.Descriptor
+	destroys            []func(api.Descriptor) bool
+	closed              bool
 }
 
 // NewDynamicConfigurationService Creates a dynamic configuration service with the given locator
 func NewDynamicConfigurationService(l *ServiceLocatorImpl) api.DynamicConfigurationService {
-	retVal := &dynamicConfigurationService {
+	retVal := &dynamicConfigurationService{
 		locator: l,
 	}
-	
+
 	return retVal
 }
 
 // CreateDynamicConfiguration creates a dynamic configuration that can be used to bind into the locator
 func (dcs *dynamicConfigurationService) CreateDynamicConfiguration() api.DynamicConfiguration {
 	lChange := dcs.locator.getLastChange()
-	
-	retVal := &dynamicConfiguration {
-		locator : dcs.locator,
+
+	retVal := &dynamicConfiguration{
+		locator:             dcs.locator,
 		locatorChangeNumber: lChange,
-		binds: []api.Descriptor{},
-		destroys: []func(api.Descriptor) bool{},
-		closed: false,
+		binds:               []api.Descriptor{},
+		destroys:            []func(api.Descriptor) bool{},
+		closed:              false,
 	}
-	
+
 	return retVal
 }
 
@@ -89,13 +90,13 @@ func (dcs *dynamicConfigurationService) CreateDynamicConfiguration() api.Dynamic
 func (dConfig *dynamicConfiguration) Bind(desc api.Descriptor) api.Descriptor {
 	dConfig.mux.Lock()
 	defer dConfig.mux.Unlock()
-	
+
 	lID := dConfig.locator.GetID()
 	sID := dConfig.locator.getAndIncrementSID()
-	
+
 	copied := CopyDescriptor(desc, lID, sID)
 	dConfig.binds = append(dConfig.binds, copied)
-	
+
 	return copied
 }
 
@@ -105,7 +106,7 @@ func (dConfig *dynamicConfiguration) Bind(desc api.Descriptor) api.Descriptor {
 func (dConfig *dynamicConfiguration) AddRemoveFilter(killer func(api.Descriptor) bool) {
 	dConfig.mux.Lock()
 	defer dConfig.mux.Unlock()
-	
+
 	dConfig.destroys = append(dConfig.destroys, killer)
 }
 
@@ -115,14 +116,14 @@ func (dConfig *dynamicConfiguration) Commit() error {
 	if dConfig.closed {
 		return fmt.Errorf("This configuration has been closed possibly because its already been committed")
 	}
-	
+
 	lChange := dConfig.locator.getLastChange()
 	if dConfig.locatorChangeNumber != lChange {
 		dConfig.closed = true
 		return fmt.Errorf("The locator %s has been changed since this dynamic configuration was created.  Will not commit it",
 			dConfig.locator.GetName())
 	}
-	
+
 	dConfig.closed = true
 	return dConfig.locator.updateDescriptors(dConfig.binds, dConfig.destroys)
 }

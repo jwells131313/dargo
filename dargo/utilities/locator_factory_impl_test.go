@@ -1,4 +1,5 @@
 package utilities
+
 /*
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *
@@ -40,21 +41,21 @@ package utilities
  */
 
 import (
-    "testing"
-    "strings"
+	"strings"
+	"testing"
 )
 
 func TestLocatorFactoryWithName(t *testing.T) {
 	slFactory := GetSystemLocatorFactory()
-	
+
 	locator, found := slFactory.FindOrCreateRootLocator("test1")
-	
+
 	lName := locator.GetName()
-	
+
 	if lName != "test1" {
 		t.Errorf("Name returned from factory is incorrect, expected test1 got %s", lName)
 	}
-	
+
 	if found == true {
 		t.Errorf("This should have been a fresh locator, but created returned false")
 	}
@@ -62,38 +63,38 @@ func TestLocatorFactoryWithName(t *testing.T) {
 
 func TestLocatorFactoryWithNoName(t *testing.T) {
 	slFactory := GetSystemLocatorFactory()
-	
+
 	locator, found := slFactory.FindOrCreateRootLocator("")
-	
+
 	lName := locator.GetName()
-	
+
 	if !strings.Contains(lName, "__Generated_Service_Locator_Name_") {
 		t.Errorf("Name returned from factory is incorrect, expected test1 got %s", lName)
 	}
-	
+
 	if found == true {
 		t.Errorf("This should have been a fresh locator, but created returned false")
 	}
-	
+
 	locator2, found2 := slFactory.FindOrCreateRootLocator("")
-	
+
 	lName2 := locator2.GetName()
-	
+
 	if !strings.Contains(lName2, "__Generated_Service_Locator_Name_") {
 		t.Errorf("Name returned from factory is incorrect, expected test1 got %s", lName2)
 	}
-	
+
 	if found2 == true {
 		t.Errorf("This should have been a fresh locator, but created returned false")
 	}
-	
+
 	if lName == lName2 {
 		t.Errorf("Generated names should not match (%s/%s)", lName, lName2)
 	}
-	
+
 	id1 := locator.GetID()
 	id2 := locator2.GetID()
-	
+
 	if id1 == id2 {
 		t.Errorf("The id's of returned locators should never match (%v/%v)", id1, id2)
 	}
@@ -101,40 +102,39 @@ func TestLocatorFactoryWithNoName(t *testing.T) {
 
 func TestLocatorFactoryWithSpecificNameTwice(t *testing.T) {
 	slFactory := GetSystemLocatorFactory()
-	
+
 	locator, found := slFactory.FindOrCreateRootLocator("test2")
-	
+
 	lName := locator.GetName()
-	
+
 	if lName != "test2" {
 		t.Errorf("Name returned from factory is incorrect, expected test1 got %s", lName)
 	}
-	
+
 	if found == true {
 		t.Errorf("This should have been a fresh locator, but created returned false")
 	}
-	
+
 	locator2, found2 := slFactory.FindOrCreateRootLocator("test2")
-	
+
 	if found2 == false {
 		t.Errorf("found2 should be true since this one should have been found")
 	}
-	
+
 	lName2 := locator.GetName()
-	
+
 	if lName != lName2 {
 		t.Errorf("Names should be the same, (%s/%s)", lName, lName2)
 	}
-	
+
 	id1 := locator.GetID()
 	id2 := locator2.GetID()
-	
+
 	if id1 != id2 {
 		t.Errorf("The id should be the same, (%v/%v)", id1, id2)
 	}
-	
+
 	if locator != locator2 {
 		t.Errorf("The locators should be exactly the same")
 	}
 }
-

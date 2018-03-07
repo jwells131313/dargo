@@ -1,4 +1,5 @@
 package api
+
 /*
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *
@@ -43,7 +44,7 @@ package api
 // service locator and can be used to add application services
 // to the context sensitive registry
 type DynamicConfigurationService interface {
-	CreateDynamicConfiguration() DynamicConfiguration	
+	CreateDynamicConfiguration() DynamicConfiguration
 }
 
 // DynamicConfiguration use this to add and remove descriptors to
@@ -53,12 +54,11 @@ type DynamicConfiguration interface {
 	// returns the copy of the descriptor that will bound in if
 	// commit succeeds
 	Bind(desc Descriptor) Descriptor
-	
+
 	// AddRemoveFilter adds a filter that will be run over all
 	// existing descriptors to determing which ones to remove
 	// from the locator
 	AddRemoveFilter(func(Descriptor) bool)
-	
+
 	Commit() error
 }
-

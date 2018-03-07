@@ -1,4 +1,5 @@
 package testFiles
+
 /*
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *
@@ -39,13 +40,17 @@ package testFiles
  * holder.
  */
 
+// EchoService The interface that should be associated with the service
+type EchoService interface {
+	// Echo return the input string
+	Echo(string) string
+}
+
 // EchoImpl A very simple application service implementation
 type EchoImpl struct {
-	
 }
 
 // Echo simply returns the input it was given
 func (ei *EchoImpl) Echo(input string) string {
 	return input
 }
-

@@ -1,4 +1,5 @@
 package internal
+
 /*
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *
@@ -55,8 +56,8 @@ func NewConstantDescriptor(constant interface{}) api.WriteableDescriptor {
 	retVal := &constantDescriptor{}
 	retVal.myConstant = constant
 	retVal.SetScope("PerLookup")
-	
-    return retVal
+
+	return retVal
 }
 
 func (desc *constantDescriptor) GetCreateFunction() func(api.ServiceLocator) (interface{}, error) {
@@ -70,6 +71,3 @@ func (desc *constantDescriptor) GetDestroyFunction() func(api.ServiceLocator, in
 		return nil
 	}
 }
-
-
-

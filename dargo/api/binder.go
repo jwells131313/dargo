@@ -1,4 +1,5 @@
 package api
+
 /*
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *
@@ -45,13 +46,13 @@ import "fmt"
 
 // Bind the descriptor to the interface type  toMe must be an interface
 func Bind(desc *Descriptor, toMe reflect.Type, name string, metadata map[string][]string) error {
-	kind := toMe.Kind();
-	
+	kind := toMe.Kind()
+
 	fmt.Println("kind=", kind.String())
-	
-	if (kind != reflect.Interface) {
+
+	if kind != reflect.Interface {
 		return errors.New("toMe must be an interface")
 	}
-	
+
 	return nil
 }

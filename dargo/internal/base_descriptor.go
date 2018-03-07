@@ -1,4 +1,5 @@
 package internal
+
 /*
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *
@@ -46,14 +47,14 @@ import (
 // BaseDescriptor a base descriptor, without the create and delete
 type BaseDescriptor struct {
 	myContracts []reflect.Type
-	scope string
-	name string
-	qualifiers []string
-	visibility int
-	metadata map[string][]string
-	rank int32
-	serviceid int64
-	locatorid int64
+	scope       string
+	name        string
+	qualifiers  []string
+	visibility  int
+	metadata    map[string][]string
+	rank        int32
+	serviceid   int64
+	locatorid   int64
 }
 
 // GetAdvertisedInterfaces Returns all interfaces advertised by this service
@@ -109,7 +110,7 @@ func (base *BaseDescriptor) GetLocatorID() int64 {
 // SetAdvertisedInterfaces sets all interfaces advertised by this service
 func (base *BaseDescriptor) SetAdvertisedInterfaces(v []reflect.Type) {
 	base.myContracts = copyAdvertised(v)
-	
+
 }
 
 // AddAdvertisedInterface adds the given type to the set of interfaces of this descriptor
@@ -154,27 +155,27 @@ func (base *BaseDescriptor) SetLocatorID(v int64) {
 
 func copyMetadata(input map[string][]string) map[string][]string {
 	b := make(map[string][]string)
-	
+
 	for k, v1 := range input {
 		v2 := make([]string, len(v1))
-		copy (v2, v1)
-		
+		copy(v2, v1)
+
 		b[k] = v2
 	}
-	
+
 	return b
 }
 
 func copyStringArray(input []string) []string {
 	retVal := make([]string, len(input))
 	copy(retVal, input)
-	
+
 	return retVal
 }
 
 func copyAdvertised(input []reflect.Type) []reflect.Type {
 	retVal := make([]reflect.Type, len(input))
 	copy(retVal, input)
-	
+
 	return retVal
 }

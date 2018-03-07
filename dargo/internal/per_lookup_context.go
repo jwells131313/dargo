@@ -1,4 +1,5 @@
 package internal
+
 /*
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *
@@ -56,7 +57,7 @@ func (context *PerLookupContext) GetScope() string {
 func (context *PerLookupContext) FindOrCreate(locator api.ServiceLocator, desc api.Descriptor) (interface{}, error) {
 	var f func(api.ServiceLocator) (interface{}, error)
 	f = desc.GetCreateFunction()
-	
+
 	return f(locator)
 }
 

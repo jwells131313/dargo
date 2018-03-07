@@ -1,4 +1,5 @@
 package internal
+
 /*
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *
@@ -40,29 +41,29 @@ package internal
  */
 
 import (
-    "testing"
-    "reflect"
+	"reflect"
+	"testing"
 )
 
-type iFace3 interface {}
+type iFace3 interface{}
 
 func TestConstantDescriptor(t *testing.T) {
 	i1 := new(iFace3)
-	
+
 	cDesc := NewConstantDescriptor(i1)
-	
+
 	var contracts []reflect.Type
-	contracts = []reflect.Type { reflect.TypeOf(i1) }
-	
+	contracts = []reflect.Type{reflect.TypeOf(i1)}
+
 	cDesc.SetAdvertisedInterfaces(contracts)
-	
+
 	fCreate := cDesc.GetCreateFunction()
-	
+
 	i2, err2 := fCreate(nil)
 	if err2 != nil {
 		t.Errorf("Could not call create method from descriptor %v", err2)
 	}
-	
+
 	if i1 != i2 {
 		t.Errorf("Did not get my original constant back! %v/%v", i1, i2)
 	}
@@ -70,25 +71,24 @@ func TestConstantDescriptor(t *testing.T) {
 
 func TestSystemDescriptor(t *testing.T) {
 	i1 := new(iFace3)
-	
+
 	cDesc := NewConstantDescriptor(i1)
-	
+
 	var contracts []reflect.Type
-	contracts = []reflect.Type { reflect.TypeOf(i1) }
-	
+	contracts = []reflect.Type{reflect.TypeOf(i1)}
+
 	cDesc.SetAdvertisedInterfaces(contracts)
-	
+
 	sDesc := CopyDescriptor(cDesc, 0, 0)
-	
+
 	fCreate := sDesc.GetCreateFunction()
-	
+
 	i2, err2 := fCreate(nil)
 	if err2 != nil {
 		t.Errorf("Could not call create method from descriptor %v", err2)
 	}
-	
+
 	if i1 != i2 {
 		t.Errorf("Did not get my original constant back! %v/%v", i1, i2)
 	}
 }
-

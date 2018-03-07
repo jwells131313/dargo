@@ -1,4 +1,5 @@
 package api
+
 /*
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *
@@ -43,17 +44,16 @@ package api
 // services in a particular context
 type Context interface {
 	GetScope() string
-	
+
 	FindOrCreate(locator ServiceLocator, desc Descriptor) (interface{}, error)
-	
+
 	ContainsKey(locator ServiceLocator, desc Descriptor) bool
-	
+
 	DestroyOne(locator ServiceLocator, desc Descriptor) error
-	
+
 	GetSupportsNilCreation(locator ServiceLocator) bool
-	
+
 	IsActive(locator ServiceLocator) bool
-	
+
 	Shutdown(locator ServiceLocator)
 }
-
