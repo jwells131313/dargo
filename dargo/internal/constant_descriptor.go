@@ -71,3 +71,13 @@ func (desc *constantDescriptor) GetDestroyFunction() func(api.ServiceLocator, in
 		return nil
 	}
 }
+
+// SetCreateFunction create creates the instance of the type
+func (desc *constantDescriptor) SetCreateFunction(func(api.ServiceLocator) (interface{}, error)) {
+	// does nothing to a constant descriptor
+}
+
+// SetDestroyFunction destroys this service
+func (desc *constantDescriptor) SetDestroyFunction(func(api.ServiceLocator, interface{}) error) {
+	// does nothing to a constant descriptor
+}

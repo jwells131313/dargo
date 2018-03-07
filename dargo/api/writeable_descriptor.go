@@ -47,6 +47,12 @@ import (
 // WriteableDescriptor A writeable version of a descriptor
 type WriteableDescriptor interface {
 	Descriptor
+	
+	// SetCreateFunction create creates the instance of the type
+	SetCreateFunction(func(ServiceLocator) (interface{}, error))
+
+	// SetDestroyFunction destroys this service
+	SetDestroyFunction(func(ServiceLocator, interface{}) error)
 
 	// SetAdvertisedInterfaces sets all interfaces advertised by this service
 	SetAdvertisedInterfaces([]reflect.Type)
