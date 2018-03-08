@@ -40,19 +40,41 @@ package api
  * holder.
  */
 
-import "reflect"
-import "errors"
-import "fmt"
+import (
+	"reflect"
+	"errors"
+)
+
+// Binder A fluent interface for creating descriptors
+type Binder interface {
+	To(reflect.Type) Binder
+	Named(string) Binder
+	Build() (WriteableDescriptor, error)
+}
+
+type binder struct {
+	creator func(ServiceLocator) (interface{}, error)
+	contracts []reflect.Type
+	name string
+}
 
 // Bind the descriptor to the interface type  toMe must be an interface
-func Bind(desc *Descriptor, toMe reflect.Type, name string, metadata map[string][]string) error {
-	kind := toMe.Kind()
-
-	fmt.Println("kind=", kind.String())
-
-	if kind != reflect.Interface {
-		return errors.New("toMe must be an interface")
+func Bind(creatorFunc func(ServiceLocator) (interface{}, error)) Binder {
+	return &binder {
+		creator: creatorFunc,
 	}
+}
 
-	return nil
+func (binder *binder) To(t reflect.Type) Binder {
+	binder.contracts = append(binder.contracts, t)
+	return binder
+}
+
+func (binder *binder) Named(userName string) Binder {
+	binder.name = userName
+	return binder
+}
+
+func (binder *binder) Build() (WriteableDescriptor, error) {
+	return nil, errors.New("not yet implemented")
 }

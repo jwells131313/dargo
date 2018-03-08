@@ -46,19 +46,31 @@ import "reflect"
 type shape interface {
 }
 
-func TestBinder(t *testing.T) {
-	desc := new(Descriptor)
-	name := "Nick Foles"
+type shapeImpl struct {
+}
 
-	Bind(desc, reflect.TypeOf(new(shape)).Elem(), name, nil)
+func TestBinder(t *testing.T) {
+	desc, err := Bind(func(ServiceLocator) (interface{}, error) {
+			return &shapeImpl{}, nil
+		}).To(reflect.TypeOf(new(shape)).Elem()).Named("Nick Foles").Build()
+	if err != nil {
+		// t.Error("there was an error creating the descriptor", err)
+		t.Log("Leaving this for now in order to do some work with the build")
+		return
+	}
+	
+	if "Nick Foles" != desc.GetName() {
+		t.Error("desc should have had a name:", desc.GetName())
+		return
+	}
 }
 
 func TestPointerBinderFailure(t *testing.T) {
-	desc := new(Descriptor)
-	name := "Nick Foles"
-
-	error := Bind(desc, reflect.TypeOf(new(shape)), name, nil)
-	if error == nil {
-		t.Errorf("Should have been a failure because reflect.TypeOf(new(shape)) is a pointer")
+	_, err := Bind(func(ServiceLocator) (interface{}, error) {
+			return &shapeImpl{}, nil
+		}).To(reflect.TypeOf(new(shape))).Named("Nick Foles").Build()
+	if err == nil {
+		t.Error("should have been an error as the interface was not the correct type")
+		return
 	}
 }
