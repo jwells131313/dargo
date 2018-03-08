@@ -41,8 +41,8 @@ package testFiles
  */
 
 import (
-	"../api"
-	"../utilities"
+	"github.com/jwells131313/dargo/api"
+	"github.com/jwells131313/dargo/utilities"
 	"reflect"
 	"testing"
 )
