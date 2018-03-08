@@ -41,7 +41,7 @@ package internal
  */
 
 import (
-	"../api"
+	"github.com/jwells131313/dargo/api"
 )
 
 // PerLookupContext is the context implementation for PerLookup

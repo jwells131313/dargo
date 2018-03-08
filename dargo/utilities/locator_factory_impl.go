@@ -40,8 +40,8 @@ package utilities
  * holder.
  */
 import (
-	"../api"
-	"../internal"
+	"github.com/jwells131313/dargo/api"
+	"github.com/jwells131313/dargo/internal"
 	"strconv"
 	"sync"
 )

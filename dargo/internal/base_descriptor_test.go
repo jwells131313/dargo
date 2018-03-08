@@ -1,7 +1,7 @@
 package internal
 
 import (
-	"../api"
+	"github.com/jwells131313/dargo/api"
 	"reflect"
 	"strings"
 	"testing"

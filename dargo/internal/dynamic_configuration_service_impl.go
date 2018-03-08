@@ -41,7 +41,7 @@ package internal
  */
 
 import (
-	"../api"
+	"github.com/jwells131313/dargo/api"
 	"fmt"
 	"sync"
 )

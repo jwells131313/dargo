@@ -42,6 +42,8 @@ box:
 
 # Build definition
 build:
+  base-path: /go/src/github.com/jwells131313/dargo
+
   # The steps that will be executed on build
   steps:
 
