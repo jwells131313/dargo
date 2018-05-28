@@ -1,5 +1,3 @@
-package api
-
 /*
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *
@@ -40,9 +38,11 @@ package api
  * holder.
  */
 
+package api
+
 import (
-	"reflect"
 	"errors"
+	"reflect"
 )
 
 // Binder A fluent interface for creating descriptors
@@ -53,14 +53,14 @@ type Binder interface {
 }
 
 type binder struct {
-	creator func(ServiceLocator) (interface{}, error)
+	creator   func(ServiceLocator) (interface{}, error)
 	contracts []reflect.Type
-	name string
+	name      string
 }
 
 // Bind the descriptor to the interface type  toMe must be an interface
 func Bind(creatorFunc func(ServiceLocator) (interface{}, error)) Binder {
-	return &binder {
+	return &binder{
 		creator: creatorFunc,
 	}
 }

@@ -1,5 +1,3 @@
-package utilities
-
 /*
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *
@@ -39,6 +37,8 @@ package utilities
  * only if the new code is made subject to such option by the copyright
  * holder.
  */
+
+package utilities
 
 import (
 	"strings"

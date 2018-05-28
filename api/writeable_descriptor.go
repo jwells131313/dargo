@@ -1,5 +1,3 @@
-package api
-
 /*
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *
@@ -40,6 +38,8 @@ package api
  * holder.
  */
 
+package api
+
 import (
 	"reflect"
 )
@@ -47,7 +47,7 @@ import (
 // WriteableDescriptor A writeable version of a descriptor
 type WriteableDescriptor interface {
 	Descriptor
-	
+
 	// SetCreateFunction create creates the instance of the type
 	SetCreateFunction(func(ServiceLocator) (interface{}, error))
 

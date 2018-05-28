@@ -1,5 +1,3 @@
-package testFiles
-
 /*
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *
@@ -39,6 +37,8 @@ package testFiles
  * only if the new code is made subject to such option by the copyright
  * holder.
  */
+
+package testFiles
 
 import (
 	"github.com/jwells131313/dargo/api"

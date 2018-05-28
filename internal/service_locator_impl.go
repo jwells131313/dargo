@@ -1,5 +1,3 @@
-package internal
-
 /*
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *
@@ -40,9 +38,11 @@ package internal
  * holder.
  */
 
+package internal
+
 import (
-	"github.com/jwells131313/dargo/api"
 	"fmt"
+	"github.com/jwells131313/dargo/api"
 	"reflect"
 	"sort"
 	"sync"

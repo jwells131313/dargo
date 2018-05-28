@@ -1,5 +1,3 @@
-package api
-
 /*
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS HEADER.
  *
@@ -40,8 +38,12 @@ package api
  * holder.
  */
 
-import "testing"
-import "reflect"
+package api
+
+import (
+	"reflect"
+	"testing"
+)
 
 type shape interface {
 }
@@ -51,14 +53,14 @@ type shapeImpl struct {
 
 func TestBinder(t *testing.T) {
 	desc, err := Bind(func(ServiceLocator) (interface{}, error) {
-			return &shapeImpl{}, nil
-		}).To(reflect.TypeOf(new(shape)).Elem()).Named("Nick Foles").Build()
+		return &shapeImpl{}, nil
+	}).To(reflect.TypeOf(new(shape)).Elem()).Named("Nick Foles").Build()
 	if err != nil {
 		// t.Error("there was an error creating the descriptor", err)
 		t.Log("Leaving this for now in order to do some work with the build")
 		return
 	}
-	
+
 	if "Nick Foles" != desc.GetName() {
 		t.Error("desc should have had a name:", desc.GetName())
 		return
@@ -67,8 +69,8 @@ func TestBinder(t *testing.T) {
 
 func TestPointerBinderFailure(t *testing.T) {
 	_, err := Bind(func(ServiceLocator) (interface{}, error) {
-			return &shapeImpl{}, nil
-		}).To(reflect.TypeOf(new(shape))).Named("Nick Foles").Build()
+		return &shapeImpl{}, nil
+	}).To(reflect.TypeOf(new(shape))).Named("Nick Foles").Build()
 	if err == nil {
 		t.Error("should have been an error as the interface was not the correct type")
 		return
