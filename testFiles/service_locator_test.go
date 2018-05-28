@@ -83,4 +83,46 @@ func TestBasicServiceLocatorLookup(t *testing.T) {
 		return
 	}
 
+	if true {
+		t.Log("Below not yet implemented")
+		return
+	}
+
+	wd, err := api.Bind(func(locator api.ServiceLocator) (interface{}, error) {
+		return NewEchoApplication(), nil
+	}).Build()
+	if err != nil {
+		t.Error("Could not bind the echo application", err)
+		return
+	}
+
+	sd := dConfig.Bind(wd)
+	if sd == nil {
+		t.Error("Should have returned read-only system descriptor")
+		return
+	}
+
+	err = dConfig.Commit()
+	if err == nil {
+		t.Error("DConfig commit failed", err)
+		return
+	}
+
+	esi, err3 := locator.GetService(reflect.TypeOf(new(EchoApplication)).Elem())
+	if err3 != nil {
+		t.Error("Could not find EchoApplication", err3)
+		return
+	}
+
+	ea, ok := esi.(EchoApplication)
+	if !ok {
+		t.Error("Could not cast returned object to EchoApplication")
+		return
+	}
+
+	ret := ea.Echo("hello")
+	if ret != "hello" {
+		t.Errorf("Expected hello got %s", ret)
+		return
+	}
 }

@@ -40,14 +40,13 @@
 
 package testFiles
 
-// EchoService The interface that should be associated with the service
-type EchoService interface {
-	// Echo return the input string
-	Echo(string) string
-}
-
 // EchoImpl A very simple application service implementation
 type EchoImpl struct {
+}
+
+// NewEchoApplication creates a new echo application
+func NewEchoApplication() EchoApplication {
+	return &EchoImpl{}
 }
 
 // Echo simply returns the input it was given
