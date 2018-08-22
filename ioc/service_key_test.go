@@ -48,6 +48,10 @@ import (
 const (
 	foo = "foo"
 	bar = "bar"
+
+	red   = "red"
+	blue  = "blue"
+	green = "green"
 )
 
 func TestNewSK(t *testing.T) {
@@ -56,6 +60,16 @@ func TestNewSK(t *testing.T) {
 	assert.Equal(t, sk.GetNamespace(), foo, "namespace should be equal")
 	assert.Equal(t, sk.GetName(), bar, "name should be equal")
 	assert.Equal(t, len(sk.GetQualifiers()), 0, "should be no qualifiers")
+
+	sk1 := NewServiceKey(foo, bar, red, blue, green)
+
+	assert.Equal(t, sk1.GetNamespace(), foo, "namespace should be equal (2)")
+	assert.Equal(t, sk1.GetName(), bar, "name should be equal (2)")
+
+	assert.Equal(t, len(sk1.GetQualifiers()), 3, "should be 3 qualifiers")
+	assert.Equal(t, red, sk1.GetQualifiers()[0], "should be red at 0 index")
+	assert.Equal(t, blue, sk1.GetQualifiers()[1], "should be blue at 1 index")
+	assert.Equal(t, green, sk1.GetQualifiers()[2], "should be green at 2 index")
 }
 
 func TestDSK(t *testing.T) {
@@ -64,6 +78,16 @@ func TestDSK(t *testing.T) {
 	assert.Equal(t, sk.GetNamespace(), DefaultNamespace, "default namespace should be equal")
 	assert.Equal(t, sk.GetName(), bar, "default name should be equal")
 	assert.Equal(t, len(sk.GetQualifiers()), 0, "should be no qualifiers")
+
+	sk1 := DSK(bar, red, blue, green)
+
+	assert.Equal(t, sk1.GetNamespace(), DefaultNamespace, "default namespace should be equal (2)")
+	assert.Equal(t, sk1.GetName(), bar, "default name should be equal (2)")
+
+	assert.Equal(t, len(sk1.GetQualifiers()), 3, "default should be 3 qualifiers")
+	assert.Equal(t, red, sk1.GetQualifiers()[0], "default should be red at 0 index")
+	assert.Equal(t, blue, sk1.GetQualifiers()[1], "default should be blue at 1 index")
+	assert.Equal(t, green, sk1.GetQualifiers()[2], "default should be green at 2 index")
 }
 
 func TestSSK(t *testing.T) {
@@ -72,4 +96,14 @@ func TestSSK(t *testing.T) {
 	assert.Equal(t, sk.GetNamespace(), SystemNamespace, "system namespace should be equal")
 	assert.Equal(t, sk.GetName(), bar, "system name should be equal")
 	assert.Equal(t, len(sk.GetQualifiers()), 0, "should be no qualifiers")
+
+	sk1 := SSK(bar, red, blue, green)
+
+	assert.Equal(t, sk1.GetNamespace(), SystemNamespace, "system namespace should be equal (2)")
+	assert.Equal(t, sk1.GetName(), bar, "system name should be equal (2)")
+
+	assert.Equal(t, len(sk1.GetQualifiers()), 3, "system should be 3 qualifiers")
+	assert.Equal(t, red, sk1.GetQualifiers()[0], "system should be red at 0 index")
+	assert.Equal(t, blue, sk1.GetQualifiers()[1], "system should be blue at 1 index")
+	assert.Equal(t, green, sk1.GetQualifiers()[2], "system should be green at 2 index")
 }
