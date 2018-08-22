@@ -44,6 +44,7 @@ package ioc
 type ServiceKey interface {
 	GetNamespace() string
 	GetName() string
+	GetQualifiers() []string
 }
 
 const (
@@ -54,15 +55,23 @@ const (
 )
 
 // NewServiceKey Creates a new darget managed service key
-func NewServiceKey(namespace, name string) ServiceKey {
+func NewServiceKey(namespace, name string, qualifiers ...string) ServiceKey {
+
+	qs := make([]string, 0)
+	for _, q := range qualifiers {
+		qs = append(qs, q)
+	}
+
 	return &serviceKeyData{
-		namespace: namespace,
-		name:      name,
+		namespace:  namespace,
+		name:       name,
+		qualifiers: qs,
 	}
 }
 
 type serviceKeyData struct {
 	namespace, name string
+	qualifiers      []string
 }
 
 func (key *serviceKeyData) GetNamespace() string {
@@ -73,12 +82,16 @@ func (key *serviceKeyData) GetName() string {
 	return key.name
 }
 
+func (key *serviceKeyData) GetQualifiers() []string {
+	return key.qualifiers
+}
+
 // DSK creates a service key in the default namespace with the given name
-func DSK(name string) ServiceKey {
-	return NewServiceKey(DefaultNamespace, name)
+func DSK(name string, qualifiers ...string) ServiceKey {
+	return NewServiceKey(DefaultNamespace, name, qualifiers...)
 }
 
 // SSK creates a service key in the system namespace with the given name
-func SSK(name string) ServiceKey {
-	return NewServiceKey(SystemNamespace, name)
+func SSK(name string, qualifiers ...string) ServiceKey {
+	return NewServiceKey(SystemNamespace, name, qualifiers...)
 }
