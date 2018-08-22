@@ -63,6 +63,7 @@ func TestDSK(t *testing.T) {
 
 	assert.Equal(t, sk.GetNamespace(), DefaultNamespace, "default namespace should be equal")
 	assert.Equal(t, sk.GetName(), bar, "default name should be equal")
+	assert.Equal(t, len(sk.GetQualifiers()), 0, "should be no qualifiers")
 }
 
 func TestSSK(t *testing.T) {
@@ -70,4 +71,5 @@ func TestSSK(t *testing.T) {
 
 	assert.Equal(t, sk.GetNamespace(), SystemNamespace, "system namespace should be equal")
 	assert.Equal(t, sk.GetName(), bar, "system name should be equal")
+	assert.Equal(t, len(sk.GetQualifiers()), 0, "should be no qualifiers")
 }
