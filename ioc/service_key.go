@@ -57,7 +57,7 @@ const (
 	SystemNamespace = "system"
 	// DefaultNamespace A default namespace
 	DefaultNamespace = "default"
-	// A namespace specifically for ContextualScope services
+	// ContextualScopeNamespace A namespace specifically for ContextualScope services
 	ContextualScopeNamespace = "sys/scope"
 )
 

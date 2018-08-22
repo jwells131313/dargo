@@ -46,11 +46,11 @@ import (
 )
 
 const (
-	// Return an error if a service locator with that name exists
+	// FailIfPresent Return an error if a service locator with that name exists
 	FailIfPresent = 0
-	// Return the existing service locator if found, otherwise create it
+	// ReturnExistingOrCreateNew Return the existing service locator if found, otherwise create it
 	ReturnExistingOrCreateNew = 1
-	// Return an existing locator with the given name, and fail if it does not already exist
+	// FailIfNotPresent Return an existing locator with the given name, and fail if it does not already exist
 	FailIfNotPresent = 2
 
 	// ServiceLocatorName The name of the ServiceLocator service (in the system namespace)

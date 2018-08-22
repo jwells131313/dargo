@@ -49,6 +49,7 @@ type serviceKeyFilter struct {
 	key ServiceKey
 }
 
+// NewServiceKeyFilter creates a filter for the given service key
 func NewServiceKeyFilter(key ServiceKey) Filter {
 	return &serviceKeyFilter{
 		key,

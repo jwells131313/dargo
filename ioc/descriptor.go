@@ -217,7 +217,7 @@ func NewWriteableDescriptor() WriteableDescriptor {
 	return retVal
 }
 
-// NewConstantDesciptor creates a descriptor that always resolves to exactly the constant
+// NewConstantDescriptor creates a descriptor that always resolves to exactly the constant
 // passed in.  It will by default be put into the PerLookup scope
 func NewConstantDescriptor(key ServiceKey, cnstnt interface{}) WriteableDescriptor {
 	retVal := &constantDescriptorImpl{
