@@ -209,6 +209,7 @@ func NewDescriptor(desc Descriptor, serviceID, locatorID int64) (Descriptor, err
 func NewWriteableDescriptor() WriteableDescriptor {
 	retVal := &writeableDescriptorImpl{}
 
+	retVal.namespace = DefaultNamespace
 	retVal.qualifiers = make([]string, 0)
 	retVal.metadata = make(map[string][]string)
 	retVal.visibility = Normal

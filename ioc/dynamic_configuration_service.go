@@ -40,11 +40,16 @@
 
 package ioc
 
+import (
+	"fmt"
+	"sync"
+)
+
 // DynamicConfigurationService This service is bound into every
 // service locator and can be used to add application services
 // to the context sensitive registry
 type DynamicConfigurationService interface {
-	CreateDynamicConfiguration() DynamicConfiguration
+	CreateDynamicConfiguration() (DynamicConfiguration, error)
 }
 
 // DynamicConfiguration use this to add and remove descriptors to
@@ -53,12 +58,12 @@ type DynamicConfiguration interface {
 	// Bind adds a descriptor to be bound into the service locator
 	// returns the copy of the descriptor that will bound in if
 	// commit succeeds
-	Bind(desc Descriptor) Descriptor
+	Bind(desc Descriptor) (Descriptor, error)
 
 	// AddRemoveFilter adds a filter that will be run over all
 	// existing descriptors to determing which ones to remove
 	// from the locator
-	AddRemoveFilter(func(Descriptor) bool)
+	AddRemoveFilter(Filter) error
 
 	Commit() error
 }
@@ -73,6 +78,86 @@ func newDynamicConfigurationService(parent *serviceLocatorData) DynamicConfigura
 	}
 }
 
-func (dcd *dynamicConfigData) CreateDynamicConfiguration() DynamicConfiguration {
-	panic("implement me")
+func (dcd *dynamicConfigData) CreateDynamicConfiguration() (DynamicConfiguration, error) {
+	return newModifier(dcd.parent), nil
+}
+
+type dynamicConfigModificationData struct {
+	lock               sync.Mutex
+	state              int
+	parent             *serviceLocatorData
+	originalGeneration uint64
+	binds              []Descriptor
+	removeFilters      []Filter
+}
+
+func newModifier(parent *serviceLocatorData) DynamicConfiguration {
+	return &dynamicConfigModificationData{
+		parent:             parent,
+		originalGeneration: parent.getGeneration(),
+		binds:              make([]Descriptor, 0),
+		removeFilters:      make([]Filter, 0),
+	}
+}
+
+func (mod *dynamicConfigModificationData) checkState() error {
+	if mod.state != 0 {
+		return fmt.Errorf("This dynamic configuration has been committed or closed for other reasons")
+	}
+
+	return nil
+}
+
+func (mod *dynamicConfigModificationData) Bind(desc Descriptor) (Descriptor, error) {
+	mod.lock.Lock()
+	defer mod.lock.Unlock()
+
+	err := mod.checkState()
+	if err != nil {
+		return nil, err
+	}
+
+	serviceID := mod.parent.getNextServiceID()
+	locatorID := mod.parent.GetID()
+
+	retVal, err := NewDescriptor(desc, serviceID, locatorID)
+	if err != nil {
+		return nil, err
+	}
+
+	mod.binds = append(mod.binds, retVal)
+
+	return retVal, nil
+}
+
+func (mod *dynamicConfigModificationData) AddRemoveFilter(f Filter) error {
+	mod.lock.Lock()
+	defer mod.lock.Unlock()
+
+	err := mod.checkState()
+	if err != nil {
+		return err
+	}
+
+	mod.removeFilters = append(mod.removeFilters, f)
+
+	return nil
+}
+
+func (mod *dynamicConfigModificationData) Commit() error {
+	mod.lock.Lock()
+	defer mod.lock.Unlock()
+
+	err := mod.checkState()
+	if err != nil {
+		return err
+	}
+
+	err = mod.parent.update(mod.binds, mod.removeFilters, mod.originalGeneration)
+	mod.state = 1
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

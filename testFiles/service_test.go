@@ -40,92 +40,75 @@
 
 package testFiles
 
-/*
-
 import (
-	"github.com/jwells131313/dargo/api"
-	"github.com/jwells131313/dargo/utilities"
-	"reflect"
+	"github.com/jwells131313/dargo/ioc"
+	"github.com/stretchr/testify/assert"
 	"testing"
+)
+
+const (
+	ServiceTestLocatorName = "ServiceTestLocatorName"
+	EchoServiceName        = "EchoService"
 )
 
 // TestBasicServiceLocatorLookup.  This uses the raw DynamicConfigurationService
 // in order to add a service (echo) and then look up the service
-func TestBasicServiceLocatorLookup(t *testing.T) {
-	locatorFactory := utilities.GetSystemLocatorFactory()
+func TestAddServiceWithDCS(t *testing.T) {
+	locator, err := ioc.NewServiceLocator(ServiceTestLocatorName, ioc.FailIfPresent)
+	assert.Nil(t, err, "error creating locator")
 
-	locator, found := locatorFactory.FindOrCreateRootLocator("BasicServiceLocatorLookup")
-	defer locator.Shutdown()
+	wd := ioc.NewWriteableDescriptor()
+	wd.SetName(EchoServiceName)
+	wd.SetCreateFunction(createEcho)
 
-	if found != false {
-		t.Errorf("There was an error creating BasicServiceLocatorLookup service locator %v", locator)
-		return
-	}
-
-	dynamicConfigurationServiceRaw, err2 := locator.GetService(reflect.TypeOf(new(api.DynamicConfigurationService)).Elem())
-	if dynamicConfigurationServiceRaw == nil {
-		t.Errorf("There must always be an implementation of the DCS in any ServiceLocator")
-		return
-	}
-	if err2 != nil {
-		t.Errorf("There was an error getting the service %v", err2)
-		return
-	}
-
-	dynamicConfigurationService, ok := dynamicConfigurationServiceRaw.(api.DynamicConfigurationService)
-
-	if !ok {
-		t.Errorf("Could not do the cast")
-		return
-	}
-
-	dConfig := dynamicConfigurationService.CreateDynamicConfiguration()
-	if dConfig == nil {
-		t.Errorf("Got a nil dynamic configuration, that's a fail")
-		return
-	}
-
-	if true {
-		t.Log("Below not yet implemented")
-		return
-	}
-
-	wd, err := api.Bind(func(locator api.ServiceLocator) (interface{}, error) {
-		return NewEchoApplication(), nil
-	}).Build()
+	dcs, err := getDCS(t, locator)
 	if err != nil {
-		t.Error("Could not bind the echo application", err)
 		return
 	}
 
-	sd := dConfig.Bind(wd)
-	if sd == nil {
-		t.Error("Should have returned read-only system descriptor")
+	config, err := dcs.CreateDynamicConfiguration()
+	assert.Nil(t, err, "could not create a dynamic configuration")
+
+	wdb, err := config.Bind(wd)
+	assert.Nil(t, err, "could not bind user descriptor")
+
+	assert.True(t, wdb.GetLocatorID() >= 0, "Got incorrect locator ID")
+	assert.True(t, wdb.GetServiceID() > 0, "Gog incorrect service ID")
+
+	err = config.Commit()
+	assert.Nil(t, err, "commit failed")
+
+	// Now lets get the service
+	if true {
+		t.Log("Fix this test once we have a nice cache for singleton service")
 		return
 	}
 
-	err = dConfig.Commit()
-	if err == nil {
-		t.Error("DConfig commit failed", err)
-		return
-	}
+	raw, err := locator.GetService(ioc.DSK(EchoServiceName))
+	assert.Nil(t, err, "error getting the user service")
 
-	esi, err3 := locator.GetService(reflect.TypeOf(new(EchoApplication)).Elem())
-	if err3 != nil {
-		t.Error("Could not find EchoApplication", err3)
-		return
-	}
+	echoService, ok := raw.(EchoApplication)
+	assert.True(t, ok, "Returned service is not an EchoApplication")
 
-	ea, ok := esi.(EchoApplication)
-	if !ok {
-		t.Error("Could not cast returned object to EchoApplication")
-		return
-	}
+	reply := echoService.Echo("hi")
+	assert.Equal(t, reply, "hi", "Echo didn't echo?")
 
-	ret := ea.Echo("hello")
-	if ret != "hello" {
-		t.Errorf("Expected hello got %s", ret)
-		return
-	}
 }
-*/
+
+func getDCS(t *testing.T, locator ioc.ServiceLocator) (ioc.DynamicConfigurationService, error) {
+	raw, err := locator.GetService(ioc.SSK(ioc.DynamicConfigurationServiceName))
+	assert.Nil(t, err, "could not get dynamic configuration service")
+
+	dcs, ok := raw.(ioc.DynamicConfigurationService)
+	assert.True(t, ok, "Service returned is not a dynamic configuration service")
+
+	return dcs, nil
+}
+
+func createEcho(locator ioc.ServiceLocator, key ioc.ServiceKey) (interface{}, error) {
+	return NewEchoApplication(), nil
+}
+
+func destroyEcho(locator ioc.ServiceLocator, key ioc.ServiceKey, obj interface{}) error {
+	return nil
+}

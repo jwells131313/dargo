@@ -104,6 +104,8 @@ type serviceLocatorData struct {
 
 	perLookupContext ContextualScope
 	singletonContext ContextualScope
+
+	generation uint64
 }
 
 // NewServiceLocator this will find or create a service locator with the given name, and
@@ -143,6 +145,7 @@ func NewServiceLocator(name string, qos int) (ServiceLocator, error) {
 		ID:               ID,
 		allDescriptors:   make([]Descriptor, 0),
 		perLookupContext: newPerLookupContext(),
+		singletonContext: newSingletonScope(),
 	}
 
 	serviceLocatorDescriptor := NewConstantDescriptor(SSK(ServiceLocatorName), retVal)
@@ -259,6 +262,10 @@ func (locator *serviceLocatorData) createService(desc Descriptor) (interface{}, 
 		cs = service.(ContextualScope)
 	}
 
+	if cs == nil {
+		return nil, fmt.Errorf("Could not find scope named %s in catchall", scope)
+	}
+
 	userService, err := cs.FindOrCreate(locator, desc)
 	if err != nil {
 		return nil, err
@@ -284,4 +291,56 @@ func (locator *serviceLocatorData) internalGetDescriptors(filter Filter, onlyOne
 	}
 
 	return retVal, nil
+}
+
+func (locator *serviceLocatorData) getGeneration() uint64 {
+	locator.lock.Lock()
+	defer locator.lock.Unlock()
+
+	return locator.generation
+}
+
+func (locator *serviceLocatorData) getNextServiceID() int64 {
+	locator.lock.Lock()
+	defer locator.lock.Unlock()
+
+	retVal := locator.nextServiceID
+
+	locator.nextServiceID = locator.nextServiceID + 1
+
+	return retVal
+}
+
+func (locator *serviceLocatorData) update(newDescs []Descriptor, removers []Filter, originalGeneration uint64) error {
+	locator.lock.Lock()
+	defer locator.lock.Unlock()
+
+	if originalGeneration != locator.generation {
+		return fmt.Errorf("Their was an update to the ServiceLocator after this DynamicConfiguration was created")
+	}
+
+	newAllDescs := make([]Descriptor, 0)
+	removedDescriptors := make([]Descriptor, 0)
+	for _, removeFilter := range removers {
+		for _, myDesc := range locator.allDescriptors {
+			if !removeFilter.Filter(myDesc) {
+				newAllDescs = append(newAllDescs, myDesc)
+			} else {
+				removedDescriptors = append(removedDescriptors, myDesc)
+			}
+		}
+	}
+
+	// TODO: Here the validation service would verify these descriptors were legal removals
+
+	for _, newDesc := range newDescs {
+		// TODO: Here the validation service would check to see if the new descriptor could be added
+
+		newAllDescs = append(newAllDescs, newDesc)
+	}
+
+	// Seems like at this point we've done all the checking and we can do the actual swap
+	locator.allDescriptors = newAllDescs
+
+	return nil
 }

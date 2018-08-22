@@ -44,3 +44,17 @@ package testFiles
 type EchoApplication interface {
 	Echo(input string) string
 }
+
+// EchoImpl A very simple application service implementation
+type EchoImpl struct {
+}
+
+// NewEchoApplication creates a new echo application
+func NewEchoApplication() EchoApplication {
+	return &EchoImpl{}
+}
+
+// Echo simply returns the input it was given
+func (ei *EchoImpl) Echo(input string) string {
+	return input
+}

@@ -38,18 +38,49 @@
  * holder.
  */
 
-package testFiles
+package ioc
 
-// EchoImpl A very simple application service implementation
-type EchoImpl struct {
+import "sync"
+
+type idKey struct {
+	service, locator int64
 }
 
-// NewEchoApplication creates a new echo application
-func NewEchoApplication() EchoApplication {
-	return &EchoImpl{}
+type singletonContextualData struct {
+	lock     sync.Mutex
+	services map[idKey]interface{}
 }
 
-// Echo simply returns the input it was given
-func (ei *EchoImpl) Echo(input string) string {
-	return input
+func newSingletonScope() ContextualScope {
+	return &singletonContextualData{
+		services: make(map[idKey]interface{}),
+	}
+}
+
+func (singletonContextualData) GetScope() string {
+	return Singleton
+}
+
+func (singletonContextualData) FindOrCreate(locator ServiceLocator, desc Descriptor) (interface{}, error) {
+	panic("implement me")
+}
+
+func (singletonContextualData) ContainsKey(locator ServiceLocator, desc Descriptor) bool {
+	panic("implement me")
+}
+
+func (singletonContextualData) DestroyOne(locator ServiceLocator, desc Descriptor) error {
+	panic("implement me")
+}
+
+func (singletonContextualData) GetSupportsNilCreation(locator ServiceLocator) bool {
+	return false
+}
+
+func (singletonContextualData) IsActive(locator ServiceLocator) bool {
+	return true
+}
+
+func (singletonContextualData) Shutdown(locator ServiceLocator) {
+	panic("implement me")
 }
