@@ -38,7 +38,9 @@
  * holder.
  */
 
-package internal
+package ioc
+
+/*
 
 import (
 	"fmt"
@@ -127,3 +129,5 @@ func (dConfig *dynamicConfiguration) Commit() error {
 	dConfig.closed = true
 	return dConfig.locator.updateDescriptors(dConfig.binds, dConfig.destroys)
 }
+
+*/

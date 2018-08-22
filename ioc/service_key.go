@@ -40,6 +40,11 @@
 
 package ioc
 
+import (
+	"fmt"
+	"regexp"
+)
+
 // ServiceKey the key to a dargo managed service
 type ServiceKey interface {
 	GetNamespace() string
@@ -52,13 +57,29 @@ const (
 	SystemNamespace = "system"
 	// DefaultNamespace A default namespace
 	DefaultNamespace = "default"
+	// A namespace specifically for ContextualScope services
+	ContextualScopeNamespace = "sys/scope"
 )
 
 // NewServiceKey Creates a new darget managed service key
-func NewServiceKey(namespace, name string, qualifiers ...string) ServiceKey {
+func NewServiceKey(namespace, name string, qualifiers ...string) (ServiceKey, error) {
+	err := checkNamespaceCharacters(namespace)
+	if err != nil {
+		return nil, err
+	}
+
+	err = checkNameCharacters(name)
+	if err != nil {
+		return nil, err
+	}
 
 	qs := make([]string, 0)
 	for _, q := range qualifiers {
+		err = checkNameCharacters(q)
+		if err != nil {
+			return nil, err
+		}
+
 		qs = append(qs, q)
 	}
 
@@ -66,7 +87,7 @@ func NewServiceKey(namespace, name string, qualifiers ...string) ServiceKey {
 		namespace:  namespace,
 		name:       name,
 		qualifiers: qs,
-	}
+	}, nil
 }
 
 type serviceKeyData struct {
@@ -88,10 +109,60 @@ func (key *serviceKeyData) GetQualifiers() []string {
 
 // DSK creates a service key in the default namespace with the given name
 func DSK(name string, qualifiers ...string) ServiceKey {
-	return NewServiceKey(DefaultNamespace, name, qualifiers...)
+	retVal, err := NewServiceKey(DefaultNamespace, name, qualifiers...)
+	if err != nil {
+		panic(err)
+	}
+
+	return retVal
 }
 
 // SSK creates a service key in the system namespace with the given name
 func SSK(name string, qualifiers ...string) ServiceKey {
-	return NewServiceKey(SystemNamespace, name, qualifiers...)
+	retVal, err := NewServiceKey(SystemNamespace, name, qualifiers...)
+	if err != nil {
+		panic(err)
+	}
+
+	return retVal
+}
+
+// CSK creates a service key in the contextual scope namespace with the given name
+func CSK(name string, qualifiers ...string) ServiceKey {
+	retVal, err := NewServiceKey(ContextualScopeNamespace, name, qualifiers...)
+	if err != nil {
+		panic(err)
+	}
+
+	return retVal
+}
+
+func checkNamespaceCharacters(input string) error {
+	if input == "" {
+		return fmt.Errorf("The namespace may not be empty")
+	}
+
+	re := regexp.MustCompile("^[A-Za-z0-9_:/]*$")
+	good := re.MatchString(input)
+	if !good {
+		return fmt.Errorf("The namespace may only have alphanumeric charaters and underscore, colon and slash (%s)",
+			input)
+	}
+
+	return nil
+}
+
+func checkNameCharacters(input string) error {
+	if input == "" {
+		return fmt.Errorf("The name or qualifier may not be empty")
+	}
+
+	re := regexp.MustCompile("^[A-Za-z0-9_]*$")
+	good := re.MatchString(input)
+	if !good {
+		return fmt.Errorf("The name or qualifier may only have alphanumeric charaters and underscore (%s)",
+			input)
+	}
+
+	return nil
 }

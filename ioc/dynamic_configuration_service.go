@@ -38,46 +38,27 @@
  * holder.
  */
 
-package api
+package ioc
 
-import (
-	"reflect"
-)
+// DynamicConfigurationService This service is bound into every
+// service locator and can be used to add application services
+// to the context sensitive registry
+type DynamicConfigurationService interface {
+	CreateDynamicConfiguration() DynamicConfiguration
+}
 
-// WriteableDescriptor A writeable version of a descriptor
-type WriteableDescriptor interface {
-	Descriptor
+// DynamicConfiguration use this to add and remove descriptors to
+// the service locator
+type DynamicConfiguration interface {
+	// Bind adds a descriptor to be bound into the service locator
+	// returns the copy of the descriptor that will bound in if
+	// commit succeeds
+	Bind(desc Descriptor) Descriptor
 
-	// SetCreateFunction create creates the instance of the type
-	SetCreateFunction(func(ServiceLocator) (interface{}, error))
+	// AddRemoveFilter adds a filter that will be run over all
+	// existing descriptors to determing which ones to remove
+	// from the locator
+	AddRemoveFilter(func(Descriptor) bool)
 
-	// SetDestroyFunction destroys this service
-	SetDestroyFunction(func(ServiceLocator, interface{}) error)
-
-	// SetAdvertisedInterfaces sets all interfaces advertised by this service
-	SetAdvertisedInterfaces([]reflect.Type)
-
-	// Adds a single advertised interface
-	AddAdvertisedInterface(reflect.Type)
-
-	// SetScope sets the scope of this service
-	SetScope(string)
-
-	// SetName sets the name of this service (or nil)
-	SetName(string)
-
-	// SetQualifiers sets the qualifiers of this service
-	SetQualifiers([]string)
-
-	// SetVisibility setsOne of NORMAL or LOCAL
-	SetVisibility(int)
-
-	// SetMetadata sets the metadata for this service
-	SetMetadata(map[string][]string)
-
-	// SetServiceID sets the serviceid
-	SetServiceID(int64)
-
-	// SetLocatorID sets the locator id for this service
-	SetLocatorID(int64)
+	Commit() error
 }

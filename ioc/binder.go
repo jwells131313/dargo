@@ -38,46 +38,43 @@
  * holder.
  */
 
-package internal
+package ioc
 
 import (
-	"github.com/jwells131313/dargo/api"
+	"errors"
+	"reflect"
 )
 
-type constantDescriptor struct {
-	BaseDescriptor
-	myConstant interface{}
+// Binder A fluent interface for creating descriptors
+type Binder interface {
+	To(reflect.Type) Binder
+	Named(string) Binder
+	Build() (WriteableDescriptor, error)
 }
 
-// NewConstantDescriptor creates a writeable descriptor with the hard-coded
-// constant given.  This descriptor will have no other fields set other
-// than scope, which will be PerLookup
-func NewConstantDescriptor(constant interface{}) api.WriteableDescriptor {
-	retVal := &constantDescriptor{}
-	retVal.myConstant = constant
-	retVal.SetScope("PerLookup")
-
-	return retVal
+type binder struct {
+	creator   func(ServiceLocator) (interface{}, error)
+	contracts []reflect.Type
+	name      string
 }
 
-func (desc *constantDescriptor) GetCreateFunction() func(api.ServiceLocator) (interface{}, error) {
-	return func(api.ServiceLocator) (interface{}, error) {
-		return desc.myConstant, nil
+// Bind the descriptor to the interface type  toMe must be an interface
+func Bind(creatorFunc func(ServiceLocator) (interface{}, error)) Binder {
+	return &binder{
+		creator: creatorFunc,
 	}
 }
 
-func (desc *constantDescriptor) GetDestroyFunction() func(api.ServiceLocator, interface{}) error {
-	return func(api.ServiceLocator, interface{}) error {
-		return nil
-	}
+func (binder *binder) To(t reflect.Type) Binder {
+	binder.contracts = append(binder.contracts, t)
+	return binder
 }
 
-// SetCreateFunction create creates the instance of the type
-func (desc *constantDescriptor) SetCreateFunction(func(api.ServiceLocator) (interface{}, error)) {
-	// does nothing to a constant descriptor
+func (binder *binder) Named(userName string) Binder {
+	binder.name = userName
+	return binder
 }
 
-// SetDestroyFunction destroys this service
-func (desc *constantDescriptor) SetDestroyFunction(func(api.ServiceLocator, interface{}) error) {
-	// does nothing to a constant descriptor
+func (binder *binder) Build() (WriteableDescriptor, error) {
+	return nil, errors.New("not yet implemented")
 }

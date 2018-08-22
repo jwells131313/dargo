@@ -38,7 +38,7 @@
  * holder.
  */
 
-package api
+package ioc
 
 import "reflect"
 

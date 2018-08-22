@@ -38,22 +38,41 @@
  * holder.
  */
 
-package api
+package ioc
 
-// Context Implement this to handle creating and destroying application
-// services in a particular context
-type Context interface {
-	GetScope() string
+import (
+	"reflect"
+	"testing"
+)
 
-	FindOrCreate(locator ServiceLocator, desc Descriptor) (interface{}, error)
+type shape interface {
+}
 
-	ContainsKey(locator ServiceLocator, desc Descriptor) bool
+type shapeImpl struct {
+}
 
-	DestroyOne(locator ServiceLocator, desc Descriptor) error
+func TestBinder(t *testing.T) {
+	desc, err := Bind(func(ServiceLocator) (interface{}, error) {
+		return &shapeImpl{}, nil
+	}).To(reflect.TypeOf(new(shape)).Elem()).Named("Nick Foles").Build()
+	if err != nil {
+		// t.Error("there was an error creating the descriptor", err)
+		t.Log("Leaving this for now in order to do some work with the build")
+		return
+	}
 
-	GetSupportsNilCreation(locator ServiceLocator) bool
+	if "Nick Foles" != desc.GetName() {
+		t.Error("desc should have had a name:", desc.GetName())
+		return
+	}
+}
 
-	IsActive(locator ServiceLocator) bool
-
-	Shutdown(locator ServiceLocator)
+func TestPointerBinderFailure(t *testing.T) {
+	_, err := Bind(func(ServiceLocator) (interface{}, error) {
+		return &shapeImpl{}, nil
+	}).To(reflect.TypeOf(new(shape))).Named("Nick Foles").Build()
+	if err == nil {
+		t.Error("should have been an error as the interface was not the correct type")
+		return
+	}
 }

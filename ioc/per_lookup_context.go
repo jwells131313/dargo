@@ -38,43 +38,55 @@
  * holder.
  */
 
-package api
+package ioc
+
+/*
 
 import (
-	"errors"
-	"reflect"
+	"github.com/jwells131313/dargo/api"
 )
 
-// Binder A fluent interface for creating descriptors
-type Binder interface {
-	To(reflect.Type) Binder
-	Named(string) Binder
-	Build() (WriteableDescriptor, error)
+// PerLookupContext is the context implementation for PerLookup
+type PerLookupContext struct {
 }
 
-type binder struct {
-	creator   func(ServiceLocator) (interface{}, error)
-	contracts []reflect.Type
-	name      string
+// GetScope always returns PerLookup
+func (context *PerLookupContext) GetScope() string {
+	return api.PerLookup
 }
 
-// Bind the descriptor to the interface type  toMe must be an interface
-func Bind(creatorFunc func(ServiceLocator) (interface{}, error)) Binder {
-	return &binder{
-		creator: creatorFunc,
-	}
+// FindOrCreate always returns a new instance for PerLookup
+func (context *PerLookupContext) FindOrCreate(locator api.ServiceLocator, desc api.Descriptor) (interface{}, error) {
+	var f func(api.ServiceLocator) (interface{}, error)
+	f = desc.GetCreateFunction()
+
+	return f(locator)
 }
 
-func (binder *binder) To(t reflect.Type) Binder {
-	binder.contracts = append(binder.contracts, t)
-	return binder
+// ContainsKey always returns false for PerLookup
+func (context *PerLookupContext) ContainsKey(_ api.ServiceLocator, desc api.Descriptor) bool {
+	return false
 }
 
-func (binder *binder) Named(userName string) Binder {
-	binder.name = userName
-	return binder
+// DestroyOne should always call the destructor
+func (context *PerLookupContext) DestroyOne(_ api.ServiceLocator, desc api.Descriptor) error {
+	// do nothing, special case
+	return nil
 }
 
-func (binder *binder) Build() (WriteableDescriptor, error) {
-	return nil, errors.New("not yet implemented")
+// GetSupportsNilCreation returns true for PerLookup
+func (context *PerLookupContext) GetSupportsNilCreation(_ api.ServiceLocator) bool {
+	return true
 }
+
+// IsActive always returns true for PerLookup
+func (context *PerLookupContext) IsActive(_ api.ServiceLocator) bool {
+	return true
+}
+
+// Shutdown does nothing in the PerLookup scope
+func (context *PerLookupContext) Shutdown(_ api.ServiceLocator) {
+	// do nothing
+}
+
+*/

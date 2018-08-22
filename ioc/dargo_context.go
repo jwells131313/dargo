@@ -45,12 +45,11 @@ import (
 	"time"
 )
 
-type DargoServiceKey string
-
 type dargo struct {
 	parent context.Context
 }
 
+// NewDargoContext creates a new dargo context with the given parent context
 func NewDargoContext(parent context.Context) context.Context {
 	return &dargo{
 		parent: parent,

@@ -38,51 +38,23 @@
  * holder.
  */
 
-package internal
+package ioc
 
-import (
-	"github.com/jwells131313/dargo/api"
-)
+// ContextualScope is the warehouse for services that have been created in a particular
+// scope.  Two special scopes are Singleton and PerLookup.  Implementations of ContextualScope
+// must always be in the special "ContextualScope" namespace
+type ContextualScope interface {
+	GetScope() string
 
-// PerLookupContext is the context implementation for PerLookup
-type PerLookupContext struct {
-}
+	FindOrCreate(locator ServiceLocator, desc Descriptor) (interface{}, error)
 
-// GetScope always returns PerLookup
-func (context *PerLookupContext) GetScope() string {
-	return api.PerLookup
-}
+	ContainsKey(locator ServiceLocator, desc Descriptor) bool
 
-// FindOrCreate always returns a new instance for PerLookup
-func (context *PerLookupContext) FindOrCreate(locator api.ServiceLocator, desc api.Descriptor) (interface{}, error) {
-	var f func(api.ServiceLocator) (interface{}, error)
-	f = desc.GetCreateFunction()
+	DestroyOne(locator ServiceLocator, desc Descriptor) error
 
-	return f(locator)
-}
+	GetSupportsNilCreation(locator ServiceLocator) bool
 
-// ContainsKey always returns false for PerLookup
-func (context *PerLookupContext) ContainsKey(_ api.ServiceLocator, desc api.Descriptor) bool {
-	return false
-}
+	IsActive(locator ServiceLocator) bool
 
-// DestroyOne should always call the destructor
-func (context *PerLookupContext) DestroyOne(_ api.ServiceLocator, desc api.Descriptor) error {
-	// do nothing, special case
-	return nil
-}
-
-// GetSupportsNilCreation returns true for PerLookup
-func (context *PerLookupContext) GetSupportsNilCreation(_ api.ServiceLocator) bool {
-	return true
-}
-
-// IsActive always returns true for PerLookup
-func (context *PerLookupContext) IsActive(_ api.ServiceLocator) bool {
-	return true
-}
-
-// Shutdown does nothing in the PerLookup scope
-func (context *PerLookupContext) Shutdown(_ api.ServiceLocator) {
-	// do nothing
+	Shutdown(locator ServiceLocator)
 }

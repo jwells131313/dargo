@@ -38,11 +38,12 @@
  * holder.
  */
 
-package internal
+package ioc
+
+/*
 
 import (
 	"fmt"
-	"github.com/jwells131313/dargo/api"
 	"reflect"
 	"sort"
 	"sync"
@@ -56,9 +57,9 @@ type ServiceLocatorImpl struct {
 	name string
 	id   int64
 
-	allDescriptors []api.Descriptor
-	byName         map[string][]api.Descriptor
-	byType         map[reflect.Type][]api.Descriptor
+	allDescriptors []Descriptor
+	byName         map[string][]Descriptor
+	byType         map[reflect.Type][]Descriptor
 
 	lastTakenServiceID int64
 	lastChange         int64
@@ -370,3 +371,4 @@ func (locator *ServiceLocatorImpl) unlock() {
 		locator.mux.Unlock()
 	}
 }
+*/

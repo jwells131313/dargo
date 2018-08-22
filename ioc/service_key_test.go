@@ -55,13 +55,15 @@ const (
 )
 
 func TestNewSK(t *testing.T) {
-	sk := NewServiceKey(foo, bar)
+	sk, err := NewServiceKey(foo, bar)
+	assert.Nil(t, err, "should be no error")
 
 	assert.Equal(t, sk.GetNamespace(), foo, "namespace should be equal")
 	assert.Equal(t, sk.GetName(), bar, "name should be equal")
 	assert.Equal(t, len(sk.GetQualifiers()), 0, "should be no qualifiers")
 
-	sk1 := NewServiceKey(foo, bar, red, blue, green)
+	sk1, err := NewServiceKey(foo, bar, red, blue, green)
+	assert.Nil(t, err, "should be no error")
 
 	assert.Equal(t, sk1.GetNamespace(), foo, "namespace should be equal (2)")
 	assert.Equal(t, sk1.GetName(), bar, "name should be equal (2)")
@@ -106,4 +108,37 @@ func TestSSK(t *testing.T) {
 	assert.Equal(t, red, sk1.GetQualifiers()[0], "system should be red at 0 index")
 	assert.Equal(t, blue, sk1.GetQualifiers()[1], "system should be blue at 1 index")
 	assert.Equal(t, green, sk1.GetQualifiers()[2], "system should be green at 2 index")
+}
+
+func TestCSK(t *testing.T) {
+	sk := CSK(bar)
+
+	assert.Equal(t, sk.GetNamespace(), ContextualScopeNamespace, "contextual namespace should be equal")
+	assert.Equal(t, sk.GetName(), bar, "contextual name should be equal")
+	assert.Equal(t, len(sk.GetQualifiers()), 0, "contextual should be no qualifiers")
+
+	sk1 := CSK(bar, red, blue, green)
+
+	assert.Equal(t, sk1.GetNamespace(), ContextualScopeNamespace, "contextual namespace should be equal (2)")
+	assert.Equal(t, sk1.GetName(), bar, "contextual name should be equal (2)")
+
+	assert.Equal(t, len(sk1.GetQualifiers()), 3, "contextual should be 3 qualifiers")
+	assert.Equal(t, red, sk1.GetQualifiers()[0], "contextual should be red at 0 index")
+	assert.Equal(t, blue, sk1.GetQualifiers()[1], "contextual should be blue at 1 index")
+	assert.Equal(t, green, sk1.GetQualifiers()[2], "contextual should be green at 2 index")
+}
+
+func TestBadNamespace(t *testing.T) {
+	_, err := NewServiceKey("with space", bar)
+	assert.NotNil(t, err, "Should have gotten an error")
+}
+
+func TestBadName(t *testing.T) {
+	_, err := NewServiceKey(foo, "a/b")
+	assert.NotNil(t, err, "Should have gotten an error")
+}
+
+func TestBadQualifier(t *testing.T) {
+	_, err := NewServiceKey(foo, bar, "a#b c")
+	assert.NotNil(t, err, "Should have gotten an error")
 }
