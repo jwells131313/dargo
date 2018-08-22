@@ -137,6 +137,10 @@ func CSK(name string, qualifiers ...string) ServiceKey {
 	return retVal
 }
 
+func newServiceKeyFromDescriptor(desc Descriptor) (ServiceKey, error) {
+	return NewServiceKey(desc.GetNamespace(), desc.GetName(), desc.GetQualifiers()...)
+}
+
 func checkNamespaceCharacters(input string) error {
 	if input == "" {
 		return fmt.Errorf("The namespace may not be empty")
@@ -154,13 +158,13 @@ func checkNamespaceCharacters(input string) error {
 
 func checkNameCharacters(input string) error {
 	if input == "" {
-		return fmt.Errorf("The name or qualifier may not be empty")
+		return fmt.Errorf("The name may not be empty")
 	}
 
 	re := regexp.MustCompile("^[A-Za-z0-9_]*$")
 	good := re.MatchString(input)
 	if !good {
-		return fmt.Errorf("The name or qualifier may only have alphanumeric charaters and underscore (%s)",
+		return fmt.Errorf("The name may only have alphanumeric charaters and underscore (%s)",
 			input)
 	}
 

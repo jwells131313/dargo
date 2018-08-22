@@ -40,53 +40,55 @@
 
 package ioc
 
-/*
-
-import (
-	"github.com/jwells131313/dargo/api"
-)
-
-// PerLookupContext is the context implementation for PerLookup
-type PerLookupContext struct {
+// Filter is used to filter descriptors for matching services
+type Filter interface {
+	Filter(Descriptor) bool
 }
 
-// GetScope always returns PerLookup
-func (context *PerLookupContext) GetScope() string {
-	return api.PerLookup
+type serviceKeyFilter struct {
+	key ServiceKey
 }
 
-// FindOrCreate always returns a new instance for PerLookup
-func (context *PerLookupContext) FindOrCreate(locator api.ServiceLocator, desc api.Descriptor) (interface{}, error) {
-	var f func(api.ServiceLocator) (interface{}, error)
-	f = desc.GetCreateFunction()
-
-	return f(locator)
+func NewServiceKeyFilter(key ServiceKey) Filter {
+	return &serviceKeyFilter{
+		key,
+	}
 }
 
-// ContainsKey always returns false for PerLookup
-func (context *PerLookupContext) ContainsKey(_ api.ServiceLocator, desc api.Descriptor) bool {
-	return false
-}
+func (filter *serviceKeyFilter) Filter(desc Descriptor) bool {
+	if desc.GetNamespace() != filter.key.GetNamespace() {
+		return false
+	}
 
-// DestroyOne should always call the destructor
-func (context *PerLookupContext) DestroyOne(_ api.ServiceLocator, desc api.Descriptor) error {
-	// do nothing, special case
-	return nil
-}
+	if desc.GetName() != filter.key.GetName() {
+		return false
+	}
 
-// GetSupportsNilCreation returns true for PerLookup
-func (context *PerLookupContext) GetSupportsNilCreation(_ api.ServiceLocator) bool {
+	cache := make(map[string]string)
+	first := true
+
+	// Descriptor must have a superset of the descriptors asked for in the key
+	for _, qualifier := range filter.key.GetQualifiers() {
+		found := false
+
+		if first {
+			first = false
+
+			for _, dQualifier := range desc.GetQualifiers() {
+				cache[dQualifier] = dQualifier
+
+				if qualifier == dQualifier {
+					found = true
+				}
+			}
+		} else {
+			_, found = cache[qualifier]
+		}
+
+		if !found {
+			return false
+		}
+	}
+
 	return true
 }
-
-// IsActive always returns true for PerLookup
-func (context *PerLookupContext) IsActive(_ api.ServiceLocator) bool {
-	return true
-}
-
-// Shutdown does nothing in the PerLookup scope
-func (context *PerLookupContext) Shutdown(_ api.ServiceLocator) {
-	// do nothing
-}
-
-*/

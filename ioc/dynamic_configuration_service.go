@@ -62,3 +62,17 @@ type DynamicConfiguration interface {
 
 	Commit() error
 }
+
+type dynamicConfigData struct {
+	parent *serviceLocatorData
+}
+
+func newDynamicConfigurationService(parent *serviceLocatorData) DynamicConfigurationService {
+	return &dynamicConfigData{
+		parent: parent,
+	}
+}
+
+func (dcd *dynamicConfigData) CreateDynamicConfiguration() DynamicConfiguration {
+	panic("implement me")
+}

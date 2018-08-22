@@ -40,33 +40,31 @@
 
 package ioc
 
-// ContextualScope is the warehouse for services that have been created in a particular
-// scope.  Two special scopes are Singleton and PerLookup.  Implementations of ContextualScope
-// must always be in the special "ContextualScope" namespace
-type ContextualScope interface {
-	// GetScope gets the name of this scope (all scopes are in the ContextualScope namespace)
-	GetScope() string
+import (
+	"github.com/stretchr/testify/assert"
+	"testing"
+)
 
-	// FindOrCreate either retrieves an existing service given the descriptor or
-	// creates a new one using the creation function
-	FindOrCreate(locator ServiceLocator, desc Descriptor) (interface{}, error)
+const (
+	testLocatorName = "TestLocator"
+)
 
-	// ContainsKey returns true if the service has already been created or false
-	// if it does not.  Note that the PerLookup ContextualScope always returns
-	// false for this method
-	ContainsKey(locator ServiceLocator, desc Descriptor) bool
+func TestGetSystemServices(t *testing.T) {
+	locator, err := NewServiceLocator(testLocatorName, ReturnExistingOrCreateNew)
+	assert.Nil(t, err, "Could not create/find locator")
 
-	// DestroyOne destroys an existing service
-	DestroyOne(locator ServiceLocator, desc Descriptor) error
+	foundService, err := locator.GetService(SSK(ServiceLocatorName))
+	assert.Nil(t, err, "Did not find service locator service")
 
-	// GetSupportsNilCreation returns true if nil is a valid value for a service
-	// in this context to take
-	GetSupportsNilCreation(locator ServiceLocator) bool
+	foundLocator, ok := foundService.(ServiceLocator)
+	assert.True(t, ok, "Does not implement ServiceLocator")
 
-	// IsActive returns true if this context is currently active
-	IsActive(locator ServiceLocator) bool
+	assert.Equal(t, locator, foundLocator, "The locators are not the same")
+	assert.Equal(t, testLocatorName, foundLocator.GetName(), "Invalid name")
 
-	// Shutdown will shut down all services in its warehouse since the ServiceLocator
-	// is shutting down
-	Shutdown(locator ServiceLocator)
+	foundService, err = locator.GetService(SSK(DynamicConfigurationServiceName))
+	assert.Nil(t, err, "Could not find dynamic configuration service")
+
+	_, ok = foundService.(DynamicConfigurationService)
+	assert.True(t, ok, "does not implement DynamicConfigurationService")
 }

@@ -40,20 +40,35 @@
 
 package ioc
 
-import "reflect"
+import (
+	"fmt"
+	"sync"
+)
+
+const (
+	// Return an error if a service locator with that name exists
+	FailIfPresent = 0
+	// Return the existing service locator if found, otherwise create it
+	ReturnExistingOrCreateNew = 1
+	// Return an existing locator with the given name, and fail if it does not already exist
+	FailIfNotPresent = 2
+
+	// ServiceLocatorName The name of the ServiceLocator service (in the system namespace)
+	ServiceLocatorName = "ServiceLocator"
+
+	// DynamicConfigurationServiceName The name of the DynamicConfigurationService (in the system namespace)
+	DynamicConfigurationServiceName = "DynamicConfigurationService"
+)
 
 // ServiceLocator The main registry for dargo.  Use it to get context sensitive lookups
 // for application services
 type ServiceLocator interface {
-	// GetService gets the service that is correct for the current context with the given interface
-	// returns the best implementation of the interface and any other error
-	// if there was an error creating the interface
-	GetService(toMe reflect.Type) (interface{}, error)
+	// GetService gets the service that is correct for the current context with the given key.
+	// It returns the best implementation of the interface
+	GetService(toMe ServiceKey) (interface{}, error)
 
-	// GetService gets the service that is correct for the current context with the given interface
-	// returns the best implementation of the interface with the given name
-	// and any other error if there was an error creating the interface
-	GetServiceWithName(toMe reflect.Type, name string) (interface{}, error)
+	// GetAllServices returns all the services matching the service key
+	GetAllServices(toMe ServiceKey) ([]interface{}, error)
 
 	// GetService gets the service that is correct for the current context with the given
 	// descriptor and any other error if there was an error creating the interface
@@ -61,23 +76,12 @@ type ServiceLocator interface {
 
 	// GetDescriptors Returns all descriptors that return true when passed through the input function
 	// will not return nil, but may return an empty list
-	GetDescriptors(func(Descriptor) bool) []Descriptor
+	GetDescriptors(Filter) ([]Descriptor, error)
 
 	// GetBestDescriptor returns the best descriptor found returning true through the input function
 	// The best descriptor is the one with the highest rank, or if rank is equal the one with the
 	// lowest serviceId or if the serviceId are the same the one with the highest locatorId
-	GetBestDescriptor(func(Descriptor) bool) Descriptor
-
-	// GetDescriptorsWithName Returns all descriptors that return true when passed through the input function
-	// and which have the given name.  Can drastically reduce the number of descriptors passed to the method
-	// will not return nil, but may return an empty list
-	GetDescriptorsWithNameOrType(func(Descriptor) bool, reflect.Type, string) []Descriptor
-
-	// GetBestDescriptor returns the best descriptor found returning true through the input function
-	// and which have the given name
-	// The best descriptor is the one with the highest rank, or if rank is equal the one with the
-	// lowest serviceId or if the serviceId are the same the one with the highest locatorId
-	GetBestDescriptorWithNameOrType(func(Descriptor) bool, reflect.Type, string) Descriptor
+	GetBestDescriptor(Filter) (Descriptor, error)
 
 	// GetName gets the name of this ServiceLocator
 	GetName() string
@@ -87,4 +91,197 @@ type ServiceLocator interface {
 
 	// Will shut down all services associated with this ServiceLocator
 	Shutdown()
+}
+
+type serviceLocatorData struct {
+	lock sync.Mutex
+	name string
+	ID   int64
+
+	allDescriptors []Descriptor
+
+	nextServiceID int64
+
+	perLookupContext ContextualScope
+	singletonContext ContextualScope
+}
+
+// NewServiceLocator this will find or create a service locator with the given name, and
+// return errors based on the value of qos
+func NewServiceLocator(name string, qos int) (ServiceLocator, error) {
+	locatorsLock.Lock()
+	defer locatorsLock.Unlock()
+
+	err := checkNameCharacters(name)
+	if err != nil {
+		return nil, err
+	}
+
+	if qos != FailIfPresent && qos != FailIfNotPresent && qos != ReturnExistingOrCreateNew {
+		return nil, fmt.Errorf("Unkonwn quality of service %d", qos)
+	}
+
+	retVal, found := locators[name]
+	if found {
+		if qos == FailIfPresent {
+			return nil, fmt.Errorf("Quality of service is FailIfPresent and there is a locator with name %s", name)
+		}
+
+		return retVal, nil
+	}
+
+	// Not found
+	if qos == FailIfNotPresent {
+		return nil, fmt.Errorf("Quality of service is FailIfNotPresent and there is no locator named %s", name)
+	}
+
+	ID := currentID
+	currentID = currentID + 1
+
+	retVal = &serviceLocatorData{
+		name:             name,
+		ID:               ID,
+		allDescriptors:   make([]Descriptor, 0),
+		perLookupContext: newPerLookupContext(),
+	}
+
+	serviceLocatorDescriptor := NewConstantDescriptor(SSK(ServiceLocatorName), retVal)
+	serviceLocatorSystemDescriptor, err := NewDescriptor(serviceLocatorDescriptor, 0, ID)
+	if err != nil {
+		return nil, err
+	}
+
+	dcs := newDynamicConfigurationService(retVal)
+	dynamicConfigurationDescriptor := NewConstantDescriptor(SSK(DynamicConfigurationServiceName), dcs)
+	dcsSystemDescriptor, err := NewDescriptor(dynamicConfigurationDescriptor, 1, ID)
+	if err != nil {
+		return nil, err
+	}
+
+	retVal.allDescriptors = append(retVal.allDescriptors, serviceLocatorSystemDescriptor)
+	retVal.allDescriptors = append(retVal.allDescriptors, dcsSystemDescriptor)
+
+	retVal.nextServiceID = 2
+
+	locators[name] = retVal
+
+	return retVal, nil
+}
+
+func (locator *serviceLocatorData) GetService(toMe ServiceKey) (interface{}, error) {
+	f := NewServiceKeyFilter(toMe)
+
+	desc, err := locator.GetBestDescriptor(f)
+	if err != nil {
+		return nil, err
+	}
+
+	return locator.createService(desc)
+}
+
+func (locator *serviceLocatorData) GetAllServices(toMe ServiceKey) ([]interface{}, error) {
+	f := NewServiceKeyFilter(toMe)
+
+	descs, err := locator.GetDescriptors(f)
+	if err != nil {
+		return nil, err
+	}
+
+	retVal := make([]interface{}, 0)
+	for _, desc := range descs {
+		us, err := locator.createService(desc)
+		if err != nil {
+			return retVal, err
+		}
+
+		retVal = append(retVal, us)
+	}
+
+	return retVal, nil
+}
+
+func (locator *serviceLocatorData) GetServiceFromDescriptor(desc Descriptor) (interface{}, error) {
+	return locator.createService(desc)
+}
+
+func (locator *serviceLocatorData) GetDescriptors(filter Filter) ([]Descriptor, error) {
+	all, err := locator.internalGetDescriptors(filter, false)
+	if err != nil {
+		return nil, err
+	}
+
+	return all, nil
+}
+
+func (locator *serviceLocatorData) GetBestDescriptor(filter Filter) (Descriptor, error) {
+	all, err := locator.internalGetDescriptors(filter, true)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(all) == 0 {
+		return nil, nil
+	}
+
+	return all[0], nil
+}
+
+func (locator *serviceLocatorData) GetName() string {
+	return locator.name
+}
+
+func (locator *serviceLocatorData) GetID() int64 {
+	return locator.ID
+}
+
+func (locator *serviceLocatorData) Shutdown() {
+	panic("implement me")
+}
+
+func (locator *serviceLocatorData) createService(desc Descriptor) (interface{}, error) {
+	scope := desc.GetScope()
+
+	var cs ContextualScope
+	if scope == PerLookup {
+		cs = locator.perLookupContext
+	} else if scope == Singleton {
+		cs = locator.singletonContext
+	} else {
+		service, err := locator.GetService(CSK(scope))
+		if err != nil {
+			return nil, err
+		}
+
+		if service == nil {
+			return nil, fmt.Errorf("could not find a scope named %s", scope)
+		}
+
+		cs = service.(ContextualScope)
+	}
+
+	userService, err := cs.FindOrCreate(locator, desc)
+	if err != nil {
+		return nil, err
+	}
+
+	return userService, nil
+}
+
+// TODO: This will one day need to, you know, honor the rank and maybe keep caches
+func (locator *serviceLocatorData) internalGetDescriptors(filter Filter, onlyOne bool) ([]Descriptor, error) {
+	locator.lock.Lock()
+	defer locator.lock.Unlock()
+
+	retVal := make([]Descriptor, 0)
+	for _, desc := range locator.allDescriptors {
+		if filter.Filter(desc) {
+			retVal = append(retVal, desc)
+
+			if onlyOne {
+				return retVal, nil
+			}
+		}
+	}
+
+	return retVal, nil
 }

@@ -40,33 +40,51 @@
 
 package ioc
 
-// ContextualScope is the warehouse for services that have been created in a particular
-// scope.  Two special scopes are Singleton and PerLookup.  Implementations of ContextualScope
-// must always be in the special "ContextualScope" namespace
-type ContextualScope interface {
-	// GetScope gets the name of this scope (all scopes are in the ContextualScope namespace)
-	GetScope() string
+type perLookupContext struct {
+}
 
-	// FindOrCreate either retrieves an existing service given the descriptor or
-	// creates a new one using the creation function
-	FindOrCreate(locator ServiceLocator, desc Descriptor) (interface{}, error)
+func newPerLookupContext() ContextualScope {
+	return &perLookupContext{}
+}
 
-	// ContainsKey returns true if the service has already been created or false
-	// if it does not.  Note that the PerLookup ContextualScope always returns
-	// false for this method
-	ContainsKey(locator ServiceLocator, desc Descriptor) bool
+// GetScope always returns PerLookup
+func (context *perLookupContext) GetScope() string {
+	return PerLookup
+}
 
-	// DestroyOne destroys an existing service
-	DestroyOne(locator ServiceLocator, desc Descriptor) error
+// FindOrCreate always returns a new instance for PerLookup
+func (context *perLookupContext) FindOrCreate(locator ServiceLocator, desc Descriptor) (interface{}, error) {
+	f := desc.GetCreateFunction()
+	key, err := newServiceKeyFromDescriptor(desc)
+	if err != nil {
+		return nil, err
+	}
 
-	// GetSupportsNilCreation returns true if nil is a valid value for a service
-	// in this context to take
-	GetSupportsNilCreation(locator ServiceLocator) bool
+	return f(locator, key)
+}
 
-	// IsActive returns true if this context is currently active
-	IsActive(locator ServiceLocator) bool
+// ContainsKey always returns false for PerLookup
+func (context *perLookupContext) ContainsKey(ServiceLocator, Descriptor) bool {
+	return false
+}
 
-	// Shutdown will shut down all services in its warehouse since the ServiceLocator
-	// is shutting down
-	Shutdown(locator ServiceLocator)
+// DestroyOne should always call the destructor
+func (context *perLookupContext) DestroyOne(ServiceLocator, Descriptor) error {
+	// do nothing, special case
+	return nil
+}
+
+// GetSupportsNilCreation returns true for PerLookup
+func (context *perLookupContext) GetSupportsNilCreation(ServiceLocator) bool {
+	return true
+}
+
+// IsActive always returns true for PerLookup
+func (context *perLookupContext) IsActive(ServiceLocator) bool {
+	return true
+}
+
+// Shutdown does nothing in the PerLookup scope
+func (context *perLookupContext) Shutdown(ServiceLocator) {
+	// do nothing
 }

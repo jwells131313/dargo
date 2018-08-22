@@ -229,7 +229,7 @@ func NewConstantDescriptor(key ServiceKey, cnstnt interface{}) WriteableDescript
 	retVal.qualifiers = key.GetQualifiers()
 	retVal.metadata = make(map[string][]string)
 	retVal.visibility = Normal
-	retVal.scope = Singleton
+	retVal.scope = PerLookup
 
 	return retVal
 

@@ -40,33 +40,13 @@
 
 package ioc
 
-// ContextualScope is the warehouse for services that have been created in a particular
-// scope.  Two special scopes are Singleton and PerLookup.  Implementations of ContextualScope
-// must always be in the special "ContextualScope" namespace
-type ContextualScope interface {
-	// GetScope gets the name of this scope (all scopes are in the ContextualScope namespace)
-	GetScope() string
+import "sync"
 
-	// FindOrCreate either retrieves an existing service given the descriptor or
-	// creates a new one using the creation function
-	FindOrCreate(locator ServiceLocator, desc Descriptor) (interface{}, error)
+var (
+	locatorsLock sync.Mutex
+	locators           = make(map[string]*serviceLocatorData)
+	currentID    int64 = 1
+)
 
-	// ContainsKey returns true if the service has already been created or false
-	// if it does not.  Note that the PerLookup ContextualScope always returns
-	// false for this method
-	ContainsKey(locator ServiceLocator, desc Descriptor) bool
-
-	// DestroyOne destroys an existing service
-	DestroyOne(locator ServiceLocator, desc Descriptor) error
-
-	// GetSupportsNilCreation returns true if nil is a valid value for a service
-	// in this context to take
-	GetSupportsNilCreation(locator ServiceLocator) bool
-
-	// IsActive returns true if this context is currently active
-	IsActive(locator ServiceLocator) bool
-
-	// Shutdown will shut down all services in its warehouse since the ServiceLocator
-	// is shutting down
-	Shutdown(locator ServiceLocator)
+func init() {
 }
