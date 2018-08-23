@@ -41,14 +41,17 @@
 package testFiles
 
 import (
+	"fmt"
 	"github.com/jwells131313/dargo/ioc"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
 
 const (
-	ServiceTestLocatorName = "ServiceTestLocatorName"
-	EchoServiceName        = "EchoService"
+	ServiceTestLocatorName  = "ServiceTestLocatorName"
+	ServiceTestLocatorName2 = "Locator2"
+	EchoServiceName         = "EchoService"
+	MusicServiceName        = "MusicService"
 )
 
 // TestBasicServiceLocatorLookup.  This uses the raw DynamicConfigurationService
@@ -57,9 +60,13 @@ func TestAddServiceWithDCS(t *testing.T) {
 	locator, err := ioc.NewServiceLocator(ServiceTestLocatorName, ioc.FailIfPresent)
 	assert.Nil(t, err, "error creating locator")
 
-	wd := ioc.NewWriteableDescriptor()
-	wd.SetName(EchoServiceName)
-	wd.SetCreateFunction(createEcho)
+	wde := ioc.NewWriteableDescriptor()
+	wde.SetName(EchoServiceName)
+	wde.SetCreateFunction(createEcho)
+
+	wdm := ioc.NewWriteableDescriptor()
+	wdm.SetName(MusicServiceName)
+	wdm.SetCreateFunction(createMusic)
 
 	dcs, err := getDCS(t, locator)
 	if err != nil {
@@ -69,22 +76,28 @@ func TestAddServiceWithDCS(t *testing.T) {
 	config, err := dcs.CreateDynamicConfiguration()
 	assert.Nil(t, err, "could not create a dynamic configuration")
 
-	wdb, err := config.Bind(wd)
-	assert.Nil(t, err, "could not bind user descriptor")
+	wdb, err := config.Bind(wde)
+	assert.Nil(t, err, "could not bind echo descriptor")
 
 	assert.True(t, wdb.GetLocatorID() >= 0, "Got incorrect locator ID")
 	assert.True(t, wdb.GetServiceID() > 0, "Gog incorrect service ID")
+
+	// Bind music as well
+	_, err = config.Bind(wdm)
+	assert.Nil(t, err, "could not bind music descriptor")
 
 	err = config.Commit()
 	assert.Nil(t, err, "commit failed")
 
 	// Now lets get the service
-	if false {
-		t.Log("Fix this test once we have a nice cache for singleton service")
-		return
-	}
+	raw, err := locator.GetService(ioc.DSK(MusicServiceName))
+	assert.Nil(t, err, "error getting the user service")
+	assert.NotNil(t, raw, "returned service is nil")
 
-	raw, err := locator.GetService(ioc.DSK(EchoServiceName))
+	musicService, ok := raw.(*musicData)
+	assert.True(t, ok, "music service not expected type")
+
+	raw, err = locator.GetService(ioc.DSK(EchoServiceName))
 	assert.Nil(t, err, "error getting the user service")
 	assert.NotNil(t, raw, "returned service is nil")
 
@@ -94,6 +107,7 @@ func TestAddServiceWithDCS(t *testing.T) {
 	reply := echoService.Echo("hi")
 	assert.Equal(t, reply, "hi", "Echo didn't echo?")
 
+	assert.Equal(t, musicService.echo, echoService, "singleton echo service should be the same")
 }
 
 func getDCS(t *testing.T, locator ioc.ServiceLocator) (ioc.DynamicConfigurationService, error) {
@@ -112,4 +126,24 @@ func createEcho(locator ioc.ServiceLocator, key ioc.ServiceKey) (interface{}, er
 
 func destroyEcho(locator ioc.ServiceLocator, key ioc.ServiceKey, obj interface{}) error {
 	return nil
+}
+
+func createMusic(locator ioc.ServiceLocator, sk ioc.ServiceKey) (interface{}, error) {
+	// This next bit is what makes this "ioc," as it it the system building up the tree
+	echoRaw, err := locator.GetService(ioc.DSK(EchoServiceName))
+	if err != nil {
+		return nil, err
+	}
+
+	echo, ok := echoRaw.(EchoApplication)
+	if !ok {
+		return nil, fmt.Errorf("Unkown type of EchoApplication")
+	}
+
+	retVal, err := newMusicData(echo)
+	if err != nil {
+		return nil, err
+	}
+
+	return retVal, nil
 }
