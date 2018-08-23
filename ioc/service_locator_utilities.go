@@ -51,6 +51,51 @@ func CreateAndBind(locatorName string, method BinderMethod) (ServiceLocator, err
 		return nil, err
 	}
 
+	err = BindIntoLocator(locator, method)
+	if err != nil {
+		return nil, err
+	}
+
+	return locator, nil
+}
+
+// BindIntoLocator uses the binder to add services into an existing ServiceLocator
+func BindIntoLocator(locator ServiceLocator, method BinderMethod) error {
+	dcs, err := getDCS(locator)
+	if err != nil {
+		return err
+	}
+
+	binder := newBinder()
+
+	err = method(binder)
+	if err != nil {
+		return err
+	}
+
+	descs := binder.finish()
+
+	config, err := dcs.CreateDynamicConfiguration()
+	if err != nil {
+		return err
+	}
+
+	for _, desc := range descs {
+		_, err = config.Bind(desc)
+		if err != nil {
+			return err
+		}
+	}
+
+	err = config.Commit()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func getDCS(locator ServiceLocator) (DynamicConfigurationService, error) {
 	dcsRaw, err := locator.GetService(SSK(DynamicConfigurationServiceName))
 	if err != nil {
 		return nil, err
@@ -61,31 +106,5 @@ func CreateAndBind(locatorName string, method BinderMethod) (ServiceLocator, err
 		return nil, fmt.Errorf("DynamicConfigurationService is an unexpected type")
 	}
 
-	binder := newBinder()
-
-	err = method(binder)
-	if err != nil {
-		return nil, err
-	}
-
-	descs := binder.finish()
-
-	config, err := dcs.CreateDynamicConfiguration()
-	if err != nil {
-		return nil, err
-	}
-
-	for _, desc := range descs {
-		_, err = config.Bind(desc)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	err = config.Commit()
-	if err != nil {
-		return nil, err
-	}
-
-	return locator, nil
+	return dcs, nil
 }
