@@ -40,47 +40,70 @@
 
 package ioc
 
-import "sync"
+import (
+	"fmt"
+	"github.com/jwells131313/goethe/cache"
+)
 
 type idKey struct {
-	service, locator int64
+	desc Descriptor
 }
 
 type singletonContextualData struct {
-	lock     sync.Mutex
-	services map[idKey]interface{}
+	locator ServiceLocator
+	cache   cache.Computable
 }
 
-func newSingletonScope() ContextualScope {
-	return &singletonContextualData{
-		services: make(map[idKey]interface{}),
+func newSingletonScope(locator *serviceLocatorData) (ContextualScope, error) {
+	retVal := &singletonContextualData{
+		locator: locator,
 	}
+
+	c, err := cache.NewCache(retVal, func(in interface{}) error {
+		return fmt.Errorf("cycle detected in singleton scope involving %v", in)
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	retVal.cache = c
+
+	return retVal, nil
 }
 
-func (singletonContextualData) GetScope() string {
+func (single *singletonContextualData) GetScope() string {
 	return Singleton
 }
 
-func (singletonContextualData) FindOrCreate(locator ServiceLocator, desc Descriptor) (interface{}, error) {
+func (single *singletonContextualData) FindOrCreate(locator ServiceLocator, desc Descriptor) (interface{}, error) {
+	return single.cache.Compute(idKey{desc: desc})
+}
+
+func (single *singletonContextualData) ContainsKey(locator ServiceLocator, desc Descriptor) bool {
 	panic("implement me")
 }
 
-func (singletonContextualData) ContainsKey(locator ServiceLocator, desc Descriptor) bool {
+func (single *singletonContextualData) DestroyOne(locator ServiceLocator, desc Descriptor) error {
 	panic("implement me")
 }
 
-func (singletonContextualData) DestroyOne(locator ServiceLocator, desc Descriptor) error {
-	panic("implement me")
-}
-
-func (singletonContextualData) GetSupportsNilCreation(locator ServiceLocator) bool {
+func (single *singletonContextualData) GetSupportsNilCreation(locator ServiceLocator) bool {
 	return false
 }
 
-func (singletonContextualData) IsActive(locator ServiceLocator) bool {
+func (single *singletonContextualData) IsActive(locator ServiceLocator) bool {
 	return true
 }
 
-func (singletonContextualData) Shutdown(locator ServiceLocator) {
+func (single *singletonContextualData) Shutdown(locator ServiceLocator) {
 	panic("implement me")
+}
+
+func (single *singletonContextualData) Compute(in interface{}) (interface{}, error) {
+	key, ok := in.(idKey)
+	if !ok {
+		return nil, fmt.Errorf("incomding key not the expected type %v", in)
+	}
+
+	return single.locator.CreateServiceFromDescriptor(key.desc)
 }

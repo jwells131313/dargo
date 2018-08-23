@@ -135,13 +135,13 @@ type baseDescriptor struct {
 	visibility             int
 	metadata               map[string][]string
 	rank                   int32
+	serviceID, locatorID   int64
 }
 
 type descriptorImpl struct {
 	baseDescriptor
-	serviceID, locatorID int64
-	creator              func(ServiceLocator, ServiceKey) (interface{}, error)
-	destroyer            func(ServiceLocator, ServiceKey, interface{}) error
+	creator   func(ServiceLocator, ServiceKey) (interface{}, error)
+	destroyer func(ServiceLocator, ServiceKey, interface{}) error
 }
 
 type writeableDescriptorImpl struct {
@@ -326,6 +326,10 @@ func (di *baseDescriptor) SetRank(rank int32) int32 {
 	di.rank = rank
 
 	return retVal
+}
+
+func (di *baseDescriptor) String() string {
+	return fmt.Sprintf("%s/%s/%d/%d", di.namespace, di.name, di.locatorID, di.serviceID)
 }
 
 func (di *descriptorImpl) GetServiceID() int64 {

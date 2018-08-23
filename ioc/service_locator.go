@@ -74,6 +74,10 @@ type ServiceLocator interface {
 	// descriptor and any other error if there was an error creating the interface
 	GetServiceFromDescriptor(desc Descriptor) (interface{}, error)
 
+	// CreateServiceFromDescriptor creates the service without using contextual data,
+	// simply properly invoking the creation method
+	CreateServiceFromDescriptor(desc Descriptor) (interface{}, error)
+
 	// GetDescriptors Returns all descriptors that return true when passed through the input function
 	// will not return nil, but may return an empty list
 	GetDescriptors(Filter) ([]Descriptor, error)
@@ -145,7 +149,11 @@ func NewServiceLocator(name string, qos int) (ServiceLocator, error) {
 		ID:               ID,
 		allDescriptors:   make([]Descriptor, 0),
 		perLookupContext: newPerLookupContext(),
-		singletonContext: newSingletonScope(),
+	}
+
+	retVal.singletonContext, err = newSingletonScope(retVal)
+	if err != nil {
+		return nil, err
 	}
 
 	serviceLocatorDescriptor := NewConstantDescriptor(SSK(ServiceLocatorName), retVal)
@@ -343,4 +351,14 @@ func (locator *serviceLocatorData) update(newDescs []Descriptor, removers []Filt
 	locator.allDescriptors = newAllDescs
 
 	return nil
+}
+
+func (locator *serviceLocatorData) CreateServiceFromDescriptor(desc Descriptor) (interface{}, error) {
+	cf := desc.GetCreateFunction()
+	serviceKey, err := newServiceKeyFromDescriptor(desc)
+	if err != nil {
+		return nil, err
+	}
+
+	return cf(locator, serviceKey)
 }

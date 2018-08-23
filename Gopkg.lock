@@ -10,6 +10,17 @@
   version = "v1.1.1"
 
 [[projects]]
+  branch = "master"
+  digest = "1:051e38fc134148f173b3f2caed2e44c88ed6815743f00418d9d0594638d587df"
+  name = "github.com/jwells131313/goethe"
+  packages = [
+    ".",
+    "cache",
+  ]
+  pruneopts = "UT"
+  revision = "2783ae4a5146aa5eebc4848617fee9ad7d9ade34"
+
+[[projects]]
   digest = "1:0028cb19b2e4c3112225cd871870f2d9cf49b9b4276531f03438a88e94be86fe"
   name = "github.com/pmezard/go-difflib"
   packages = ["difflib"]
@@ -28,6 +39,9 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  input-imports = ["github.com/stretchr/testify/assert"]
+  input-imports = [
+    "github.com/jwells131313/goethe/cache",
+    "github.com/stretchr/testify/assert",
+  ]
   solver-name = "gps-cdcl"
   solver-version = 1

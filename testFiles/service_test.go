@@ -79,13 +79,14 @@ func TestAddServiceWithDCS(t *testing.T) {
 	assert.Nil(t, err, "commit failed")
 
 	// Now lets get the service
-	if true {
+	if false {
 		t.Log("Fix this test once we have a nice cache for singleton service")
 		return
 	}
 
 	raw, err := locator.GetService(ioc.DSK(EchoServiceName))
 	assert.Nil(t, err, "error getting the user service")
+	assert.NotNil(t, raw, "returned service is nil")
 
 	echoService, ok := raw.(EchoApplication)
 	assert.True(t, ok, "Returned service is not an EchoApplication")
