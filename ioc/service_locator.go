@@ -67,6 +67,11 @@ type ServiceLocator interface {
 	// It returns the best implementation of the interface
 	GetService(toMe ServiceKey) (interface{}, error)
 
+	// GetDService gets the service with the given name in the default namespace and
+	// with the provided qualifiers
+	// It returns the best implementation of the interface
+	GetDService(name string, qualifiers ...string) (interface{}, error)
+
 	// GetAllServices returns all the services matching the service key
 	GetAllServices(toMe ServiceKey) ([]interface{}, error)
 
@@ -188,6 +193,10 @@ func (locator *serviceLocatorData) GetService(toMe ServiceKey) (interface{}, err
 	}
 
 	return locator.createService(desc)
+}
+
+func (locator *serviceLocatorData) GetDService(name string, qualifiers ...string) (interface{}, error) {
+	return locator.GetService(DSK(name, qualifiers...))
 }
 
 func (locator *serviceLocatorData) GetAllServices(toMe ServiceKey) ([]interface{}, error) {

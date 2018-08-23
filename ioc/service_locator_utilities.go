@@ -40,39 +40,52 @@
 
 package ioc
 
-import (
-	"reflect"
-	"testing"
-)
+import "fmt"
 
-type shape interface {
-}
-
-type shapeImpl struct {
-}
-
-func TestBinder(t *testing.T) {
-	desc, err := Bind(func(ServiceLocator) (interface{}, error) {
-		return &shapeImpl{}, nil
-	}).To(reflect.TypeOf(new(shape)).Elem()).Named("Nick Foles").Build()
+// CreateAndBind creates a ServiceLocator with the given name (failing
+// if the locator already exists) and binding the methods described in
+// the BinderMethod into the locator
+func CreateAndBind(locatorName string, method BinderMethod) (ServiceLocator, error) {
+	locator, err := NewServiceLocator(locatorName, FailIfPresent)
 	if err != nil {
-		// t.Error("there was an error creating the descriptor", err)
-		t.Log("Leaving this for now in order to do some work with the build")
-		return
+		return nil, err
 	}
 
-	if "Nick Foles" != desc.GetName() {
-		t.Error("desc should have had a name:", desc.GetName())
-		return
+	dcsRaw, err := locator.GetService(SSK(DynamicConfigurationServiceName))
+	if err != nil {
+		return nil, err
 	}
-}
 
-func TestPointerBinderFailure(t *testing.T) {
-	_, err := Bind(func(ServiceLocator) (interface{}, error) {
-		return &shapeImpl{}, nil
-	}).To(reflect.TypeOf(new(shape))).Named("Nick Foles").Build()
-	if err == nil {
-		t.Error("should have been an error as the interface was not the correct type")
-		return
+	dcs, ok := dcsRaw.(DynamicConfigurationService)
+	if !ok {
+		return nil, fmt.Errorf("DynamicConfigurationService is an unexpected type")
 	}
+
+	binder := newBinder()
+
+	err = method(binder)
+	if err != nil {
+		return nil, err
+	}
+
+	descs := binder.finish()
+
+	config, err := dcs.CreateDynamicConfiguration()
+	if err != nil {
+		return nil, err
+	}
+
+	for _, desc := range descs {
+		_, err = config.Bind(desc)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	err = config.Commit()
+	if err != nil {
+		return nil, err
+	}
+
+	return locator, nil
 }

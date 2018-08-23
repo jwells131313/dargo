@@ -110,6 +110,27 @@ func TestAddServiceWithDCS(t *testing.T) {
 	assert.Equal(t, musicService.echo, echoService, "singleton echo service should be the same")
 }
 
+// TestBasicServiceLocatorLookup.  This uses the raw DynamicConfigurationService
+// in order to add a service (echo) and then look up the service
+func TestSimpleService(t *testing.T) {
+	locator, err := ioc.CreateAndBind(ServiceTestLocatorName2, func(binder ioc.Binder) error {
+		binder.Bind(createEcho, EchoServiceName)
+		binder.Bind(createMusic, MusicServiceName)
+
+		return nil
+	})
+	assert.Nil(t, err, "could not create locator using binder")
+
+	raw, err := locator.GetDService(MusicServiceName)
+	assert.Nil(t, err, "did not find music service")
+
+	musicService, ok := raw.(*musicData)
+	assert.True(t, ok, "music service does not have correct type")
+
+	reply := musicService.echo.Echo("Go Eagles!")
+	assert.Equal(t, reply, "Go Eagles!", "echo didn't echo")
+}
+
 func getDCS(t *testing.T, locator ioc.ServiceLocator) (ioc.DynamicConfigurationService, error) {
 	raw, err := locator.GetService(ioc.SSK(ioc.DynamicConfigurationServiceName))
 	assert.Nil(t, err, "could not get dynamic configuration service")

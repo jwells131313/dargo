@@ -40,41 +40,88 @@
 
 package ioc
 
-import (
-	"errors"
-	"reflect"
-)
+type BinderMethod func(Binder) error
 
 // Binder A fluent interface for creating descriptors
 type Binder interface {
-	To(reflect.Type) Binder
-	Named(string) Binder
-	Build() (WriteableDescriptor, error)
+	Bind(func(ServiceLocator, ServiceKey) (interface{}, error), string) Binder
+	InScope(string) Binder
+	InNamespace(string) Binder
+	QualifiedBy(string) Binder
 }
 
 type binder struct {
-	creator   func(ServiceLocator) (interface{}, error)
-	contracts []reflect.Type
-	name      string
+	descriptors []Descriptor
+
+	current    WriteableDescriptor
+	qualifiers []string
 }
 
-// Bind the descriptor to the interface type  toMe must be an interface
-func Bind(creatorFunc func(ServiceLocator) (interface{}, error)) Binder {
+func newBinder() *binder {
 	return &binder{
-		creator: creatorFunc,
+		descriptors: make([]Descriptor, 0),
 	}
 }
 
-func (binder *binder) To(t reflect.Type) Binder {
-	binder.contracts = append(binder.contracts, t)
+func (binder *binder) Bind(cf func(ServiceLocator, ServiceKey) (interface{}, error), name string) Binder {
+	if binder.current != nil {
+		if len(binder.qualifiers) > 0 {
+			binder.current.SetQualifiers(binder.qualifiers)
+		}
+
+		binder.descriptors = append(binder.descriptors, binder.current)
+
+		binder.current = nil
+		binder.qualifiers = nil
+	}
+
+	binder.current = NewWriteableDescriptor()
+	binder.current.SetCreateFunction(cf)
+	binder.current.SetName(name)
+
+	binder.qualifiers = make([]string, 0)
+
 	return binder
 }
 
-func (binder *binder) Named(userName string) Binder {
-	binder.name = userName
+func (binder *binder) InScope(scope string) Binder {
+	if binder.current == nil {
+		panic("must call bind before this method")
+	}
+
+	binder.current.SetScope(scope)
+
 	return binder
 }
 
-func (binder *binder) Build() (WriteableDescriptor, error) {
-	return nil, errors.New("not yet implemented")
+func (binder *binder) InNamespace(namespace string) Binder {
+	if binder.current == nil {
+		panic("must call bind before this method")
+	}
+
+	binder.current.SetNamespace(namespace)
+
+	return binder
+}
+
+func (binder *binder) QualifiedBy(qualifier string) Binder {
+	if binder.current == nil {
+		panic("must call bind before this method")
+	}
+
+	binder.qualifiers = append(binder.qualifiers, qualifier)
+
+	return binder
+}
+
+func (binder *binder) finish() []Descriptor {
+	if binder.current != nil {
+		if len(binder.qualifiers) > 0 {
+			binder.current.SetQualifiers(binder.qualifiers)
+		}
+
+		binder.descriptors = append(binder.descriptors, binder.current)
+	}
+
+	return binder.descriptors
 }
