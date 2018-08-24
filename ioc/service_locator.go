@@ -46,21 +46,6 @@ import (
 	"sync"
 )
 
-const (
-	// FailIfPresent Return an error if a service locator with that name exists
-	FailIfPresent = 0
-	// ReturnExistingOrCreateNew Return the existing service locator if found, otherwise create it
-	ReturnExistingOrCreateNew = 1
-	// FailIfNotPresent Return an existing locator with the given name, and fail if it does not already exist
-	FailIfNotPresent = 2
-
-	// ServiceLocatorName The name of the ServiceLocator service (in the system namespace)
-	ServiceLocatorName = "ServiceLocator"
-
-	// DynamicConfigurationServiceName The name of the DynamicConfigurationService (in the system namespace)
-	DynamicConfigurationServiceName = "DynamicConfigurationService"
-)
-
 // ServiceLocator The main registry for dargo.  Use it to get context sensitive lookups
 // for application services
 type ServiceLocator interface {
