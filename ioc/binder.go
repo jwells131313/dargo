@@ -40,6 +40,7 @@
 
 package ioc
 
+// BinderMethod is the method signature for binding services into the ServiceLocator
 type BinderMethod func(Binder) error
 
 // Binder A fluent interface for creating descriptors
