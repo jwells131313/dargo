@@ -115,8 +115,8 @@ func TestAddServiceWithDCS(t *testing.T) {
 // in order to add a service (echo) and then look up the service
 func TestSimpleService(t *testing.T) {
 	locator, err := ioc.CreateAndBind(ServiceTestLocatorName2, func(binder ioc.Binder) error {
-		binder.Bind(createEcho, EchoServiceName)
-		binder.Bind(createMusic, MusicServiceName)
+		binder.Bind(EchoServiceName, createEcho)
+		binder.Bind(MusicServiceName, createMusic)
 
 		return nil
 	})
@@ -134,15 +134,15 @@ func TestSimpleService(t *testing.T) {
 
 func TestRankOverrideService(t *testing.T) {
 	locator, err := ioc.CreateAndBind(ServiceTestLocatorName3, func(binder ioc.Binder) error {
-		binder.Bind(createEcho, EchoServiceName)
-		binder.Bind(createMusic, MusicServiceName)
+		binder.Bind(EchoServiceName, createEcho)
+		binder.Bind(MusicServiceName, createMusic)
 
 		return nil
 	})
 	assert.Nil(t, err, "could not create locator using binder")
 
 	err = ioc.BindIntoLocator(locator, func(binder ioc.Binder) error {
-		binder.Bind(createTestEcho, EchoServiceName).Ranked(1)
+		binder.Bind(EchoServiceName, createTestEcho).Ranked(1)
 		return nil
 	})
 	assert.Nil(t, err, "added in the test echo service at rank 1")

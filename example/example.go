@@ -102,16 +102,16 @@ const (
 func start() (ioc.ServiceLocator, error) {
 	return ioc.CreateAndBind("OracleMusicPlayer", func(binder ioc.Binder) error {
 		// bind the "A" note
-		binder.Bind(func(locator ioc.ServiceLocator, key ioc.ServiceKey) (interface{}, error) {
+		binder.Bind(NoteServiceName, func(locator ioc.ServiceLocator, key ioc.ServiceKey) (interface{}, error) {
 			return newNoteService("a"), nil
 			// Give the service the NoteServiceName and qualify it with the note
-		}, NoteServiceName).QualifiedBy("a")
+		}).QualifiedBy("a")
 
 		// bind the "B" note
-		binder.Bind(func(locator ioc.ServiceLocator, key ioc.ServiceKey) (interface{}, error) {
+		binder.Bind(NoteServiceName, func(locator ioc.ServiceLocator, key ioc.ServiceKey) (interface{}, error) {
 			return newNoteService("b"), nil
 			// Give the service the NoteServiceName and qualify it with the note
-		}, NoteServiceName).QualifiedBy("b")
+		}).QualifiedBy("b")
 
 		// I got tired of doing it one-by-one, so I'm doing the rest in a loop
 
@@ -121,12 +121,12 @@ func start() (ioc.ServiceLocator, error) {
 			note := remainingNote
 
 			// Bind all the other notes in this loop
-			binder.Bind(func(locator ioc.ServiceLocator, key ioc.ServiceKey) (interface{}, error) {
+			binder.Bind(NoteServiceName, func(locator ioc.ServiceLocator, key ioc.ServiceKey) (interface{}, error) {
 				// Creates a new note service with the given note
 				return newNoteService(note), nil
 
 				// Give the service the NoteServiceName and qualify it with the note
-			}, NoteServiceName).QualifiedBy(remainingNote)
+			}).QualifiedBy(remainingNote)
 		}
 
 		return nil
@@ -135,7 +135,7 @@ func start() (ioc.ServiceLocator, error) {
 
 func bindPlayer(locator ioc.ServiceLocator) error {
 	return ioc.BindIntoLocator(locator, func(binder ioc.Binder) error {
-		binder.Bind(createMusicService, MusicServiceName)
+		binder.Bind(MusicServiceName, createMusicService)
 		return nil
 	})
 }

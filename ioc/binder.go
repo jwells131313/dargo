@@ -44,7 +44,7 @@ type BinderMethod func(Binder) error
 
 // Binder A fluent interface for creating descriptors
 type Binder interface {
-	Bind(func(ServiceLocator, ServiceKey) (interface{}, error), string) Binder
+	Bind(name string, bindMethod func(ServiceLocator, ServiceKey) (interface{}, error)) Binder
 	InScope(string) Binder
 	InNamespace(string) Binder
 	QualifiedBy(string) Binder
@@ -64,7 +64,7 @@ func newBinder() *binder {
 	}
 }
 
-func (binder *binder) Bind(cf func(ServiceLocator, ServiceKey) (interface{}, error), name string) Binder {
+func (binder *binder) Bind(name string, cf func(ServiceLocator, ServiceKey) (interface{}, error)) Binder {
 	if binder.current != nil {
 		if len(binder.qualifiers) > 0 {
 			binder.current.SetQualifiers(binder.qualifiers)
