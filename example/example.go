@@ -45,10 +45,12 @@ import (
 	"github.com/jwells131313/dargo/ioc"
 )
 
+// MusicService can play a scale!
 type MusicService interface {
 	PlayCScale() string
 }
 
+// NoteService can play a note!
 type NoteService interface {
 	PlayNote() string
 }
@@ -95,7 +97,10 @@ func (note *noteGenerator) PlayNote() string {
 }
 
 const (
-	NoteServiceName  = "NoteServiceName"
+	// NoteServiceName is the name of the note service.  Note services also have qualifiers
+	// for the specific note they play
+	NoteServiceName = "NoteServiceName"
+	// MusicServiceName is the name of the music service
 	MusicServiceName = "MusicServiceName"
 )
 

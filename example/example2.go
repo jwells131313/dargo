@@ -46,11 +46,16 @@ import (
 )
 
 const (
+	// Example2LocatorName is the name given to the locators defined in example2
 	Example2LocatorName = "Example2Locator"
-	EchoServiceName     = "EchoService_Name"
-	LoggerServiceName   = "LoggerService_Name"
+	// EchoServiceName is the name of the echo service
+	EchoServiceName = "EchoService_Name"
+	// LoggerServiceName is the name of the logger service
+	LoggerServiceName = "LoggerService_Name"
 )
 
+// EchoService is a service that logs the incoming string and
+// then returns the string it was given (echo!)
 type EchoService interface {
 	Echo(string) string
 }
