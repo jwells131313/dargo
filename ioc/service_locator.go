@@ -42,6 +42,7 @@ package ioc
 
 import (
 	"fmt"
+	"sort"
 	"sync"
 )
 
@@ -306,6 +307,26 @@ func (locator *serviceLocatorData) internalGetDescriptors(filter Filter, onlyOne
 			}
 		}
 	}
+
+	sort.Slice(retVal, func(i, j int) bool {
+		if retVal[i].GetRank() > retVal[j].GetRank() {
+			return true
+		} else if retVal[i].GetRank() < retVal[j].GetRank() {
+			return false
+		}
+
+		if retVal[i].GetLocatorID() > retVal[j].GetLocatorID() {
+			return true
+		} else if retVal[i].GetLocatorID() < retVal[j].GetLocatorID() {
+			return false
+		}
+
+		if retVal[i].GetServiceID() < retVal[j].GetLocatorID() {
+			return true
+		}
+
+		return false
+	})
 
 	return retVal, nil
 }

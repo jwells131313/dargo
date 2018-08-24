@@ -48,6 +48,7 @@ type Binder interface {
 	InScope(string) Binder
 	InNamespace(string) Binder
 	QualifiedBy(string) Binder
+	Ranked(int32) Binder
 }
 
 type binder struct {
@@ -112,6 +113,17 @@ func (binder *binder) QualifiedBy(qualifier string) Binder {
 	binder.qualifiers = append(binder.qualifiers, qualifier)
 
 	return binder
+}
+
+func (binder *binder) Ranked(rank int32) Binder {
+	if binder.current == nil {
+		panic("must call bind before this method")
+	}
+
+	binder.current.SetRank(rank)
+
+	return binder
+
 }
 
 func (binder *binder) finish() []Descriptor {
