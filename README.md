@@ -36,7 +36,7 @@
 [//]: # " only if the new code is made subject to such option by the copyright "
 [//]: # " holder. "
 
-# dargo [![wercker status](https://app.wercker.com/status/24379824ff4ec7e885f37323e261a36b/s/master "wercker status")](https://app.wercker.com/project/byKey/24379824ff4ec7e885f37323e261a36b)
+# dargo [![GoDoc](https://godoc.org/github.com/jwells131313/dargo/ioc?status.svg)](https://godoc.org/github.com/jwells131313/dargo/ioc) [![wercker status](https://app.wercker.com/status/24379824ff4ec7e885f37323e261a36b/s/master "wercker status")](https://app.wercker.com/project/byKey/24379824ff4ec7e885f37323e261a36b)
 
 Dynamic Service Registry and Inversion of Control for GO
 
