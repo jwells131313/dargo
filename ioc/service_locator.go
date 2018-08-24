@@ -193,6 +193,10 @@ func (locator *serviceLocatorData) GetService(toMe ServiceKey) (interface{}, err
 		return nil, err
 	}
 
+	if desc == nil {
+		return nil, fmt.Errorf("Service %v not found", toMe)
+	}
+
 	return locator.createService(desc)
 }
 
@@ -226,7 +230,7 @@ func (locator *serviceLocatorData) GetServiceFromDescriptor(desc Descriptor) (in
 }
 
 func (locator *serviceLocatorData) GetDescriptors(filter Filter) ([]Descriptor, error) {
-	all, err := locator.internalGetDescriptors(filter, false)
+	all, err := locator.internalGetDescriptors(filter)
 	if err != nil {
 		return nil, err
 	}
@@ -235,7 +239,7 @@ func (locator *serviceLocatorData) GetDescriptors(filter Filter) ([]Descriptor, 
 }
 
 func (locator *serviceLocatorData) GetBestDescriptor(filter Filter) (Descriptor, error) {
-	all, err := locator.internalGetDescriptors(filter, true)
+	all, err := locator.internalGetDescriptors(filter)
 	if err != nil {
 		return nil, err
 	}
@@ -293,7 +297,7 @@ func (locator *serviceLocatorData) createService(desc Descriptor) (interface{}, 
 }
 
 // TODO: This will one day need to, you know, honor the rank and maybe keep caches
-func (locator *serviceLocatorData) internalGetDescriptors(filter Filter, onlyOne bool) ([]Descriptor, error) {
+func (locator *serviceLocatorData) internalGetDescriptors(filter Filter) ([]Descriptor, error) {
 	locator.lock.Lock()
 	defer locator.lock.Unlock()
 
@@ -301,10 +305,6 @@ func (locator *serviceLocatorData) internalGetDescriptors(filter Filter, onlyOne
 	for _, desc := range locator.allDescriptors {
 		if filter.Filter(desc) {
 			retVal = append(retVal, desc)
-
-			if onlyOne {
-				return retVal, nil
-			}
 		}
 	}
 
@@ -358,14 +358,19 @@ func (locator *serviceLocatorData) update(newDescs []Descriptor, removers []Filt
 	}
 
 	newAllDescs := make([]Descriptor, 0)
+
 	removedDescriptors := make([]Descriptor, 0)
-	for _, removeFilter := range removers {
-		for _, myDesc := range locator.allDescriptors {
-			if !removeFilter.Filter(myDesc) {
-				newAllDescs = append(newAllDescs, myDesc)
-			} else {
-				removedDescriptors = append(removedDescriptors, myDesc)
-			}
+	for _, myDesc := range locator.allDescriptors {
+		removeMe := false
+
+		for _, removeFilter := range removers {
+			removeMe = removeMe || removeFilter.Filter(myDesc)
+		}
+
+		if !removeMe {
+			newAllDescs = append(newAllDescs, myDesc)
+		} else {
+			removedDescriptors = append(removedDescriptors, myDesc)
 		}
 	}
 

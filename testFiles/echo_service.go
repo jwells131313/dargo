@@ -58,3 +58,14 @@ func NewEchoApplication() EchoApplication {
 func (ei *EchoImpl) Echo(input string) string {
 	return input
 }
+
+type testEchoImpl struct {
+}
+
+func newTestEchoImpl() EchoApplication {
+	return &testEchoImpl{}
+}
+
+func (tei *testEchoImpl) Echo(input string) string {
+	return "test"
+}

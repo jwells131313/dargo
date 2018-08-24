@@ -50,6 +50,7 @@ import (
 const (
 	ServiceTestLocatorName  = "ServiceTestLocatorName"
 	ServiceTestLocatorName2 = "Locator2"
+	ServiceTestLocatorName3 = "Locator3"
 	EchoServiceName         = "EchoService"
 	MusicServiceName        = "MusicService"
 )
@@ -131,6 +132,32 @@ func TestSimpleService(t *testing.T) {
 	assert.Equal(t, reply, "Go Eagles!", "echo didn't echo")
 }
 
+func TestRankOverrideService(t *testing.T) {
+	locator, err := ioc.CreateAndBind(ServiceTestLocatorName3, func(binder ioc.Binder) error {
+		binder.Bind(createEcho, EchoServiceName)
+		binder.Bind(createMusic, MusicServiceName)
+
+		return nil
+	})
+	assert.Nil(t, err, "could not create locator using binder")
+
+	err = ioc.BindIntoLocator(locator, func(binder ioc.Binder) error {
+		binder.Bind(createTestEcho, EchoServiceName).Ranked(1)
+		return nil
+	})
+	assert.Nil(t, err, "added in the test echo service at rank 1")
+
+	raw, err := locator.GetDService(MusicServiceName)
+	assert.Nil(t, err, "did not find music service")
+
+	musicService, ok := raw.(*musicData)
+	assert.True(t, ok, "music service does not have correct type")
+
+	reply := musicService.echo.Echo("Go Eagles!")
+	assert.Equal(t, reply, "test", "echo didn't echo")
+
+}
+
 func getDCS(t *testing.T, locator ioc.ServiceLocator) (ioc.DynamicConfigurationService, error) {
 	raw, err := locator.GetService(ioc.SSK(ioc.DynamicConfigurationServiceName))
 	assert.Nil(t, err, "could not get dynamic configuration service")
@@ -143,6 +170,10 @@ func getDCS(t *testing.T, locator ioc.ServiceLocator) (ioc.DynamicConfigurationS
 
 func createEcho(locator ioc.ServiceLocator, key ioc.ServiceKey) (interface{}, error) {
 	return NewEchoApplication(), nil
+}
+
+func createTestEcho(locator ioc.ServiceLocator, key ioc.ServiceKey) (interface{}, error) {
+	return newTestEchoImpl(), nil
 }
 
 func destroyEcho(locator ioc.ServiceLocator, key ioc.ServiceKey, obj interface{}) error {
