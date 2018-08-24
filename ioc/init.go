@@ -48,5 +48,29 @@ var (
 	currentID    int64 = 1
 )
 
+// constant values for the ioc package
+const (
+	// Indicates that this is normal descriptor, visible to children
+	NormalVisibility = iota
+
+	// Indicates taht this is a local descriptor, only visible to its own locator
+	LocalVisibility = iota
+
+	// PerLookup Every new lookup is a new service
+	PerLookup = "PerLookup"
+
+	// Singleton Is created one time only
+	Singleton = "Singleton"
+
+	// SystemNamespace The namespace for system services
+	SystemNamespace = "system"
+
+	// DefaultNamespace A default namespace
+	DefaultNamespace = "default"
+
+	// ContextualScopeNamespace A namespace specifically for ContextualScope services
+	ContextualScopeNamespace = "sys/scope"
+)
+
 func init() {
 }

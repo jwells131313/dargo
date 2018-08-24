@@ -52,15 +52,6 @@ type ServiceKey interface {
 	GetQualifiers() []string
 }
 
-const (
-	// SystemNamespace The namespace for system services
-	SystemNamespace = "system"
-	// DefaultNamespace A default namespace
-	DefaultNamespace = "default"
-	// ContextualScopeNamespace A namespace specifically for ContextualScope services
-	ContextualScopeNamespace = "sys/scope"
-)
-
 // NewServiceKey Creates a new darget managed service key
 func NewServiceKey(namespace, name string, qualifiers ...string) (ServiceKey, error) {
 	err := checkNamespaceCharacters(namespace)

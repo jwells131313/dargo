@@ -45,21 +45,6 @@ import (
 	"sync"
 )
 
-// Values for the visibility field of the Descriptor
-const (
-	// Indicates that this is normal descriptor, visibile to children
-	Normal = iota
-
-	// Indicates taht this is a local descriptor, only visible to its own locator
-	Local = iota
-
-	// PerLookup Every new lookup is a new service
-	PerLookup = "PerLookup"
-
-	// Singleton Is created one time only
-	Singleton = "Singleton"
-)
-
 // Descriptor description of a dargo service description
 type Descriptor interface {
 	// GetCreateFunction create creates the instance of the type
@@ -183,8 +168,8 @@ func NewDescriptor(desc Descriptor, serviceID, locatorID int64) (Descriptor, err
 	}
 
 	visibility := desc.GetVisibility()
-	if visibility != Local && visibility != Normal {
-		return nil, fmt.Errorf("descriptor must have visibility Local or Normal, it is %d", visibility)
+	if visibility != LocalVisibility && visibility != NormalVisibility {
+		return nil, fmt.Errorf("descriptor must have visibility LocalVisibility or Normal, it is %d", visibility)
 	}
 
 	retVal := &descriptorImpl{
@@ -212,7 +197,7 @@ func NewWriteableDescriptor() WriteableDescriptor {
 	retVal.namespace = DefaultNamespace
 	retVal.qualifiers = make([]string, 0)
 	retVal.metadata = make(map[string][]string)
-	retVal.visibility = Normal
+	retVal.visibility = NormalVisibility
 	retVal.scope = Singleton
 
 	return retVal
@@ -229,7 +214,7 @@ func NewConstantDescriptor(key ServiceKey, cnstnt interface{}) WriteableDescript
 	retVal.name = key.GetName()
 	retVal.qualifiers = key.GetQualifiers()
 	retVal.metadata = make(map[string][]string)
-	retVal.visibility = Normal
+	retVal.visibility = NormalVisibility
 	retVal.scope = PerLookup
 
 	return retVal
@@ -429,8 +414,8 @@ func (wdi *writeableDescriptorImpl) SetVisibility(in int) error {
 	wdi.lock.Lock()
 	defer wdi.lock.Unlock()
 
-	if in != Local && in != Normal {
-		return fmt.Errorf("visibility %d is not Local or Normal", in)
+	if in != LocalVisibility && in != NormalVisibility {
+		return fmt.Errorf("visibility %d is not LocalVisibility or Normal", in)
 	}
 
 	wdi.visibility = in

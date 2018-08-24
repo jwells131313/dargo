@@ -36,7 +36,7 @@
 [//]: # " only if the new code is made subject to such option by the copyright "
 [//]: # " holder. "
 
-# dargo
+# dargo [![wercker status](https://app.wercker.com/status/24379824ff4ec7e885f37323e261a36b/s/master "wercker status")](https://app.wercker.com/project/byKey/24379824ff4ec7e885f37323e261a36b)
 
 Dynamic Service Registry and Inversion of Control for GO
 
@@ -73,7 +73,156 @@ all of your internal code will use the mock from the ServiceLocator rather than 
 
 ### An Example
 
-In the following example a MusicService depends on seven NoteServices.  Each NoteService is qualified with
-one of the letters from A to G.
+In the following example we will bind two services.  One provides an EchoService and is in the Singleton
+scope, while the other is a logger service and is in the PerLookup scope.  First, here is the definition
+and implementation of the EchoService:
 
+```go
+// EchoService is a service that logs the incoming string and
+// then returns the string it was given (echo!)
+type EchoService interface {
+	Echo(string) string
+}
+
+type echoServiceData struct {
+	logger *logrus.Logger
+}
+
+func (echo *echoServiceData) Echo(in string) string {
+	echo.logger.Printf("Echo got a string to log: %s", in)
+
+	return in
+}
+```
+
+To allow dargo to create the EchoService the user must supply a creation function.  The creation
+function is passed a ServiceLocator to be used to find other services it may depend on and the
+ServiceKey that describes the service further.  This is the creation function for the EchoService:
+
+```go
+func newEchoService(locator ioc.ServiceLocator, key ioc.ServiceKey) (interface{}, error) {
+	logger, err := locator.GetDService(LoggerServiceName)
+	if err != nil {
+		return nil, err
+	}
+
+	return &echoServiceData{
+		logger: logger.(*logrus.Logger),
+	}, nil
+
+}
+```
+
+The code above used the ServiceLocator method GetDService to get the LoggerService.  The
+method GetDService returns services in the default service namespace (more about service names later).
+It then gives that service to the echo data structure that is returned.
+
+Here is the creation function for the logger service:
+
+```go
+import "github.com/sirupsen/logrus"
+
+func newLogger(ioc.ServiceLocator, ioc.ServiceKey) (interface{}, error) {
+	return logrus.New(), nil
+}
+```
+
+Now that we have our services defined and our creator functions written we can create a
+ServiceLocator and bind those services.  This is the method that does that:
+
+```go
+// CreateEchoLocator returns a ServiceLocator with the EchoService bound
+// into it as well as a PerLookup logger service
+func CreateEchoLocator() (ioc.ServiceLocator, error) {
+	
+	// Use CreateAndBind to create and bind services all at once!
+	return ioc.CreateAndBind(Example2LocatorName, func(binder ioc.Binder) error {
+		
+		// binds the echo service into the locator in Singleton scope
+		binder.Bind(EchoServiceName, newEchoService)
+
+		// binds the logger service into the locator in PerLookup scope
+		binder.Bind(LoggerServiceName, newLogger).InScope(ioc.PerLookup)
+
+		return nil
+	})
+}
+```
+
+The CreateAndBind method both creates a ServiceLocator and takes a binder function into which a
+Binder is passed for use in binding services.  It is important to note that the services are **not**
+created at this time, rather a description of the service is put into the ServiceLocator.  Services
+are normally created when they are requested depending on the rules of the scope.  Singleton services
+are created the first time they are asked for, while PerLookup services are created every time someone
+looks the service up.
+
+You can now look up and use the echo service, as shown in the following test code:
+
+```go
+func TestExample2(t *testing.T) {
+	locator, err := CreateEchoLocator()
+	if err != nil {
+		t.Error("could not create locator")
+		return
+	}
+
+	rawService, err := locator.GetDService(EchoServiceName)
+	if err != nil {
+		t.Errorf("could not find echo service %v", err)
+		return
+	}
+
+	echoService, ok := rawService.(EchoService)
+	if !ok {
+		t.Errorf("raw echo service was not the correct type %v", rawService)
+		return
+	}
+
+	ret := echoService.Echo("hi")
+	if ret != "hi" {
+		t.Errorf("did not get expected reply: %s", ret)
+	}
+}
+``` 
+
+When the test code does "locator.GetDService(EchoServiceName)" the create method for the EchoService will be
+invoked, which will in turn lookup the logger service, which, since it is in the PerLookup scope, will always
+return a new one.  Subsequent lookups of the EchoService, however, will return the **same** EchoService, since
+the EchoService is in the Singleton scope.
+
+### Service Names
+
+Every service bound into the ServiceLocator has a name.  The names are scoped by a namespace.  There is
+a default namespace which is sufficient for most use cases.  However, there are
+other special name spaces such as, "system", used for system services, and "sys/scope", used for special
+ContextualScope services
+
+The allowed characters for a name are alphanumeric and _.  The allowed characters for a namespace
+are alphanumeric, _, and ":".  Qualifiers have the same restrictions as the name.
+
+The ServiceKey interface represents a full service key:
+
+```go
+// ServiceKey the key to a dargo managed service
+type ServiceKey interface {
+	GetNamespace() string
+	GetName() string
+	GetQualifiers() []string
+}
+```
+
+There are helper methods for generating ServiceKeys from simple strings.  Also the ServiceLocator
+has a method GetDService which always uses the default namespace to find services.  Here
+are the helper method signatures for creating ServiceKeys:
+
+```go
+// DSK creates a service key in the default namespace with the given name
+func DSK(name string, qualifiers ...string) ServiceKey {...}
+
+// SSK creates a service key in the system namespace with the given name
+func SSK(name string, qualifiers ...string) ServiceKey {...}
+
+// CSK creates a service key in the contextual scope namespace with the given name
+func CSK(name string, qualifiers ...string) ServiceKey {...}
+```
 

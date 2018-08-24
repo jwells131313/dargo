@@ -75,7 +75,7 @@ func createBenchmarkWriteableDescriptor(t *testing.T) WriteableDescriptor {
 	assert.Nil(t, err, "got error %v", err)
 	err = wd.SetQualifiers(qualifiers)
 	assert.Nil(t, err, "got error %v", err)
-	err = wd.SetVisibility(Local)
+	err = wd.SetVisibility(LocalVisibility)
 	assert.Nil(t, err, "got error %v", err)
 	err = wd.SetMetadata(metadata)
 	assert.Nil(t, err, "got error %v", err)
@@ -93,7 +93,7 @@ func validateBenchmarkDescriptor(t *testing.T, wd Descriptor) {
 	assert.Equal(t, foo, wd.GetNamespace(), "did not get expected namespace")
 	assert.Equal(t, bar, wd.GetName(), "did not get expected name")
 	assert.Equal(t, PerLookup, wd.GetScope(), "did not get expected scope")
-	assert.Equal(t, Local, wd.GetVisibility(), "did not get expected visibility")
+	assert.Equal(t, LocalVisibility, wd.GetVisibility(), "did not get expected visibility")
 
 	assert.Equal(t, 2, len(wd.GetQualifiers()), "qualifiers should have had two elements")
 	assert.Equal(t, blue, wd.GetQualifiers()[0], "zero qualifier should have been blue")
