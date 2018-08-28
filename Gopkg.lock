@@ -21,6 +21,14 @@
   revision = "2783ae4a5146aa5eebc4848617fee9ad7d9ade34"
 
 [[projects]]
+  digest = "1:40e195917a951a8bf867cd05de2a46aaf1806c50cf92eebf4c16f78cd196f747"
+  name = "github.com/pkg/errors"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "645ef00459ed84a119197bfb8d8205042c6df63d"
+  version = "v0.8.0"
+
+[[projects]]
   digest = "1:0028cb19b2e4c3112225cd871870f2d9cf49b9b4276531f03438a88e94be86fe"
   name = "github.com/pmezard/go-difflib"
   packages = ["difflib"]
@@ -54,20 +62,22 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:7710ea76bd73d3154e86eaf2db8b36a6dffbd6114e4e37b516f1d232c03ddd8d"
+  digest = "1:9c99029818a3d4f53bcfd6c0158ca068aeacfecb29283f82a1f9c79b8d2a7da4"
   name = "golang.org/x/sys"
   packages = [
     "unix",
     "windows",
   ]
   pruneopts = "UT"
-  revision = "11551d06cbcc94edc80a0facaccbda56473c19c1"
+  revision = "d99a578cf41bfccdeaf48b0845c823a4b8b0ad5e"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
+    "github.com/jwells131313/goethe",
     "github.com/jwells131313/goethe/cache",
+    "github.com/pkg/errors",
     "github.com/sirupsen/logrus",
     "github.com/stretchr/testify/assert",
   ]

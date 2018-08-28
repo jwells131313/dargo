@@ -93,3 +93,10 @@ func (filter *serviceKeyFilter) Filter(desc Descriptor) bool {
 
 	return true
 }
+
+type allFilterData struct {
+}
+
+func (allFilterData) Filter(Descriptor) bool {
+	return true
+}

@@ -42,6 +42,7 @@ package ioc
 
 import (
 	"fmt"
+	"github.com/pkg/errors"
 	"sort"
 	"sync"
 )
@@ -179,7 +180,7 @@ func (locator *serviceLocatorData) GetService(toMe ServiceKey) (interface{}, err
 	}
 
 	if desc == nil {
-		return nil, fmt.Errorf("Service %v not found", toMe)
+		return nil, fmt.Errorf(ServiceWithNameNotFoundExceptionString, toMe)
 	}
 
 	return locator.createService(desc)
@@ -259,7 +260,7 @@ func (locator *serviceLocatorData) createService(desc Descriptor) (interface{}, 
 	} else {
 		service, err := locator.GetService(CSK(scope))
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrapf(err, "could not get context %s for service %s", scope, desc)
 		}
 
 		if service == nil {

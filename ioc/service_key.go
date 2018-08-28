@@ -98,6 +98,18 @@ func (key *serviceKeyData) GetQualifiers() []string {
 	return key.qualifiers
 }
 
+func (key *serviceKeyData) String() string {
+	qPart := ""
+	if len(key.qualifiers) > 0 {
+		for _, qualifier := range key.qualifiers {
+			qPart = qPart + "@" + qualifier
+		}
+	}
+
+	return fmt.Sprintf("%s/%s%s", key.namespace, key.name, qPart)
+
+}
+
 // DSK creates a service key in the default namespace with the given name
 func DSK(name string, qualifiers ...string) ServiceKey {
 	retVal, err := NewServiceKey(DefaultNamespace, name, qualifiers...)

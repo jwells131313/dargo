@@ -42,32 +42,140 @@ package ioc
 
 import (
 	"context"
+	"fmt"
+	"github.com/pkg/errors"
+	"sync/atomic"
 	"time"
 )
 
-type dargo struct {
-	parent context.Context
+type dargoContext struct {
+	ID      int32
+	parent  context.Context
+	locator ServiceLocator
 }
+
+var (
+	nextContextID int32
+)
 
 // NewDargoContext creates a new dargo context with the given parent context
-func NewDargoContext(parent context.Context) context.Context {
-	return &dargo{
-		parent: parent,
+func NewDargoContext(parent context.Context, locator ServiceLocator) (context.Context, error) {
+	id := atomic.AddInt32(&nextContextID, 1)
+
+	retVal := &dargoContext{
+		ID:      id,
+		parent:  parent,
+		locator: locator,
 	}
+
+	contextImplRaw, err := locator.GetService(CSK(ContextScope))
+	if err != nil {
+		if isServiceNotFound(err) {
+			return nil, fmt.Errorf("there is no ContextScope.  You need to call EnableContextScope in the ioc package to install a ContextScope handler")
+		}
+
+		return nil, errors.Wrap(err, "error getting ContextScope while creating new DargoContext")
+	}
+
+	contextImpl, ok := contextImplRaw.(*contextScopeData)
+	if !ok {
+		return nil, fmt.Errorf("The context implementation was not the expected type while creating new DargoContext")
+	}
+
+	contextImpl.addContext(retVal)
+
+	return retVal, nil
 }
 
-func (dgo *dargo) Deadline() (deadline time.Time, ok bool) {
+func (dgo *dargoContext) Deadline() (deadline time.Time, ok bool) {
 	return dgo.parent.Deadline()
 }
 
-func (dgo *dargo) Done() <-chan struct{} {
+func (dgo *dargoContext) Done() <-chan struct{} {
 	return dgo.parent.Done()
 }
 
-func (dgo *dargo) Err() error {
+func (dgo *dargoContext) Err() error {
 	return dgo.parent.Err()
 }
 
-func (dgo *dargo) Value(key interface{}) interface{} {
-	return dgo.parent.Value(key)
+func (dgo *dargoContext) Value(key interface{}) interface{} {
+
+	switch key.(type) {
+	case ServiceKey:
+		retVal, err := dgo.getValue(key.(ServiceKey))
+		if err != nil {
+			return dgo.parent.Value(key)
+		}
+
+		return retVal
+	case string:
+		key := DSK(key.(string))
+		retVal, err := dgo.getValue(key)
+		if err != nil {
+			return dgo.parent.Value(key)
+		}
+
+		return retVal
+	default:
+		return dgo.parent.Value(key)
+	}
+
+}
+
+type valReply struct {
+	val interface{}
+	err error
+}
+
+func (dgo *dargoContext) getValue(key ServiceKey) (interface{}, error) {
+	tid := threadManager.GetThreadID()
+
+	if tid < 0 {
+		c := make(chan (*valReply))
+
+		threadManager.Go(dgo.getChannelDargoValue, key, c)
+
+		rply := <-c
+
+		return rply.val, rply.err
+	}
+
+	return dgo.getGoetheDargoValue(key)
+}
+
+func (dgo *dargoContext) getChannelDargoValue(key ServiceKey, ch chan *valReply) {
+	retVal, err := dgo.getGoetheDargoValue(key)
+
+	ret := &valReply{
+		val: retVal,
+		err: err,
+	}
+
+	ch <- ret
+}
+
+func (dgo *dargoContext) getGoetheDargoValue(key ServiceKey) (interface{}, error) {
+	tl, err := threadManager.GetThreadLocal(dargoContextThreadLocal)
+	if err != nil {
+		return nil, err
+	}
+
+	rawStack, err := tl.Get()
+	if err != nil {
+		return nil, err
+	}
+
+	stack, ok := rawStack.(stack)
+	if !ok {
+		return nil, fmt.Errorf("unexpected type from thread local")
+	}
+
+	err = stack.Push(dgo.ID)
+	if err != nil {
+		return nil, err
+	}
+	defer stack.Pop()
+
+	return dgo.locator.GetService(key)
 }

@@ -40,7 +40,10 @@
 
 package ioc
 
-import "sync"
+import (
+	"github.com/jwells131313/goethe"
+	"sync"
+)
 
 var (
 	locatorsLock sync.Mutex
@@ -61,6 +64,9 @@ const (
 
 	// Singleton Is created one time only
 	Singleton = "Singleton"
+
+	// ContextScope scope is per context
+	ContextScope = "ContextScope"
 
 	// SystemNamespace The namespace for system services
 	SystemNamespace = "system"
@@ -85,7 +91,27 @@ const (
 
 	// DynamicConfigurationServiceName The name of the DynamicConfigurationService (in the system namespace)
 	DynamicConfigurationServiceName = "DynamicConfigurationService"
+
+	// ServiceWithNameNotFoundExceptionString is the string used in the error when a service descriptor is not found
+	ServiceWithNameNotFoundExceptionString = "service was not found: %s"
+)
+
+var (
+	// AllFilter is a filter that returns true for every Descriptor
+	AllFilter Filter = &allFilterData{}
+
+	threadManager = goethe.GG()
+)
+
+const (
+	dargoContextThreadLocal = "DargoContextThreadLocal"
 )
 
 func init() {
+	threadManager.EstablishThreadLocal(dargoContextThreadLocal, func(tl goethe.ThreadLocal) error {
+		tl.Set(newStack())
+
+		return nil
+
+	}, nil)
 }

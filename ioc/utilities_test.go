@@ -40,97 +40,70 @@
 
 package ioc
 
-import "fmt"
+import (
+	"github.com/stretchr/testify/assert"
+	"testing"
+)
 
-// CreateAndBind creates a ServiceLocator with the given name (failing
-// if the locator already exists) and binding the methods described in
-// the BinderMethod into the locator
-func CreateAndBind(locatorName string, method BinderMethod) (ServiceLocator, error) {
-	locator, err := NewServiceLocator(locatorName, FailIfPresent)
+func TestStack(t *testing.T) {
+	stack := newStack()
+	assert.NotNil(t, stack, "new returned nil")
+
+	retNil, found := stack.Peek()
+	assert.False(t, found, "new stack peek should return false")
+	assert.Nil(t, retNil, "empty stack must return nil value")
+
+	retNil, found = stack.Pop()
+	assert.False(t, found, "new stack pop should return false")
+	assert.Nil(t, retNil, "empty stack must return nil value")
+
+	err := stack.Push(1)
 	if err != nil {
-		return nil, err
+		t.Errorf("%v", err)
+		return
 	}
 
-	err = BindIntoLocator(locator, method)
+	err = stack.Push(2)
 	if err != nil {
-		return nil, err
+		t.Errorf("%v", err)
+		return
 	}
 
-	return locator, nil
-}
-
-// BindIntoLocator uses the binder to add services into an existing ServiceLocator
-func BindIntoLocator(locator ServiceLocator, method BinderMethod) error {
-	dcs, err := getDCS(locator)
+	err = stack.Push(3)
 	if err != nil {
-		return err
+		t.Errorf("%v", err)
+		return
 	}
 
-	binder := newBinder()
+	raw, found := stack.Peek()
+	assert.True(t, found, "should have seen last value with peek")
+	assert.Equal(t, 3, raw.(int), "should have last value pushed")
 
-	err = method(binder)
-	if err != nil {
-		return err
-	}
+	raw, found = stack.Pop()
+	assert.True(t, found, "should have seen last value with pop")
+	assert.Equal(t, 3, raw.(int), "should have last value pushed")
 
-	descs := binder.finish()
+	raw, found = stack.Peek()
+	assert.True(t, found, "should have seen middle value with peek")
+	assert.Equal(t, 2, raw.(int), "should have middle value pushed")
 
-	config, err := dcs.CreateDynamicConfiguration()
-	if err != nil {
-		return err
-	}
+	raw, found = stack.Pop()
+	assert.True(t, found, "should have seen middle value with pop")
+	assert.Equal(t, 2, raw.(int), "should have middle value pushed")
 
-	for _, desc := range descs {
-		_, err = config.Bind(desc)
-		if err != nil {
-			return err
-		}
-	}
+	raw, found = stack.Peek()
+	assert.True(t, found, "should have seen first value with peek")
+	assert.Equal(t, 1, raw.(int), "should have first value pushed")
 
-	err = config.Commit()
-	if err != nil {
-		return err
-	}
+	raw, found = stack.Pop()
+	assert.True(t, found, "should have seen first value with pop")
+	assert.Equal(t, 1, raw.(int), "should have first value pushed")
 
-	return nil
-}
+	retNil, found = stack.Peek()
+	assert.False(t, found, "empty stack peek should return false")
+	assert.Nil(t, retNil, "empty stack must return nil value")
 
-func getDCS(locator ServiceLocator) (DynamicConfigurationService, error) {
-	dcsRaw, err := locator.GetService(SSK(DynamicConfigurationServiceName))
-	if err != nil {
-		return nil, err
-	}
-
-	dcs, ok := dcsRaw.(DynamicConfigurationService)
-	if !ok {
-		return nil, fmt.Errorf("DynamicConfigurationService is an unexpected type")
-	}
-
-	return dcs, nil
-}
-
-// EnableContextScope enables the use of the DargoContext
-func EnableContextScope(locator ServiceLocator) error {
-	dargoKey := CSK(ContextScope)
-	filter := NewServiceKeyFilter(dargoKey)
-
-	// TODO: Need idempotent semantics
-	_, err := locator.GetBestDescriptor(filter)
-	if err != nil {
-		if isServiceNotFound(err) {
-			return nil
-		}
-
-		return err
-	}
-
-	return BindIntoLocator(locator, func(binder Binder) error {
-		binder.Bind(ContextScope, contextCreator).InNamespace(ContextualScopeNamespace)
-
-		return nil
-	})
-}
-
-func contextCreator(locator ServiceLocator, key ServiceKey) (interface{}, error) {
-	return newContextScope(locator)
+	retNil, found = stack.Pop()
+	assert.False(t, found, "empty stack pop should return false")
+	assert.Nil(t, retNil, "empty stack must return nil value")
 }

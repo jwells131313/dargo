@@ -40,97 +40,69 @@
 
 package ioc
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+	"sync"
+)
 
-// CreateAndBind creates a ServiceLocator with the given name (failing
-// if the locator already exists) and binding the methods described in
-// the BinderMethod into the locator
-func CreateAndBind(locatorName string, method BinderMethod) (ServiceLocator, error) {
-	locator, err := NewServiceLocator(locatorName, FailIfPresent)
-	if err != nil {
-		return nil, err
-	}
-
-	err = BindIntoLocator(locator, method)
-	if err != nil {
-		return nil, err
-	}
-
-	return locator, nil
+type stack interface {
+	Push(interface{}) error
+	Pop() (interface{}, bool)
+	Peek() (interface{}, bool)
 }
 
-// BindIntoLocator uses the binder to add services into an existing ServiceLocator
-func BindIntoLocator(locator ServiceLocator, method BinderMethod) error {
-	dcs, err := getDCS(locator)
-	if err != nil {
-		return err
+func isServiceNotFound(e error) bool {
+	return strings.Contains(e.Error(), ServiceWithNameNotFoundExceptionString)
+}
+
+type stackData struct {
+	lock  sync.Mutex
+	stack []interface{}
+}
+
+func newStack() stack {
+	return &stackData{
+		stack: make([]interface{}, 0),
+	}
+}
+
+func (stack *stackData) Push(in interface{}) error {
+	stack.lock.Lock()
+	defer stack.lock.Unlock()
+
+	if in == nil {
+		return fmt.Errorf("nil cannot be pushed")
 	}
 
-	binder := newBinder()
-
-	err = method(binder)
-	if err != nil {
-		return err
-	}
-
-	descs := binder.finish()
-
-	config, err := dcs.CreateDynamicConfiguration()
-	if err != nil {
-		return err
-	}
-
-	for _, desc := range descs {
-		_, err = config.Bind(desc)
-		if err != nil {
-			return err
-		}
-	}
-
-	err = config.Commit()
-	if err != nil {
-		return err
-	}
+	stack.stack = append(stack.stack, in)
 
 	return nil
 }
 
-func getDCS(locator ServiceLocator) (DynamicConfigurationService, error) {
-	dcsRaw, err := locator.GetService(SSK(DynamicConfigurationServiceName))
-	if err != nil {
-		return nil, err
+func (stack *stackData) Pop() (interface{}, bool) {
+	stack.lock.Lock()
+	defer stack.lock.Unlock()
+
+	sLen := len(stack.stack)
+	if sLen <= 0 {
+		return nil, false
 	}
 
-	dcs, ok := dcsRaw.(DynamicConfigurationService)
-	if !ok {
-		return nil, fmt.Errorf("DynamicConfigurationService is an unexpected type")
-	}
+	retVal := stack.stack[sLen-1]
+	stack.stack = stack.stack[:sLen-1]
 
-	return dcs, nil
+	return retVal, true
 }
 
-// EnableContextScope enables the use of the DargoContext
-func EnableContextScope(locator ServiceLocator) error {
-	dargoKey := CSK(ContextScope)
-	filter := NewServiceKeyFilter(dargoKey)
+func (stack *stackData) Peek() (interface{}, bool) {
+	stack.lock.Lock()
+	defer stack.lock.Unlock()
 
-	// TODO: Need idempotent semantics
-	_, err := locator.GetBestDescriptor(filter)
-	if err != nil {
-		if isServiceNotFound(err) {
-			return nil
-		}
-
-		return err
+	sLen := len(stack.stack)
+	if sLen <= 0 {
+		return nil, false
 	}
 
-	return BindIntoLocator(locator, func(binder Binder) error {
-		binder.Bind(ContextScope, contextCreator).InNamespace(ContextualScopeNamespace)
-
-		return nil
-	})
-}
-
-func contextCreator(locator ServiceLocator, key ServiceKey) (interface{}, error) {
-	return newContextScope(locator)
+	return stack.stack[sLen-1], true
 }
