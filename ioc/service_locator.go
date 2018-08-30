@@ -100,6 +100,7 @@ type serviceLocatorData struct {
 
 	perLookupContext ContextualScope
 	singletonContext ContextualScope
+	otherContexts    map[string]ContextualScope
 
 	generation uint64
 }
@@ -141,6 +142,7 @@ func NewServiceLocator(name string, qos int) (ServiceLocator, error) {
 		ID:               ID,
 		allDescriptors:   make([]Descriptor, 0),
 		perLookupContext: newPerLookupContext(),
+		otherContexts:    make(map[string]ContextualScope),
 	}
 
 	retVal.singletonContext, err = newSingletonScope(retVal)
@@ -336,11 +338,18 @@ func (locator *serviceLocatorData) getNextServiceID() int64 {
 }
 
 func (locator *serviceLocatorData) update(newDescs []Descriptor, removers []Filter, originalGeneration uint64) error {
+	_, err := locator.internalUpdate(newDescs, removers, originalGeneration)
+
+	return err
+}
+
+func (locator *serviceLocatorData) internalUpdate(newDescs []Descriptor,
+	removers []Filter, originalGeneration uint64) ([]Descriptor, error) {
 	locator.lock.Lock()
 	defer locator.lock.Unlock()
 
 	if originalGeneration != locator.generation {
-		return fmt.Errorf("Their was an update to the ServiceLocator after this DynamicConfiguration was created")
+		return nil, fmt.Errorf("Their was an update to the ServiceLocator after this DynamicConfiguration was created")
 	}
 
 	newAllDescs := make([]Descriptor, 0)
@@ -361,9 +370,18 @@ func (locator *serviceLocatorData) update(newDescs []Descriptor, removers []Filt
 	}
 
 	// TODO: Here the validation service would verify these descriptors were legal removals
-
+	newContextualScopeDescriptors := make([]Descriptor, 0)
 	for _, newDesc := range newDescs {
 		// TODO: Here the validation service would check to see if the new descriptor could be added
+
+		if ContextualScopeNamespace == newDesc.GetNamespace() {
+			if Singleton != newDesc.GetScope() {
+				return nil, fmt.Errorf("All services in the %s namespace must have Singleton scope, the following descriptor does not: %v",
+					ContextualScopeNamespace, newDesc)
+			}
+
+			newContextualScopeDescriptors = append(newContextualScopeDescriptors, newDesc)
+		}
 
 		newAllDescs = append(newAllDescs, newDesc)
 	}
@@ -371,7 +389,7 @@ func (locator *serviceLocatorData) update(newDescs []Descriptor, removers []Filt
 	// Seems like at this point we've done all the checking and we can do the actual swap
 	locator.allDescriptors = newAllDescs
 
-	return nil
+	return newContextualScopeDescriptors, nil
 }
 
 func (locator *serviceLocatorData) CreateServiceFromDescriptor(desc Descriptor) (interface{}, error) {

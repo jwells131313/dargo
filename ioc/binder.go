@@ -50,6 +50,7 @@ type Binder interface {
 	InNamespace(string) Binder
 	QualifiedBy(string) Binder
 	Ranked(int32) Binder
+	AndDestroyWith(func(ServiceLocator, ServiceKey, interface{}) error) Binder
 }
 
 type binder struct {
@@ -125,6 +126,16 @@ func (binder *binder) Ranked(rank int32) Binder {
 
 	return binder
 
+}
+
+func (binder *binder) AndDestroyWith(destroyer func(ServiceLocator, ServiceKey, interface{}) error) Binder {
+	if binder.current == nil {
+		panic("must call bind before this method")
+	}
+
+	binder.current.SetDestroyFunction(destroyer)
+
+	return binder
 }
 
 func (binder *binder) finish() []Descriptor {
