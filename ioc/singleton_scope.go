@@ -51,7 +51,7 @@ type idKey struct {
 
 type singletonContextualData struct {
 	locator ServiceLocator
-	cache   cache.Computable
+	cache   cache.Cache
 }
 
 func newSingletonScope(locator *serviceLocatorData) (ContextualScope, error) {
@@ -80,7 +80,7 @@ func (single *singletonContextualData) FindOrCreate(locator ServiceLocator, desc
 }
 
 func (single *singletonContextualData) ContainsKey(locator ServiceLocator, desc Descriptor) bool {
-	panic("implement me")
+	return single.cache.HasKey(idKey{desc: desc})
 }
 
 func (single *singletonContextualData) DestroyOne(locator ServiceLocator, desc Descriptor) error {

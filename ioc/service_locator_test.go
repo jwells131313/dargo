@@ -46,7 +46,8 @@ import (
 )
 
 const (
-	testLocatorName = "TestLocator"
+	testLocatorName  = "TestLocator"
+	testLocatorName2 = "TestLocator2"
 )
 
 func TestGetSystemServices(t *testing.T) {
@@ -62,9 +63,25 @@ func TestGetSystemServices(t *testing.T) {
 	assert.Equal(t, locator, foundLocator, "The locators are not the same")
 	assert.Equal(t, testLocatorName, foundLocator.GetName(), "Invalid name")
 
+	locatorID := locator.GetID()
+	assert.True(t, locatorID > 0, "locator id should be greater than zero %d", locatorID)
+
 	foundService, err = locator.GetService(SSK(DynamicConfigurationServiceName))
 	assert.Nil(t, err, "Could not find dynamic configuration service")
 
 	_, ok = foundService.(DynamicConfigurationService)
 	assert.True(t, ok, "does not implement DynamicConfigurationService")
+
+	locator2, err := NewServiceLocator(testLocatorName2, FailIfPresent)
+	assert.Nil(t, err, "Could not create/find locator2")
+
+	assert.NotEqual(t, locator2, locator, "The locators are not the same")
+	assert.Equal(t, testLocatorName2, locator2.GetName(), "Invalid name")
+
+	locatorID2 := locator2.GetID()
+	assert.True(t, locatorID2 > 0, "locator id should be greater than zero %d", locatorID2)
+	assert.NotEqual(t, locatorID, locatorID2, "The locator serviceID should not be equal")
+
+	locator3, err := NewServiceLocator(testLocatorName, FailIfNotPresent)
+	assert.Equal(t, locator, locator3, "Already existing locator returned")
 }
