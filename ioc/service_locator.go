@@ -42,9 +42,9 @@ package ioc
 
 import (
 	"fmt"
+	"github.com/jwells131313/goethe"
 	"github.com/pkg/errors"
 	"sort"
-	"sync"
 )
 
 // ServiceLocator The main registry for dargo.  Use it to get context sensitive lookups
@@ -90,9 +90,9 @@ type ServiceLocator interface {
 }
 
 type serviceLocatorData struct {
-	lock sync.Mutex
-	name string
-	ID   int64
+	glock goethe.Lock
+	name  string
+	ID    int64
 
 	allDescriptors []Descriptor
 
@@ -138,6 +138,7 @@ func NewServiceLocator(name string, qos int) (ServiceLocator, error) {
 	currentID = currentID + 1
 
 	retVal = &serviceLocatorData{
+		glock:            threadManager.NewGoetheLock(),
 		name:             name,
 		ID:               ID,
 		allDescriptors:   make([]Descriptor, 0),
@@ -218,16 +219,22 @@ func (locator *serviceLocatorData) GetServiceFromDescriptor(desc Descriptor) (in
 }
 
 func (locator *serviceLocatorData) GetDescriptors(filter Filter) ([]Descriptor, error) {
-	all, err := locator.internalGetDescriptors(filter)
-	if err != nil {
-		return nil, err
+	tid := threadManager.GetThreadID()
+	if tid < 0 {
+		c := make(chan *igsRet)
+
+		threadManager.Go(locator.channelGetDescriptors, filter, c)
+
+		ret := <-c
+
+		return ret.descriptors, ret.err
 	}
 
-	return all, nil
+	return locator.internalGetDescriptors(filter)
 }
 
 func (locator *serviceLocatorData) GetBestDescriptor(filter Filter) (Descriptor, error) {
-	all, err := locator.internalGetDescriptors(filter)
+	all, err := locator.GetDescriptors(filter)
 	if err != nil {
 		return nil, err
 	}
@@ -284,10 +291,26 @@ func (locator *serviceLocatorData) createService(desc Descriptor) (interface{}, 
 	return userService, nil
 }
 
+type igsRet struct {
+	descriptors []Descriptor
+	err         error
+}
+
+func (locator *serviceLocatorData) channelGetDescriptors(filter Filter, retChan chan *igsRet) {
+	descs, err := locator.internalGetDescriptors(filter)
+
+	retVal := &igsRet{
+		descriptors: descs,
+		err:         err,
+	}
+
+	retChan <- retVal
+}
+
 // TODO: This will one day need to, you know, honor the rank and maybe keep caches
 func (locator *serviceLocatorData) internalGetDescriptors(filter Filter) ([]Descriptor, error) {
-	locator.lock.Lock()
-	defer locator.lock.Unlock()
+	locator.glock.ReadLock()
+	defer locator.glock.ReadUnlock()
 
 	retVal := make([]Descriptor, 0)
 	for _, desc := range locator.allDescriptors {
@@ -320,15 +343,47 @@ func (locator *serviceLocatorData) internalGetDescriptors(filter Filter) ([]Desc
 }
 
 func (locator *serviceLocatorData) getGeneration() uint64 {
-	locator.lock.Lock()
-	defer locator.lock.Unlock()
+	tid := threadManager.GetThreadID()
+	if tid < 0 {
+		c := make(chan uint64)
+
+		threadManager.Go(func(ret chan uint64) {
+			locator.glock.ReadLock()
+			defer locator.glock.ReadUnlock()
+
+			ret <- locator.generation
+		}, c)
+
+		return <-c
+	}
+
+	locator.glock.ReadLock()
+	defer locator.glock.ReadUnlock()
 
 	return locator.generation
 }
 
 func (locator *serviceLocatorData) getNextServiceID() int64 {
-	locator.lock.Lock()
-	defer locator.lock.Unlock()
+	tid := threadManager.GetThreadID()
+	if tid < 0 {
+		c := make(chan int64)
+
+		threadManager.Go(func(ret chan int64) {
+			locator.glock.WriteLock()
+			defer locator.glock.WriteUnlock()
+
+			retVal := locator.nextServiceID
+
+			locator.nextServiceID = locator.nextServiceID + 1
+
+			ret <- retVal
+		}, c)
+
+		return <-c
+	}
+
+	locator.glock.WriteLock()
+	defer locator.glock.WriteUnlock()
 
 	retVal := locator.nextServiceID
 
@@ -345,8 +400,8 @@ func (locator *serviceLocatorData) update(newDescs []Descriptor, removers []Filt
 
 func (locator *serviceLocatorData) internalUpdate(newDescs []Descriptor,
 	removers []Filter, originalGeneration uint64) ([]Descriptor, error) {
-	locator.lock.Lock()
-	defer locator.lock.Unlock()
+	locator.glock.WriteLock()
+	defer locator.glock.WriteUnlock()
 
 	if originalGeneration != locator.generation {
 		return nil, fmt.Errorf("Their was an update to the ServiceLocator after this DynamicConfiguration was created")
