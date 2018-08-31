@@ -168,19 +168,19 @@ func getDCS(t *testing.T, locator ioc.ServiceLocator) (ioc.DynamicConfigurationS
 	return dcs, nil
 }
 
-func createEcho(locator ioc.ServiceLocator, key ioc.ServiceKey) (interface{}, error) {
+func createEcho(locator ioc.ServiceLocator, key ioc.Descriptor) (interface{}, error) {
 	return NewEchoApplication(), nil
 }
 
-func createTestEcho(locator ioc.ServiceLocator, key ioc.ServiceKey) (interface{}, error) {
+func createTestEcho(locator ioc.ServiceLocator, key ioc.Descriptor) (interface{}, error) {
 	return newTestEchoImpl(), nil
 }
 
-func destroyEcho(locator ioc.ServiceLocator, key ioc.ServiceKey, obj interface{}) error {
+func destroyEcho(locator ioc.ServiceLocator, key ioc.Descriptor, obj interface{}) error {
 	return nil
 }
 
-func createMusic(locator ioc.ServiceLocator, sk ioc.ServiceKey) (interface{}, error) {
+func createMusic(locator ioc.ServiceLocator, sk ioc.Descriptor) (interface{}, error) {
 	// This next bit is what makes this "ioc," as it it the system building up the tree
 	echoRaw, err := locator.GetService(ioc.DSK(EchoServiceName))
 	if err != nil {

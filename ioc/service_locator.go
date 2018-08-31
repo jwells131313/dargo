@@ -42,14 +42,16 @@ package ioc
 
 import (
 	"fmt"
+	"github.com/jwells131313/goethe"
 	"github.com/pkg/errors"
 	"sort"
-	"sync"
 )
 
 // ServiceLocator The main registry for dargo.  Use it to get context sensitive lookups
 // for application services
 type ServiceLocator interface {
+	fmt.Stringer
+
 	// GetService gets the service that is correct for the current context with the given key.
 	// It returns the best implementation of the interface
 	GetService(toMe ServiceKey) (interface{}, error)
@@ -87,21 +89,22 @@ type ServiceLocator interface {
 
 	// Will shut down all services associated with this ServiceLocator
 	Shutdown()
+
+	// GetState Returns LocatorStateRunning or LocatorStateShutdown depending on if this
+	// locator is currently running or it has been shut down
+	GetState() string
 }
 
 type serviceLocatorData struct {
-	lock sync.Mutex
-	name string
-	ID   int64
-
-	allDescriptors []Descriptor
-
-	nextServiceID int64
-
+	glock            goethe.Lock
+	name             string
+	ID               int64
+	allDescriptors   []Descriptor
+	nextServiceID    int64
 	perLookupContext ContextualScope
 	singletonContext ContextualScope
-
-	generation uint64
+	generation       uint64
+	state            string
 }
 
 // NewServiceLocator this will find or create a service locator with the given name, and
@@ -137,10 +140,12 @@ func NewServiceLocator(name string, qos int) (ServiceLocator, error) {
 	currentID = currentID + 1
 
 	retVal = &serviceLocatorData{
+		glock:            threadManager.NewGoetheLock(),
 		name:             name,
 		ID:               ID,
 		allDescriptors:   make([]Descriptor, 0),
 		perLookupContext: newPerLookupContext(),
+		state:            LocatorStateRunning,
 	}
 
 	retVal.singletonContext, err = newSingletonScope(retVal)
@@ -171,7 +176,20 @@ func NewServiceLocator(name string, qos int) (ServiceLocator, error) {
 	return retVal, nil
 }
 
+func (locator *serviceLocatorData) checkState() error {
+	if locator.state != LocatorStateRunning {
+		return LocatorIsShutdownError
+	}
+
+	return nil
+}
+
 func (locator *serviceLocatorData) GetService(toMe ServiceKey) (interface{}, error) {
+	err := locator.checkState()
+	if err != nil {
+		return nil, err
+	}
+
 	f := NewServiceKeyFilter(toMe)
 
 	desc, err := locator.GetBestDescriptor(f)
@@ -187,10 +205,20 @@ func (locator *serviceLocatorData) GetService(toMe ServiceKey) (interface{}, err
 }
 
 func (locator *serviceLocatorData) GetDService(name string, qualifiers ...string) (interface{}, error) {
+	err := locator.checkState()
+	if err != nil {
+		return nil, err
+	}
+
 	return locator.GetService(DSK(name, qualifiers...))
 }
 
 func (locator *serviceLocatorData) GetAllServices(toMe ServiceKey) ([]interface{}, error) {
+	err := locator.checkState()
+	if err != nil {
+		return nil, err
+	}
+
 	f := NewServiceKeyFilter(toMe)
 
 	descs, err := locator.GetDescriptors(f)
@@ -212,20 +240,41 @@ func (locator *serviceLocatorData) GetAllServices(toMe ServiceKey) ([]interface{
 }
 
 func (locator *serviceLocatorData) GetServiceFromDescriptor(desc Descriptor) (interface{}, error) {
-	return locator.createService(desc)
-}
-
-func (locator *serviceLocatorData) GetDescriptors(filter Filter) ([]Descriptor, error) {
-	all, err := locator.internalGetDescriptors(filter)
+	err := locator.checkState()
 	if err != nil {
 		return nil, err
 	}
 
-	return all, nil
+	return locator.createService(desc)
+}
+
+func (locator *serviceLocatorData) GetDescriptors(filter Filter) ([]Descriptor, error) {
+	err := locator.checkState()
+	if err != nil {
+		return nil, err
+	}
+
+	tid := threadManager.GetThreadID()
+	if tid < 0 {
+		c := make(chan *igsRet)
+
+		threadManager.Go(locator.channelGetDescriptors, filter, c)
+
+		ret := <-c
+
+		return ret.descriptors, ret.err
+	}
+
+	return locator.internalGetDescriptors(filter)
 }
 
 func (locator *serviceLocatorData) GetBestDescriptor(filter Filter) (Descriptor, error) {
-	all, err := locator.internalGetDescriptors(filter)
+	err := locator.checkState()
+	if err != nil {
+		return nil, err
+	}
+
+	all, err := locator.GetDescriptors(filter)
 	if err != nil {
 		return nil, err
 	}
@@ -246,7 +295,17 @@ func (locator *serviceLocatorData) GetID() int64 {
 }
 
 func (locator *serviceLocatorData) Shutdown() {
-	panic("implement me")
+	c := make(chan bool)
+
+	threadManager.Go(func() {
+		locator.singletonContext.Shutdown(locator)
+
+		locator.state = LocatorStateShutdown
+
+		c <- true
+	})
+
+	<-c
 }
 
 func (locator *serviceLocatorData) createService(desc Descriptor) (interface{}, error) {
@@ -258,16 +317,17 @@ func (locator *serviceLocatorData) createService(desc Descriptor) (interface{}, 
 	} else if scope == Singleton {
 		cs = locator.singletonContext
 	} else {
-		service, err := locator.GetService(CSK(scope))
+		csk := CSK(scope)
+		raw, err := locator.GetService(csk)
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not get context %s for service %s", scope, desc)
 		}
 
-		if service == nil {
-			return nil, fmt.Errorf("could not find a scope named %s", scope)
+		var ok bool
+		cs, ok = raw.(ContextualScope)
+		if !ok {
+			return nil, fmt.Errorf("implementation of %s was not a ContextualScope", scope)
 		}
-
-		cs = service.(ContextualScope)
 	}
 
 	if cs == nil {
@@ -282,10 +342,26 @@ func (locator *serviceLocatorData) createService(desc Descriptor) (interface{}, 
 	return userService, nil
 }
 
+type igsRet struct {
+	descriptors []Descriptor
+	err         error
+}
+
+func (locator *serviceLocatorData) channelGetDescriptors(filter Filter, retChan chan *igsRet) {
+	descs, err := locator.internalGetDescriptors(filter)
+
+	retVal := &igsRet{
+		descriptors: descs,
+		err:         err,
+	}
+
+	retChan <- retVal
+}
+
 // TODO: This will one day need to, you know, honor the rank and maybe keep caches
 func (locator *serviceLocatorData) internalGetDescriptors(filter Filter) ([]Descriptor, error) {
-	locator.lock.Lock()
-	defer locator.lock.Unlock()
+	locator.glock.ReadLock()
+	defer locator.glock.ReadUnlock()
 
 	retVal := make([]Descriptor, 0)
 	for _, desc := range locator.allDescriptors {
@@ -318,15 +394,47 @@ func (locator *serviceLocatorData) internalGetDescriptors(filter Filter) ([]Desc
 }
 
 func (locator *serviceLocatorData) getGeneration() uint64 {
-	locator.lock.Lock()
-	defer locator.lock.Unlock()
+	tid := threadManager.GetThreadID()
+	if tid < 0 {
+		c := make(chan uint64)
+
+		threadManager.Go(func(ret chan uint64) {
+			locator.glock.ReadLock()
+			defer locator.glock.ReadUnlock()
+
+			ret <- locator.generation
+		}, c)
+
+		return <-c
+	}
+
+	locator.glock.ReadLock()
+	defer locator.glock.ReadUnlock()
 
 	return locator.generation
 }
 
 func (locator *serviceLocatorData) getNextServiceID() int64 {
-	locator.lock.Lock()
-	defer locator.lock.Unlock()
+	tid := threadManager.GetThreadID()
+	if tid < 0 {
+		c := make(chan int64)
+
+		threadManager.Go(func(ret chan int64) {
+			locator.glock.WriteLock()
+			defer locator.glock.WriteUnlock()
+
+			retVal := locator.nextServiceID
+
+			locator.nextServiceID = locator.nextServiceID + 1
+
+			ret <- retVal
+		}, c)
+
+		return <-c
+	}
+
+	locator.glock.WriteLock()
+	defer locator.glock.WriteUnlock()
 
 	retVal := locator.nextServiceID
 
@@ -335,9 +443,10 @@ func (locator *serviceLocatorData) getNextServiceID() int64 {
 	return retVal
 }
 
-func (locator *serviceLocatorData) update(newDescs []Descriptor, removers []Filter, originalGeneration uint64) error {
-	locator.lock.Lock()
-	defer locator.lock.Unlock()
+func (locator *serviceLocatorData) update(newDescs []Descriptor,
+	removers []Filter, originalGeneration uint64) error {
+	locator.glock.WriteLock()
+	defer locator.glock.WriteUnlock()
 
 	if originalGeneration != locator.generation {
 		return fmt.Errorf("Their was an update to the ServiceLocator after this DynamicConfiguration was created")
@@ -361,7 +470,6 @@ func (locator *serviceLocatorData) update(newDescs []Descriptor, removers []Filt
 	}
 
 	// TODO: Here the validation service would verify these descriptors were legal removals
-
 	for _, newDesc := range newDescs {
 		// TODO: Here the validation service would check to see if the new descriptor could be added
 
@@ -375,11 +483,20 @@ func (locator *serviceLocatorData) update(newDescs []Descriptor, removers []Filt
 }
 
 func (locator *serviceLocatorData) CreateServiceFromDescriptor(desc Descriptor) (interface{}, error) {
-	cf := desc.GetCreateFunction()
-	serviceKey, err := newServiceKeyFromDescriptor(desc)
+	err := locator.checkState()
 	if err != nil {
 		return nil, err
 	}
 
-	return cf(locator, serviceKey)
+	cf := desc.GetCreateFunction()
+
+	return cf(locator, desc)
+}
+
+func (locator *serviceLocatorData) GetState() string {
+	return locator.state
+}
+
+func (locator *serviceLocatorData) String() string {
+	return fmt.Sprintf("ServiceLocator(%s,%d)", locator.name, locator.ID)
 }

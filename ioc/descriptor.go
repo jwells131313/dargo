@@ -48,10 +48,10 @@ import (
 // Descriptor description of a dargo service description
 type Descriptor interface {
 	// GetCreateFunction create creates the instance of the type
-	GetCreateFunction() func(ServiceLocator, ServiceKey) (interface{}, error)
+	GetCreateFunction() func(ServiceLocator, Descriptor) (interface{}, error)
 
 	// GetDestroyFunction destroys this service
-	GetDestroyFunction() func(ServiceLocator, ServiceKey, interface{}) error
+	GetDestroyFunction() func(ServiceLocator, Descriptor, interface{}) error
 
 	// GetNamespace returns the namespace this service is in (may not be empty string)
 	GetNamespace() string
@@ -89,10 +89,10 @@ type WriteableDescriptor interface {
 	Descriptor
 
 	// SetCreateFunction create creates the instance of the type
-	SetCreateFunction(func(ServiceLocator, ServiceKey) (interface{}, error)) error
+	SetCreateFunction(func(ServiceLocator, Descriptor) (interface{}, error)) error
 
 	// SetDestroyFunction destroys this service
-	SetDestroyFunction(func(ServiceLocator, ServiceKey, interface{}) error) error
+	SetDestroyFunction(func(ServiceLocator, Descriptor, interface{}) error) error
 
 	// SetNamespace sets the namespace of this descriptor, may not be empty
 	SetNamespace(string) error
@@ -125,14 +125,14 @@ type baseDescriptor struct {
 
 type descriptorImpl struct {
 	baseDescriptor
-	creator   func(ServiceLocator, ServiceKey) (interface{}, error)
-	destroyer func(ServiceLocator, ServiceKey, interface{}) error
+	creator   func(ServiceLocator, Descriptor) (interface{}, error)
+	destroyer func(ServiceLocator, Descriptor, interface{}) error
 }
 
 type writeableDescriptorImpl struct {
 	baseDescriptor
-	creator   func(ServiceLocator, ServiceKey) (interface{}, error)
-	destroyer func(ServiceLocator, ServiceKey, interface{}) error
+	creator   func(ServiceLocator, Descriptor) (interface{}, error)
+	destroyer func(ServiceLocator, Descriptor, interface{}) error
 }
 
 type constantDescriptorImpl struct {
@@ -205,14 +205,14 @@ func NewWriteableDescriptor() WriteableDescriptor {
 
 // NewConstantDescriptor creates a descriptor that always resolves to exactly the constant
 // passed in.  It will by default be put into the PerLookup scope
-func NewConstantDescriptor(key ServiceKey, cnstnt interface{}) WriteableDescriptor {
+func NewConstantDescriptor(sk ServiceKey, cnstnt interface{}) WriteableDescriptor {
 	retVal := &constantDescriptorImpl{
 		cnstnt: cnstnt,
 	}
 
-	retVal.namespace = key.GetNamespace()
-	retVal.name = key.GetName()
-	retVal.qualifiers = key.GetQualifiers()
+	retVal.namespace = sk.GetNamespace()
+	retVal.name = sk.GetName()
+	retVal.qualifiers = sk.GetQualifiers()
 	retVal.metadata = make(map[string][]string)
 	retVal.visibility = NormalVisibility
 	retVal.scope = PerLookup
@@ -221,14 +221,14 @@ func NewConstantDescriptor(key ServiceKey, cnstnt interface{}) WriteableDescript
 
 }
 
-func (di *descriptorImpl) GetCreateFunction() func(sl ServiceLocator, sk ServiceKey) (interface{}, error) {
+func (di *descriptorImpl) GetCreateFunction() func(sl ServiceLocator, desc Descriptor) (interface{}, error) {
 	di.lock.Lock()
 	defer di.lock.Unlock()
 
 	return di.creator
 }
 
-func (di *descriptorImpl) GetDestroyFunction() func(ServiceLocator, ServiceKey, interface{}) error {
+func (di *descriptorImpl) GetDestroyFunction() func(ServiceLocator, Descriptor, interface{}) error {
 	di.lock.Lock()
 	defer di.lock.Unlock()
 
@@ -331,7 +331,7 @@ func (di *descriptorImpl) GetLocatorID() int64 {
 	return di.locatorID
 }
 
-func (wdi *writeableDescriptorImpl) SetCreateFunction(in func(ServiceLocator, ServiceKey) (interface{}, error)) error {
+func (wdi *writeableDescriptorImpl) SetCreateFunction(in func(ServiceLocator, Descriptor) (interface{}, error)) error {
 	wdi.lock.Lock()
 	defer wdi.lock.Unlock()
 
@@ -340,7 +340,7 @@ func (wdi *writeableDescriptorImpl) SetCreateFunction(in func(ServiceLocator, Se
 	return nil
 }
 
-func (wdi *writeableDescriptorImpl) SetDestroyFunction(in func(ServiceLocator, ServiceKey, interface{}) error) error {
+func (wdi *writeableDescriptorImpl) SetDestroyFunction(in func(ServiceLocator, Descriptor, interface{}) error) error {
 	wdi.lock.Lock()
 	defer wdi.lock.Unlock()
 
@@ -432,14 +432,14 @@ func (wdi *writeableDescriptorImpl) SetMetadata(md map[string][]string) error {
 	return nil
 }
 
-func (wdi *writeableDescriptorImpl) GetCreateFunction() func(sl ServiceLocator, sk ServiceKey) (interface{}, error) {
+func (wdi *writeableDescriptorImpl) GetCreateFunction() func(sl ServiceLocator, sk Descriptor) (interface{}, error) {
 	wdi.lock.Lock()
 	defer wdi.lock.Unlock()
 
 	return wdi.creator
 }
 
-func (wdi *writeableDescriptorImpl) GetDestroyFunction() func(ServiceLocator, ServiceKey, interface{}) error {
+func (wdi *writeableDescriptorImpl) GetDestroyFunction() func(ServiceLocator, Descriptor, interface{}) error {
 	wdi.lock.Lock()
 	defer wdi.lock.Unlock()
 
@@ -454,20 +454,20 @@ func (wdi *writeableDescriptorImpl) GetLocatorID() int64 {
 	return -1
 }
 
-func (cdi *constantDescriptorImpl) GetCreateFunction() func(sl ServiceLocator, sk ServiceKey) (interface{}, error) {
+func (cdi *constantDescriptorImpl) GetCreateFunction() func(sl ServiceLocator, sk Descriptor) (interface{}, error) {
 	cdi.lock.Lock()
 	defer cdi.lock.Unlock()
 
-	return func(ServiceLocator, ServiceKey) (interface{}, error) {
+	return func(ServiceLocator, Descriptor) (interface{}, error) {
 		return cdi.cnstnt, nil
 	}
 }
 
-func (cdi *constantDescriptorImpl) GetDestroyFunction() func(ServiceLocator, ServiceKey, interface{}) error {
+func (cdi *constantDescriptorImpl) GetDestroyFunction() func(ServiceLocator, Descriptor, interface{}) error {
 	cdi.lock.Lock()
 	defer cdi.lock.Unlock()
 
-	return func(ServiceLocator, ServiceKey, interface{}) error {
+	return func(ServiceLocator, Descriptor, interface{}) error {
 		return nil
 	}
 }

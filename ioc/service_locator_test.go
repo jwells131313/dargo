@@ -41,6 +41,7 @@
 package ioc
 
 import (
+	"fmt"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
@@ -48,6 +49,9 @@ import (
 const (
 	testLocatorName  = "TestLocator"
 	testLocatorName2 = "TestLocator2"
+	testLocatorName3 = "TestLocator3"
+
+	ShutdownService = "ShutdownService"
 )
 
 func TestGetSystemServices(t *testing.T) {
@@ -84,4 +88,54 @@ func TestGetSystemServices(t *testing.T) {
 
 	locator3, err := NewServiceLocator(testLocatorName, FailIfNotPresent)
 	assert.Equal(t, locator, locator3, "Already existing locator returned")
+}
+
+func TestShutdownServiceLocator(t *testing.T) {
+	locator, err := CreateAndBind(testLocatorName3, func(binder Binder) error {
+		binder.Bind(ShutdownService, createShuttableService).AndDestroyWith(destroyShuttableService)
+
+		return nil
+	})
+	if err != nil {
+		assert.NotNil(t, err, "Could not create locator to shut down")
+		return
+	}
+
+	raw, err := locator.GetDService(ShutdownService)
+	if err != nil {
+		assert.NotNil(t, err, "Could not find ShutdownService")
+		return
+	}
+
+	shutdownService, ok := raw.(*shuttableService)
+	if !ok {
+		assert.True(t, ok, "Not expected type")
+		return
+	}
+
+	assert.False(t, shutdownService.isShut, "service is not shut down yet")
+
+	locator.Shutdown()
+
+	assert.True(t, shutdownService.isShut, "service in singleton scope should have been shut down")
+
+}
+
+type shuttableService struct {
+	isShut bool
+}
+
+func createShuttableService(locator ServiceLocator, key Descriptor) (interface{}, error) {
+	return &shuttableService{}, nil
+}
+
+func destroyShuttableService(locator ServiceLocator, key Descriptor, instance interface{}) error {
+	shuttable, ok := instance.(*shuttableService)
+	if !ok {
+		return fmt.Errorf("Could not shut down instance, it was not the correct type %v", instance)
+	}
+
+	shuttable.isShut = true
+
+	return nil
 }

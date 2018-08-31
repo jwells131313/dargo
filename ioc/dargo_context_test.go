@@ -116,7 +116,7 @@ func createDargoContext(t *testing.T, locator ServiceLocator, parentContext cont
 	return retVal, nil
 }
 
-func createDargoService(locator ServiceLocator, key ServiceKey) (interface{}, error) {
+func createDargoService(locator ServiceLocator, key Descriptor) (interface{}, error) {
 	val := atomic.AddInt32(&creationGeneration, 1)
 
 	return &testDargoContextHolder{
@@ -130,7 +130,7 @@ type toUpper interface {
 
 type toUpperData struct{}
 
-func createToUpperService(locator ServiceLocator, key ServiceKey) (interface{}, error) {
+func createToUpperService(locator ServiceLocator, key Descriptor) (interface{}, error) {
 	return &toUpperData{}, nil
 }
 

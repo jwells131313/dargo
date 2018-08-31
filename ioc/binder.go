@@ -45,11 +45,12 @@ type BinderMethod func(Binder) error
 
 // Binder A fluent interface for creating descriptors
 type Binder interface {
-	Bind(name string, bindMethod func(ServiceLocator, ServiceKey) (interface{}, error)) Binder
+	Bind(name string, bindMethod func(ServiceLocator, Descriptor) (interface{}, error)) Binder
 	InScope(string) Binder
 	InNamespace(string) Binder
 	QualifiedBy(string) Binder
 	Ranked(int32) Binder
+	AndDestroyWith(func(ServiceLocator, Descriptor, interface{}) error) Binder
 }
 
 type binder struct {
@@ -65,7 +66,7 @@ func newBinder() *binder {
 	}
 }
 
-func (binder *binder) Bind(name string, cf func(ServiceLocator, ServiceKey) (interface{}, error)) Binder {
+func (binder *binder) Bind(name string, cf func(ServiceLocator, Descriptor) (interface{}, error)) Binder {
 	if binder.current != nil {
 		if len(binder.qualifiers) > 0 {
 			binder.current.SetQualifiers(binder.qualifiers)
@@ -125,6 +126,16 @@ func (binder *binder) Ranked(rank int32) Binder {
 
 	return binder
 
+}
+
+func (binder *binder) AndDestroyWith(destroyer func(ServiceLocator, Descriptor, interface{}) error) Binder {
+	if binder.current == nil {
+		panic("must call bind before this method")
+	}
+
+	binder.current.SetDestroyFunction(destroyer)
+
+	return binder
 }
 
 func (binder *binder) finish() []Descriptor {

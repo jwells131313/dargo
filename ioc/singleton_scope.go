@@ -96,7 +96,49 @@ func (single *singletonContextualData) IsActive(locator ServiceLocator) bool {
 }
 
 func (single *singletonContextualData) Shutdown(locator ServiceLocator) {
-	panic("implement me")
+	tid := threadManager.GetThreadID()
+	if tid < 0 {
+		c := make(chan bool)
+
+		threadManager.Go(single.channelShutdown, c)
+
+		<-c
+
+		return
+	}
+
+	single.internalShutdown()
+
+}
+
+func (single *singletonContextualData) channelShutdown(replyChan chan bool) {
+	single.internalShutdown()
+
+	replyChan <- true
+}
+
+func (single *singletonContextualData) internalShutdown() {
+	single.cache.Remove(func(key interface{}, value interface{}) bool {
+		idKey := key.(idKey)
+
+		single.actualDestruction(idKey.desc, value)
+
+		return true
+	})
+
+}
+
+func (single *singletonContextualData) actualDestruction(desc Descriptor, value interface{}) {
+	if desc == nil {
+		return
+	}
+
+	df := desc.GetDestroyFunction()
+	if df == nil {
+		return
+	}
+
+	df(single.locator, desc, value)
 }
 
 func (single *singletonContextualData) Compute(in interface{}) (interface{}, error) {
