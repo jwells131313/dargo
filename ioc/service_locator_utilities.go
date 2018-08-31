@@ -134,3 +134,21 @@ func EnableContextScope(locator ServiceLocator) error {
 func contextCreator(locator ServiceLocator, key ServiceKey) (interface{}, error) {
 	return newContextScope(locator)
 }
+
+func DumpAllDescriptors(locator ServiceLocator) {
+	if locator == nil {
+		return
+	}
+
+	all, err := locator.GetDescriptors(AllFilter)
+	if err != nil {
+		fmt.Printf("Could not find any descriptors %s", err.Error())
+		return
+	}
+
+	for index, desc := range all {
+		fmt.Printf("%d. %v\n", (index + 1), desc)
+	}
+	fmt.Printf("finished dumping all %d descriptors from locator %s\n", len(all), locator.GetName())
+
+}

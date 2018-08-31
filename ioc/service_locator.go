@@ -43,6 +43,7 @@ package ioc
 import (
 	"fmt"
 	"github.com/jwells131313/goethe"
+	"github.com/jwells131313/goethe/cache"
 	"github.com/pkg/errors"
 	"sort"
 )
@@ -100,7 +101,7 @@ type serviceLocatorData struct {
 
 	perLookupContext ContextualScope
 	singletonContext ContextualScope
-	otherContexts    map[string]ContextualScope
+	otherContexts    cache.Cache
 
 	generation uint64
 }
@@ -143,10 +144,18 @@ func NewServiceLocator(name string, qos int) (ServiceLocator, error) {
 		ID:               ID,
 		allDescriptors:   make([]Descriptor, 0),
 		perLookupContext: newPerLookupContext(),
-		otherContexts:    make(map[string]ContextualScope),
 	}
 
 	retVal.singletonContext, err = newSingletonScope(retVal)
+	if err != nil {
+		return nil, err
+	}
+
+	retVal.otherContexts, err = cache.NewComputeFunctionCache(func(key interface{}) (interface{}, error) {
+		csk := CSK(key.(string))
+
+		return retVal.GetService(csk)
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -267,16 +276,12 @@ func (locator *serviceLocatorData) createService(desc Descriptor) (interface{}, 
 	} else if scope == Singleton {
 		cs = locator.singletonContext
 	} else {
-		service, err := locator.GetService(CSK(scope))
+		raw, err := locator.otherContexts.Compute(scope)
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not get context %s for service %s", scope, desc)
 		}
 
-		if service == nil {
-			return nil, fmt.Errorf("could not find a scope named %s", scope)
-		}
-
-		cs = service.(ContextualScope)
+		cs = raw.(ContextualScope)
 	}
 
 	if cs == nil {
@@ -392,19 +397,13 @@ func (locator *serviceLocatorData) getNextServiceID() int64 {
 	return retVal
 }
 
-func (locator *serviceLocatorData) update(newDescs []Descriptor, removers []Filter, originalGeneration uint64) error {
-	_, err := locator.internalUpdate(newDescs, removers, originalGeneration)
-
-	return err
-}
-
-func (locator *serviceLocatorData) internalUpdate(newDescs []Descriptor,
-	removers []Filter, originalGeneration uint64) ([]Descriptor, error) {
+func (locator *serviceLocatorData) update(newDescs []Descriptor,
+	removers []Filter, originalGeneration uint64) error {
 	locator.glock.WriteLock()
 	defer locator.glock.WriteUnlock()
 
 	if originalGeneration != locator.generation {
-		return nil, fmt.Errorf("Their was an update to the ServiceLocator after this DynamicConfiguration was created")
+		return fmt.Errorf("Their was an update to the ServiceLocator after this DynamicConfiguration was created")
 	}
 
 	newAllDescs := make([]Descriptor, 0)
@@ -425,18 +424,8 @@ func (locator *serviceLocatorData) internalUpdate(newDescs []Descriptor,
 	}
 
 	// TODO: Here the validation service would verify these descriptors were legal removals
-	newContextualScopeDescriptors := make([]Descriptor, 0)
 	for _, newDesc := range newDescs {
 		// TODO: Here the validation service would check to see if the new descriptor could be added
-
-		if ContextualScopeNamespace == newDesc.GetNamespace() {
-			if Singleton != newDesc.GetScope() {
-				return nil, fmt.Errorf("All services in the %s namespace must have Singleton scope, the following descriptor does not: %v",
-					ContextualScopeNamespace, newDesc)
-			}
-
-			newContextualScopeDescriptors = append(newContextualScopeDescriptors, newDesc)
-		}
 
 		newAllDescs = append(newAllDescs, newDesc)
 	}
@@ -444,7 +433,7 @@ func (locator *serviceLocatorData) internalUpdate(newDescs []Descriptor,
 	// Seems like at this point we've done all the checking and we can do the actual swap
 	locator.allDescriptors = newAllDescs
 
-	return newContextualScopeDescriptors, nil
+	return nil
 }
 
 func (locator *serviceLocatorData) CreateServiceFromDescriptor(desc Descriptor) (interface{}, error) {

@@ -75,6 +75,8 @@ func TestSingleCallToDargoContext(t *testing.T) {
 
 	EnableContextScope(locator)
 
+	DumpAllDescriptors(locator)
+
 	bg := context.Background()
 
 	myContext, err := createDargoContext(t, locator, bg)
