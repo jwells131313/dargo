@@ -43,7 +43,6 @@ package ioc
 import (
 	"fmt"
 	"github.com/jwells131313/goethe"
-	"github.com/jwells131313/goethe/cache"
 	"github.com/pkg/errors"
 	"sort"
 )
@@ -101,7 +100,6 @@ type serviceLocatorData struct {
 
 	perLookupContext ContextualScope
 	singletonContext ContextualScope
-	otherContexts    cache.Cache
 
 	generation uint64
 }
@@ -147,15 +145,6 @@ func NewServiceLocator(name string, qos int) (ServiceLocator, error) {
 	}
 
 	retVal.singletonContext, err = newSingletonScope(retVal)
-	if err != nil {
-		return nil, err
-	}
-
-	retVal.otherContexts, err = cache.NewComputeFunctionCache(func(key interface{}) (interface{}, error) {
-		csk := CSK(key.(string))
-
-		return retVal.GetService(csk)
-	})
 	if err != nil {
 		return nil, err
 	}
@@ -276,12 +265,17 @@ func (locator *serviceLocatorData) createService(desc Descriptor) (interface{}, 
 	} else if scope == Singleton {
 		cs = locator.singletonContext
 	} else {
-		raw, err := locator.otherContexts.Compute(scope)
+		csk := CSK(scope)
+		raw, err := locator.GetService(csk)
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not get context %s for service %s", scope, desc)
 		}
 
-		cs = raw.(ContextualScope)
+		var ok bool
+		cs, ok = raw.(ContextualScope)
+		if !ok {
+			return nil, fmt.Errorf("implementation of %s was not a ContextualScope", scope)
+		}
 	}
 
 	if cs == nil {
