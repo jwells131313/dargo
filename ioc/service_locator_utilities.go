@@ -131,7 +131,7 @@ func EnableContextScope(locator ServiceLocator) error {
 	})
 }
 
-func contextCreator(locator ServiceLocator, key ServiceKey) (interface{}, error) {
+func contextCreator(locator ServiceLocator, key Descriptor) (interface{}, error) {
 	return newContextScope(locator)
 }
 

@@ -55,12 +55,8 @@ func (context *perLookupContext) GetScope() string {
 // FindOrCreate always returns a new instance for PerLookup
 func (context *perLookupContext) FindOrCreate(locator ServiceLocator, desc Descriptor) (interface{}, error) {
 	f := desc.GetCreateFunction()
-	key, err := newServiceKeyFromDescriptor(desc)
-	if err != nil {
-		return nil, err
-	}
 
-	return f(locator, key)
+	return f(locator, desc)
 }
 
 // ContainsKey always returns false for PerLookup

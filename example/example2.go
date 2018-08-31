@@ -78,7 +78,7 @@ func CreateEchoLocator() (ioc.ServiceLocator, error) {
 	})
 }
 
-func newEchoService(locator ioc.ServiceLocator, key ioc.ServiceKey) (interface{}, error) {
+func newEchoService(locator ioc.ServiceLocator, key ioc.Descriptor) (interface{}, error) {
 	logger, err := locator.GetDService(LoggerServiceName)
 	if err != nil {
 		return nil, err
@@ -90,7 +90,7 @@ func newEchoService(locator ioc.ServiceLocator, key ioc.ServiceKey) (interface{}
 
 }
 
-func newLogger(ioc.ServiceLocator, ioc.ServiceKey) (interface{}, error) {
+func newLogger(ioc.ServiceLocator, ioc.Descriptor) (interface{}, error) {
 	return logrus.New(), nil
 }
 

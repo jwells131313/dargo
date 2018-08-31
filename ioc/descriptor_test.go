@@ -141,7 +141,7 @@ func TestConstantDescriptor(t *testing.T) {
 
 	fCreate := cDesc.GetCreateFunction()
 
-	i2, err2 := fCreate(nil, key)
+	i2, err2 := fCreate(nil, cDesc)
 	if err2 != nil {
 		t.Errorf("Could not call create method from descriptor %v", err2)
 	}
@@ -151,10 +151,10 @@ func TestConstantDescriptor(t *testing.T) {
 	}
 }
 
-func testCreator(locator ServiceLocator, key ServiceKey) (interface{}, error) {
+func testCreator(locator ServiceLocator, key Descriptor) (interface{}, error) {
 	return nil, nil
 }
 
-func testDestroyer(locator ServiceLocator, key ServiceKey, killMe interface{}) error {
+func testDestroyer(locator ServiceLocator, key Descriptor, killMe interface{}) error {
 	return nil
 }

@@ -11,14 +11,14 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:8db66237cd24313be6cc48525c0be6e2c3e46985f67c8f5c1a165050e0fd3ccf"
+  digest = "1:f409008eacd1168461e616c6d56e2fb0e5192dca91424a21509e26266c8e333c"
   name = "github.com/jwells131313/goethe"
   packages = [
     ".",
     "cache",
   ]
   pruneopts = "UT"
-  revision = "30cba799155a3f566a9d8c372f934bbbfc2999b2"
+  revision = "76b04869b4db5cf2e48ccf549797f6985ea92416"
 
 [[projects]]
   digest = "1:40e195917a951a8bf867cd05de2a46aaf1806c50cf92eebf4c16f78cd196f747"

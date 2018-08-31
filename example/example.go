@@ -107,13 +107,13 @@ const (
 func start() (ioc.ServiceLocator, error) {
 	return ioc.CreateAndBind("OracleMusicPlayer", func(binder ioc.Binder) error {
 		// bind the "A" note
-		binder.Bind(NoteServiceName, func(locator ioc.ServiceLocator, key ioc.ServiceKey) (interface{}, error) {
+		binder.Bind(NoteServiceName, func(locator ioc.ServiceLocator, key ioc.Descriptor) (interface{}, error) {
 			return newNoteService("a"), nil
 			// Give the service the NoteServiceName and qualify it with the note
 		}).QualifiedBy("a")
 
 		// bind the "B" note
-		binder.Bind(NoteServiceName, func(locator ioc.ServiceLocator, key ioc.ServiceKey) (interface{}, error) {
+		binder.Bind(NoteServiceName, func(locator ioc.ServiceLocator, key ioc.Descriptor) (interface{}, error) {
 			return newNoteService("b"), nil
 			// Give the service the NoteServiceName and qualify it with the note
 		}).QualifiedBy("b")
@@ -126,7 +126,7 @@ func start() (ioc.ServiceLocator, error) {
 			note := remainingNote
 
 			// Bind all the other notes in this loop
-			binder.Bind(NoteServiceName, func(locator ioc.ServiceLocator, key ioc.ServiceKey) (interface{}, error) {
+			binder.Bind(NoteServiceName, func(locator ioc.ServiceLocator, key ioc.Descriptor) (interface{}, error) {
 				// Creates a new note service with the given note
 				return newNoteService(note), nil
 
@@ -145,7 +145,7 @@ func bindPlayer(locator ioc.ServiceLocator) error {
 	})
 }
 
-func createMusicService(locator ioc.ServiceLocator, key ioc.ServiceKey) (interface{}, error) {
+func createMusicService(locator ioc.ServiceLocator, key ioc.Descriptor) (interface{}, error) {
 	notes := []string{"a", "b", "c", "d", "e", "f", "g"}
 	serviceMap := make(map[string]NoteService)
 

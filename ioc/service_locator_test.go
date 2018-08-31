@@ -91,11 +91,6 @@ func TestGetSystemServices(t *testing.T) {
 }
 
 func TestShutdownServiceLocator(t *testing.T) {
-	if true {
-		t.Log("fix once shutdown works")
-		return
-	}
-
 	locator, err := CreateAndBind(testLocatorName3, func(binder Binder) error {
 		binder.Bind(ShutdownService, createShuttableService).AndDestroyWith(destroyShuttableService)
 
@@ -130,11 +125,11 @@ type shuttableService struct {
 	isShut bool
 }
 
-func createShuttableService(locator ServiceLocator, key ServiceKey) (interface{}, error) {
+func createShuttableService(locator ServiceLocator, key Descriptor) (interface{}, error) {
 	return &shuttableService{}, nil
 }
 
-func destroyShuttableService(locator ServiceLocator, key ServiceKey, instance interface{}) error {
+func destroyShuttableService(locator ServiceLocator, key Descriptor, instance interface{}) error {
 	shuttable, ok := instance.(*shuttableService)
 	if !ok {
 		return fmt.Errorf("Could not shut down instance, it was not the correct type %v", instance)

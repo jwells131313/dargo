@@ -41,6 +41,7 @@
 package ioc
 
 import (
+	"fmt"
 	"github.com/jwells131313/goethe"
 	"sync"
 )
@@ -94,11 +95,20 @@ const (
 
 	// ServiceWithNameNotFoundExceptionString is the string used in the error when a service descriptor is not found
 	ServiceWithNameNotFoundExceptionString = "service was not found: %s"
+
+	// LocatorStateRunning This is the state when a locator is currently open and running
+	LocatorStateRunning = "Running"
+
+	// LocatorStateShutdown This is the state when a locator has been shut down
+	LocatorStateShutdown = "Shutdown"
 )
 
 var (
 	// AllFilter is a filter that returns true for every Descriptor
 	AllFilter Filter = &allFilterData{}
+
+	// LocatorIsShutdownError is returned if the locator you are using has been shut down
+	LocatorIsShutdownError = fmt.Errorf("This locator has been shut down")
 
 	threadManager = goethe.GG()
 )
