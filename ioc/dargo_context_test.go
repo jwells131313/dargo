@@ -157,7 +157,8 @@ func TestManyDargoContexts(t *testing.T) {
 }
 
 func TestDargoContextCancel(t *testing.T) {
-	parentContext, canceller := context.WithCancel(context.Background())
+	parentContext1, canceller1 := context.WithCancel(context.Background())
+	parentContext2, canceller2 := context.WithCancel(context.Background())
 
 	locator, err := CreateAndBind(testDargoContextLocator3, func(binder Binder) error {
 		binder.Bind(testDargoService, createDargoService).
@@ -173,26 +174,50 @@ func TestDargoContextCancel(t *testing.T) {
 
 	EnableContextScope(locator)
 
-	context, err := createDargoContext(parentContext, t, locator)
+	context1, err := createDargoContext(parentContext1, t, locator)
 	if err != nil {
-		t.Errorf("could not create locator %v", err)
+		t.Errorf("could not create context 1 %v", err)
 		return
 	}
 
-	ds, err := getDargoService(context)
+	// context 2 is not destroyed to ensure its services are not destroyed when 1 dies
+	context2, err := createDargoContext(parentContext2, t, locator)
+	if err != nil {
+		t.Errorf("could not create context 2  %v", err)
+		return
+	}
+
+	ds, err := getDargoService(context1)
+	if err != nil {
+		t.Errorf("could not get test dargo service %v", err)
+		return
+	}
+
+	ds1, err := getDargoService(context2)
 	if err != nil {
 		t.Errorf("could not get test dargo service %v", err)
 		return
 	}
 
 	assert.False(t, ds.destroyed, "Have not cancelled context yet so should not be destroyed")
+	assert.False(t, ds1.destroyed, "Have not cancelled context yet so should not be destroyed ds1")
 
-	canceller()
+	canceller1()
 
 	// Wait for it to be done
-	<-context.Done()
+	<-context1.Done()
 
 	assert.True(t, ds.destroyed, "Cancelled and waited, so... yeah, should be destroyed now")
+	assert.False(t, ds1.destroyed, "Have not cancelled context yet so should not be destroyed ds1")
+
+	canceller2()
+
+	// Wait for it to be done
+	<-context2.Done()
+
+	assert.True(t, ds.destroyed, "Cancelled and waited, so... yeah, should be destroyed now")
+	assert.True(t, ds1.destroyed, "Have not cancelled context yet so should not be destroyed ds1")
+
 }
 
 func hasValue(t *testing.T, expected int32, a, b, c int32) {
