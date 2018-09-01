@@ -84,7 +84,19 @@ func (single *singletonContextualData) ContainsKey(locator ServiceLocator, desc 
 }
 
 func (single *singletonContextualData) DestroyOne(locator ServiceLocator, desc Descriptor) error {
-	panic("implement me")
+	lookForMe := idKey{desc: desc}
+
+	single.cache.Remove(func(key interface{}, value interface{}) bool {
+		if key == lookForMe {
+			single.actualDestruction(desc, value)
+
+			return true
+		}
+
+		return false
+	})
+
+	return nil
 }
 
 func (single *singletonContextualData) GetSupportsNilCreation(locator ServiceLocator) bool {
