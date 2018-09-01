@@ -158,7 +158,10 @@ func TestManyDargoContexts(t *testing.T) {
 
 func TestDargoContextCancel(t *testing.T) {
 	parentContext1, canceller1 := context.WithCancel(context.Background())
+	defer canceller1()
+
 	parentContext2, canceller2 := context.WithCancel(context.Background())
+	defer canceller2()
 
 	locator, err := CreateAndBind(testDargoContextLocator3, func(binder Binder) error {
 		binder.Bind(testDargoService, createDargoService).
