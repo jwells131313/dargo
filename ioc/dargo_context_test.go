@@ -77,7 +77,7 @@ func TestSingleCallToDargoContext(t *testing.T) {
 
 	bg := context.Background()
 
-	myContext, err := createDargoContext(t, locator, bg)
+	myContext, err := createDargoContext(bg, t, locator)
 	if err != nil {
 		t.Errorf("could not create context %v", err)
 		return
@@ -95,7 +95,7 @@ func TestSingleCallToDargoContext(t *testing.T) {
 
 }
 
-func createDargoContext(t *testing.T, locator ServiceLocator, parentContext context.Context) (context.Context, error) {
+func createDargoContext(parentContext context.Context, t *testing.T, locator ServiceLocator) (context.Context, error) {
 	retVal, err := NewDargoContext(parentContext, locator)
 	if err != nil {
 		assert.NotNil(t, err, "Could not create new DargoContext")

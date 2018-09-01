@@ -40,12 +40,15 @@
 
 package ioc
 
+import "reflect"
+
 // BinderMethod is the method signature for binding services into the ServiceLocator
 type BinderMethod func(Binder) error
 
 // Binder A fluent interface for creating descriptors
 type Binder interface {
 	Bind(name string, bindMethod func(ServiceLocator, Descriptor) (interface{}, error)) Binder
+	BindWithStruct(name string, str interface{}) Binder
 	InScope(string) Binder
 	InNamespace(string) Binder
 	QualifiedBy(string) Binder
@@ -77,6 +80,35 @@ func (binder *binder) Bind(name string, cf func(ServiceLocator, Descriptor) (int
 		binder.current = nil
 		binder.qualifiers = nil
 	}
+
+	binder.current = NewWriteableDescriptor()
+	binder.current.SetCreateFunction(cf)
+	binder.current.SetName(name)
+
+	binder.qualifiers = make([]string, 0)
+
+	return binder
+}
+
+func (binder *binder) BindWithStruct(name string, str interface{}) Binder {
+	if binder.current != nil {
+		if len(binder.qualifiers) > 0 {
+			binder.current.SetQualifiers(binder.qualifiers)
+		}
+
+		binder.descriptors = append(binder.descriptors, binder.current)
+
+		binder.current = nil
+		binder.qualifiers = nil
+	}
+
+	ty := reflect.TypeOf(str)
+	if ty.Kind() != reflect.Struct {
+		// TODO: We could probably make this a pointer to a struct as well
+		panic("BindWithStruct must be passed a struct (not a pointer to a struct)")
+	}
+
+	cf := newCreatorFunc(ty)
 
 	binder.current = NewWriteableDescriptor()
 	binder.current.SetCreateFunction(cf)
