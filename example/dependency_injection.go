@@ -58,6 +58,7 @@ type SimpleServiceData struct {
 	Log *logrus.Logger `inject:"LoggerService_Name"`
 }
 
+// CallMe implements the SimpleService method
 func (ss *SimpleServiceData) CallMe() {
 	ss.Log.Info("This logger was injected!")
 }

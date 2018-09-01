@@ -42,13 +42,13 @@ Dynamic Service Registry and Inversion of Control for GO
 
 ## Service Registry
 
-Dargo is an in-memory service registry for GO.  It also introduces inversion of control, in that once the
-service descriptions are bound into the registry they are created in response to registry lookups.  Services
-are scoped by context, and so are created based on the lifecycle defined by the scope.  For
-example a service in the Singleton scope are only every created once.  A service in the PerLookup
-scope are created every time they are looked up.
+Dargo is an depenency injection system for GO.  It has inversion of control, in that once the
+service descriptions are bound into the registry they are created in response to injection requests
+or lookups.  Services are scoped, and are created based on the defined lifecycle of the scope.  For
+example services in the Singleton scope are only created once.  Services in the PerLookup
+scope are created every time they are injected.
 
-NOTE:  The current version of this API is 0.1.0.  This means that the API has
+NOTE:  The current version of this API is 0.2.0.  This means that the API has
 not settled completely and may change in future revisions.  Once the dargo
 team has decided the API is good as it is we will make the 1.0 version which
 will have some backward compatibility guarantees.  In the meantime, if you
@@ -59,9 +59,11 @@ The general flow of an application that uses dargo is to:
 1.  Create a ServiceLocator
 2.  Bind services into the ServiceLocator
 3.  Use the ServiceLocator in your code to find services
+4.  Any dependent services of the found service are automaticially injected
 
-Services can depend on other services.  When a service is created first all of its dependencies can be created with
-the same ServiceLocator.
+Services can depend on other services.  When a service is created first all of its dependencies are
+created.  A service binding can either provide a method with which to create
+the service, or it can use the automatic injection capability of dargo.
 
 There can be multiple implementations of the same service, and there are specific rules
 for choosing the best service amongst all of the possible choices.  In some cases services can be differentiated
@@ -70,6 +72,76 @@ by qualifiers.  In other cases services can be given ranks, with higher ranks be
 Using dargo helps unit test your code as it becomes easy to replace services served by the locator with mocks.
 If you ensure that your test mocks have a higher rank than the service bound by your normal code then
 all of your internal code will use the mock from the ServiceLocator rather than the original service.
+
+### Injection Example
+
+In this example a service called SimpleService will inject a logger.  The logger itself is a dargo
+service that is bound with a creation method.  That creation method looks like this:
+
+```go
+func newLogger(ioc.ServiceLocator, ioc.Descriptor) (interface{}, error) {
+	return logrus.New(), nil
+}
+```
+
+The binding of SimpleService will provide the struct that should be used to implement the interface.  The
+struct has a field annotated with _inject_ followed by the name of the service to inject.  This
+is the interface and the struct used to implement it:
+
+```go
+type SimpleService interface {
+	// CallMe logs a message to the logger!
+	CallMe()
+}
+
+// SimpleServiceData is a struct implementing SimpleService
+type SimpleServiceData struct {
+	Log *logrus.Logger `inject:"LoggerService_Name"`
+}
+
+// CallMe implements the SimpleService method
+func (ssd *SimpleServiceData) CallMe() {
+	ssd.Log.Info("This logger was injected!")
+}
+```
+
+Both the logger service and the SimpleService are bound into the ServiceLocator.  This is normally done near
+the start of your program:
+
+```go
+locator, err := ioc.CreateAndBind("InjectionExampleLocator", func(binder ioc.Binder) error {
+	    // Binds SimpleService by providing the structure
+	    binder.BindWithStruct("SimpleService", SimpleServiceData{})
+	    // Binds the logger service by providing the creation function 
+	    binder.Bind("LoggerService_Name", newLogger).InScope(ioc.PerLookup)
+	    return nil
+    })
+```
+
+The returned locator can be used to lookup the SimpleService service.  The SimpleService is bound
+into the Singleton scope (the default scope), which means that it will only be created the first
+time it is looked up or injected, and never again.  The LoggerService, on the other hand is in the
+PerLookup scope, which means that every time it is injected or looked up a new one will be created.
+
+This is the code that uses the looked up service:
+
+```go
+    raw, err := locator.GetDService("SimpleService")
+	if err != nil {
+		return err
+	}
+
+	ss, ok := raw.(SimpleService)
+	if !ok {
+		return fmt.Errorf("Invalid type for simple service %v", ss)
+	}
+
+	ss.CallMe()
+```
+
+Any depth of injection is supported (ServiceA can depend on ServiceB which depends on ServiceC and so on).
+A service can also depend on as many services as it would like (ServiceA can depend on service D, E and F etc).
+Howerver, services cannot have circular dependencies.
 
 ### An Example
 
