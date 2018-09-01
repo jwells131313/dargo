@@ -135,6 +135,8 @@ func contextCreator(locator ServiceLocator, key Descriptor) (interface{}, error)
 	return newContextScope(locator)
 }
 
+// DumpAllDescriptors prints all the descriptors known to the passed in locator
+// to stdout
 func DumpAllDescriptors(locator ServiceLocator) {
 	if locator == nil {
 		return

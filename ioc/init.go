@@ -107,8 +107,8 @@ var (
 	// AllFilter is a filter that returns true for every Descriptor
 	AllFilter Filter = &allFilterData{}
 
-	// LocatorIsShutdownError is returned if the locator you are using has been shut down
-	LocatorIsShutdownError = fmt.Errorf("This locator has been shut down")
+	// ErrLocatorIsShutdown is returned if the locator you are using has been shut down
+	ErrLocatorIsShutdown = fmt.Errorf("locator has been shut down")
 
 	threadManager = goethe.GG()
 )

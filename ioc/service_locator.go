@@ -178,7 +178,7 @@ func NewServiceLocator(name string, qos int) (ServiceLocator, error) {
 
 func (locator *serviceLocatorData) checkState() error {
 	if locator.state != LocatorStateRunning {
-		return LocatorIsShutdownError
+		return ErrLocatorIsShutdown
 	}
 
 	return nil

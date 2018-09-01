@@ -48,6 +48,7 @@ import (
 
 // SimpleService is a test service
 type SimpleService interface {
+	// CallMe logs a message to the logger!
 	CallMe()
 }
 
