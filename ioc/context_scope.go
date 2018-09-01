@@ -164,11 +164,49 @@ func (cs *contextScopeData) FindOrCreate(locator ServiceLocator, desc Descriptor
 }
 
 func (cs *contextScopeData) ContainsKey(locator ServiceLocator, desc Descriptor) bool {
-	panic("implement me")
+	cs.lock.Lock()
+	defer cs.lock.Unlock()
+
+	cache, err := cs.getCache()
+	if err != nil {
+		return false
+	}
+
+	idKey := idKey{
+		desc: desc,
+	}
+
+	return cache.HasKey(idKey)
 }
 
 func (cs *contextScopeData) DestroyOne(locator ServiceLocator, desc Descriptor) error {
-	panic("implement me")
+	cs.lock.Lock()
+	defer cs.lock.Unlock()
+
+	cache, err := cs.getCache()
+	if err != nil {
+		return err
+	}
+
+	idKey := idKey{
+		desc: desc,
+	}
+
+	cache.Remove(func(key interface{}, value interface{}) bool {
+		if idKey == key {
+			destroyer := desc.GetDestroyFunction()
+
+			if destroyer != nil {
+				destroyer(locator, desc, value)
+			}
+
+			return true
+		}
+
+		return false
+	})
+
+	return nil
 }
 
 func (cs *contextScopeData) GetSupportsNilCreation(locator ServiceLocator) bool {
@@ -180,7 +218,29 @@ func (cs *contextScopeData) IsActive(locator ServiceLocator) bool {
 }
 
 func (cs *contextScopeData) Shutdown(locator ServiceLocator) {
-	panic("implement me")
+	cs.lock.Lock()
+	defer cs.lock.Unlock()
+
+	for _, cache := range cs.contextCaches {
+		cache.Remove(func(key interface{}, value interface{}) bool {
+			idKey, ok := key.(idKey)
+			if !ok {
+				return true
+			}
+
+			destroyer := idKey.desc.GetDestroyFunction()
+			if destroyer == nil {
+				return true
+			}
+
+			destroyer(locator, idKey.desc, value)
+
+			return true
+		})
+	}
+
+	// Empty the cache
+	cs.contextCaches = make(map[int32]cache.Cache)
 }
 
 func (cs *contextScopeData) Compute(in interface{}) (interface{}, error) {
