@@ -40,7 +40,7 @@
 
 Dynamic Service Registry and Inversion of Control for GO
 
-## Service Registry
+## Depenency Injector for go
 
 Dargo is an depenency injection system for GO.  It has inversion of control, in that once the
 service descriptions are bound into the registry they are created in response to injection requests
