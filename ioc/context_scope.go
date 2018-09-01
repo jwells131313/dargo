@@ -125,7 +125,7 @@ func (cs *contextScopeData) FindOrCreate(locator ServiceLocator, desc Descriptor
 		return nil, err
 	}
 
-	idKey := &idKey{
+	idKey := idKey{
 		desc: desc,
 	}
 
@@ -153,7 +153,7 @@ func (cs *contextScopeData) Shutdown(locator ServiceLocator) {
 }
 
 func (cs *contextScopeData) Compute(in interface{}) (interface{}, error) {
-	key, ok := in.(*idKey)
+	key, ok := in.(idKey)
 	if !ok {
 		return nil, fmt.Errorf("incomding key not the expected type %v", in)
 	}
