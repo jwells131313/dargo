@@ -43,6 +43,7 @@ package ioc
 import (
 	"context"
 	"fmt"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"strings"
 	"sync/atomic"
@@ -52,8 +53,10 @@ import (
 const (
 	testDargoContextLocator1 = "TestDargoContextLocator1"
 	testDargoContextLocator2 = "TestDargoContextLocator2"
-	testDargoService         = "testDargoService"
-	testToUpperService       = "testToUpperService"
+	testDargoContextLocator3 = "TestDargoContextLocator3"
+
+	testDargoService   = "testDargoService"
+	testToUpperService = "testToUpperService"
 )
 
 var creationGeneration int32
@@ -61,6 +64,7 @@ var creationGeneration int32
 type testDargoContextHolder struct {
 	creationNumber int32
 	context        context.Context
+	destroyed      bool
 }
 
 func TestSingleCallToDargoContext(t *testing.T) {
@@ -150,6 +154,72 @@ func TestManyDargoContexts(t *testing.T) {
 	hasValue(t, 1, ret1, ret2, ret3)
 	hasValue(t, 2, ret1, ret2, ret3)
 	hasValue(t, 3, ret1, ret2, ret3)
+}
+
+func TestDargoContextCancel(t *testing.T) {
+	parentContext1, canceller1 := context.WithCancel(context.Background())
+	defer canceller1()
+
+	parentContext2, canceller2 := context.WithCancel(context.Background())
+	defer canceller2()
+
+	locator, err := CreateAndBind(testDargoContextLocator3, func(binder Binder) error {
+		binder.Bind(testDargoService, createDargoService).
+			InScope(ContextScope).
+			AndDestroyWith(destroyDargoService)
+
+		return nil
+	})
+	if err != nil {
+		t.Errorf("could not create locator %v", err)
+		return
+	}
+
+	EnableContextScope(locator)
+
+	context1, err := createDargoContext(parentContext1, t, locator)
+	if err != nil {
+		t.Errorf("could not create context 1 %v", err)
+		return
+	}
+
+	// context 2 is not destroyed to ensure its services are not destroyed when 1 dies
+	context2, err := createDargoContext(parentContext2, t, locator)
+	if err != nil {
+		t.Errorf("could not create context 2  %v", err)
+		return
+	}
+
+	ds, err := getDargoService(context1)
+	if err != nil {
+		t.Errorf("could not get test dargo service %v", err)
+		return
+	}
+
+	ds1, err := getDargoService(context2)
+	if err != nil {
+		t.Errorf("could not get test dargo service %v", err)
+		return
+	}
+
+	assert.False(t, ds.destroyed, "Have not cancelled context yet so should not be destroyed")
+	assert.False(t, ds1.destroyed, "Have not cancelled context yet so should not be destroyed ds1")
+
+	canceller1()
+
+	// Wait for it to be done
+	<-context1.Done()
+
+	assert.True(t, ds.destroyed, "Cancelled and waited, so... yeah, should be destroyed now")
+	assert.False(t, ds1.destroyed, "Have not cancelled context yet so should not be destroyed ds1")
+
+	canceller2()
+
+	// Wait for it to be done
+	<-context2.Done()
+
+	assert.True(t, ds.destroyed, "Cancelled and waited, so... yeah, should be destroyed now")
+	assert.True(t, ds1.destroyed, "Have not cancelled context yet so should not be destroyed ds1")
 
 }
 
@@ -160,17 +230,26 @@ func hasValue(t *testing.T, expected int32, a, b, c int32) {
 }
 
 func getDargoServiceValue(context context.Context) (int32, error) {
+	ds, err := getDargoService(context)
+	if err != nil {
+		return -1, errors.Wrap(err, "Could not get dargo service")
+	}
+
+	return ds.creationNumber, nil
+}
+
+func getDargoService(context context.Context) (*testDargoContextHolder, error) {
 	raw := context.Value(testDargoService)
 	if raw == nil {
-		return -1, fmt.Errorf("Could not find the testDargoService from context %v", context)
+		return nil, fmt.Errorf("Could not find the testDargoService from context %v", context)
 	}
 
 	ds, ok := raw.(*testDargoContextHolder)
 	if !ok {
-		return -2, fmt.Errorf("TestDargoService was not the correct type")
+		return nil, fmt.Errorf("TestDargoService was not the correct type")
 	}
 
-	return ds.creationNumber, nil
+	return ds, nil
 }
 
 func createDargoContext(parentContext context.Context, t *testing.T, locator ServiceLocator) (context.Context, error) {
@@ -200,6 +279,17 @@ func createDargoService(locator ServiceLocator, key Descriptor) (interface{}, er
 	return &testDargoContextHolder{
 		creationNumber: val,
 	}, nil
+}
+
+func destroyDargoService(locator ServiceLocator, key Descriptor, raw interface{}) error {
+	ds, ok := raw.(*testDargoContextHolder)
+	if !ok {
+		return fmt.Errorf("Incorrect type to destroy")
+	}
+
+	ds.destroyed = true
+
+	return nil
 }
 
 func (tdch *testDargoContextHolder) String() string {
