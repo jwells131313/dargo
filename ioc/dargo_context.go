@@ -49,9 +49,11 @@ import (
 )
 
 type dargoContext struct {
-	ID      int32
-	parent  context.Context
-	locator ServiceLocator
+	ID           int32
+	parent       context.Context
+	locator      ServiceLocator
+	dargoContext *contextScopeData
+	doneChannel  chan struct{}
 }
 
 var (
@@ -63,9 +65,10 @@ func NewDargoContext(parent context.Context, locator ServiceLocator) (context.Co
 	id := atomic.AddInt32(&nextContextID, 1)
 
 	retVal := &dargoContext{
-		ID:      id,
-		parent:  parent,
-		locator: locator,
+		ID:          id,
+		parent:      parent,
+		locator:     locator,
+		doneChannel: make(chan struct{}),
 	}
 
 	contextImplRaw, err := locator.GetService(CSK(ContextScope))
@@ -82,9 +85,24 @@ func NewDargoContext(parent context.Context, locator ServiceLocator) (context.Co
 		return nil, fmt.Errorf("The context implementation was not the expected type while creating new DargoContext")
 	}
 
+	retVal.dargoContext = contextImpl
+
 	contextImpl.addContext(retVal)
 
+	threadManager.Go(retVal.killMe)
+
 	return retVal, nil
+}
+
+type doneStruct struct{}
+
+func (dgo *dargoContext) killMe() {
+	// Wait for parent to be done
+	<-dgo.parent.Done()
+
+	dgo.dargoContext.removeContext(dgo)
+
+	dgo.doneChannel <- doneStruct{}
 }
 
 func (dgo *dargoContext) Deadline() (deadline time.Time, ok bool) {
@@ -92,7 +110,7 @@ func (dgo *dargoContext) Deadline() (deadline time.Time, ok bool) {
 }
 
 func (dgo *dargoContext) Done() <-chan struct{} {
-	return dgo.parent.Done()
+	return dgo.doneChannel
 }
 
 func (dgo *dargoContext) Err() error {

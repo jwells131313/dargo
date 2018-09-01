@@ -78,6 +78,37 @@ func (cs *contextScopeData) addContext(dc *dargoContext) error {
 	return nil
 }
 
+func (cs *contextScopeData) removeContext(dc *dargoContext) {
+	cs.lock.Lock()
+	defer cs.lock.Unlock()
+
+	cache, found := cs.contextCaches[dc.ID]
+	if !found {
+		return
+	}
+
+	// Remove cache
+	delete(cs.contextCaches, dc.ID)
+
+	// Destroy all services in this cache
+	cache.Remove(func(key interface{}, value interface{}) bool {
+		idKey, ok := key.(idKey)
+		if !ok {
+			return true
+		}
+
+		destroyer := idKey.desc.GetDestroyFunction()
+		if destroyer == nil {
+			return true
+		}
+
+		destroyer(cs.locator, idKey.desc, value)
+
+		return true
+	})
+
+}
+
 func (cs *contextScopeData) GetScope() string {
 	return ContextScope
 }
