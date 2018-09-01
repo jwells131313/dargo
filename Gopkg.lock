@@ -10,7 +10,6 @@
   version = "v1.1.1"
 
 [[projects]]
-  branch = "master"
   digest = "1:f409008eacd1168461e616c6d56e2fb0e5192dca91424a21509e26266c8e333c"
   name = "github.com/jwells131313/goethe"
   packages = [
@@ -19,6 +18,7 @@
   ]
   pruneopts = "UT"
   revision = "76b04869b4db5cf2e48ccf549797f6985ea92416"
+  version = "v0.9.0"
 
 [[projects]]
   digest = "1:40e195917a951a8bf867cd05de2a46aaf1806c50cf92eebf4c16f78cd196f747"
