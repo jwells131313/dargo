@@ -298,3 +298,16 @@ func SSK(name string, qualifiers ...string) ServiceKey {...}
 func CSK(name string, qualifiers ...string) ServiceKey {...}
 ```
 
+### Context Scope
+
+Many go programs use the context.Context scope in order to get their services.  Dargo provides an optional
+Context scope which can associate a ServiceLocator with a Context.  So your programs can continue to
+use context.Context and be getting all the dependency-injection goodness from Dargo.
+
+The definition of the lifecycle of the Context Scope is that of the underlying parent Context.  When
+the parent Context is finished all of the dargo services associated with that Context will be destroyed.
+For example, if you have something like a per-request scope, you can use that as the parent for the
+Dargo Context scope.  Every service that is bound to the Dargo Context scope will be unique per request
+and will be destroyed when the request has been finished.
+
+Under Construction: Need an example
