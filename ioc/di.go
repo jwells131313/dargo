@@ -38,30 +38,68 @@
  * holder.
  */
 
-package example
+package ioc
 
 import (
-	"github.com/stretchr/testify/assert"
-	"testing"
+	"reflect"
 )
 
-func TestExample(t *testing.T) {
-	locator, err := start()
-	assert.Nil(t, err, "could not start the player")
-
-	err = bindPlayer(locator)
-	assert.Nil(t, err, "could not bind the player")
-
-	rawService, err := locator.GetDService(MusicServiceName)
-	assert.Nil(t, err, "could not find music service")
-
-	musicService := rawService.(MusicService)
-
-	scale := musicService.PlayCScale()
-	assert.Equal(t, "<<<cdefgab>>>", scale, "scale didn't match")
+type diData struct {
+	ty reflect.Type
 }
 
-func TestExperiment(t *testing.T) {
-	err := runExample()
-	assert.Nil(t, err, "experiment failure")
+func newCreatorFunc(ty reflect.Type) func(ServiceLocator, Descriptor) (interface{}, error) {
+	diVal := &diData{
+		ty: ty,
+	}
+
+	retVal := func(locator ServiceLocator, desc Descriptor) (interface{}, error) {
+		return diVal.create(locator, desc)
+	}
+
+	return retVal
+}
+
+type indexAndValueOfDependency struct {
+	index int
+	value reflect.Value
+}
+
+func (di *diData) create(locator ServiceLocator, desc Descriptor) (interface{}, error) {
+	numFields := di.ty.NumField()
+
+	dependencies := make([]*indexAndValueOfDependency, 0)
+	for lcv := 0; lcv < numFields; lcv++ {
+		fieldVal := di.ty.Field(lcv)
+
+		injectString := fieldVal.Tag.Get("inject")
+
+		if injectString != "" {
+			// TODO: Needs to be a whole, like, parsing discussion...
+			dependency, err := locator.GetDService(injectString)
+			if err != nil {
+				return nil, err
+			}
+
+			dependencyAsValue := reflect.ValueOf(dependency)
+
+			dependencies = append(dependencies, &indexAndValueOfDependency{
+				index: lcv,
+				value: dependencyAsValue,
+			})
+		}
+	}
+
+	retVal := reflect.New(di.ty)
+	indirect := reflect.Indirect(retVal)
+
+	for _, iav := range dependencies {
+		index := iav.index
+		value := iav.value
+
+		fieldValue := indirect.Field(index)
+		fieldValue.Set(value)
+	}
+
+	return retVal.Interface(), nil
 }
