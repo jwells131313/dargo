@@ -69,10 +69,10 @@ type echoServiceData struct {
 func CreateEchoLocator() (ioc.ServiceLocator, error) {
 	return ioc.CreateAndBind(Example2LocatorName, func(binder ioc.Binder) error {
 		// binds the echo service into the locator in Singleton scope
-		binder.Bind(EchoServiceName, newEchoService)
+		binder.BindWithCreator(EchoServiceName, newEchoService)
 
 		// binds the logger service into the locator in PerLookup scope
-		binder.Bind(LoggerServiceName, newLogger).InScope(ioc.PerLookup)
+		binder.BindWithCreator(LoggerServiceName, newLogger).InScope(ioc.PerLookup)
 
 		return nil
 	})

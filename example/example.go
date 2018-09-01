@@ -107,13 +107,13 @@ const (
 func start() (ioc.ServiceLocator, error) {
 	return ioc.CreateAndBind("OracleMusicPlayer", func(binder ioc.Binder) error {
 		// bind the "A" note
-		binder.Bind(NoteServiceName, func(locator ioc.ServiceLocator, key ioc.Descriptor) (interface{}, error) {
+		binder.BindWithCreator(NoteServiceName, func(locator ioc.ServiceLocator, key ioc.Descriptor) (interface{}, error) {
 			return newNoteService("a"), nil
 			// Give the service the NoteServiceName and qualify it with the note
 		}).QualifiedBy("a")
 
 		// bind the "B" note
-		binder.Bind(NoteServiceName, func(locator ioc.ServiceLocator, key ioc.Descriptor) (interface{}, error) {
+		binder.BindWithCreator(NoteServiceName, func(locator ioc.ServiceLocator, key ioc.Descriptor) (interface{}, error) {
 			return newNoteService("b"), nil
 			// Give the service the NoteServiceName and qualify it with the note
 		}).QualifiedBy("b")
@@ -125,8 +125,8 @@ func start() (ioc.ServiceLocator, error) {
 			// allocate new storage for each note variable
 			note := remainingNote
 
-			// Bind all the other notes in this loop
-			binder.Bind(NoteServiceName, func(locator ioc.ServiceLocator, key ioc.Descriptor) (interface{}, error) {
+			// BindWithCreator all the other notes in this loop
+			binder.BindWithCreator(NoteServiceName, func(locator ioc.ServiceLocator, key ioc.Descriptor) (interface{}, error) {
 				// Creates a new note service with the given note
 				return newNoteService(note), nil
 
@@ -140,7 +140,7 @@ func start() (ioc.ServiceLocator, error) {
 
 func bindPlayer(locator ioc.ServiceLocator) error {
 	return ioc.BindIntoLocator(locator, func(binder ioc.Binder) error {
-		binder.Bind(MusicServiceName, createMusicService)
+		binder.BindWithCreator(MusicServiceName, createMusicService)
 		return nil
 	})
 }

@@ -38,52 +38,68 @@
  * holder.
  */
 
-package example
+package ioc
 
 import (
 	"fmt"
-	"github.com/jwells131313/dargo/ioc"
-	"github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/assert"
+	"testing"
 )
 
-// SimpleService is a test service
-type SimpleService interface {
-	// CallMe logs a message to the logger!
-	CallMe()
-}
+const (
+	DILocator1 = "DITestLocator1"
 
-// SimpleServiceData is a struct implementing SimpleService
-// and which injects its logger
-type SimpleServiceData struct {
-	Log *logrus.Logger `inject:"LoggerService_Name"`
-}
+	AServiceName = "A"
+	BServiceName = "B"
+)
 
-// CallMe implements the SimpleService method
-func (ss *SimpleServiceData) CallMe() {
-	ss.Log.Info("This logger was injected!")
-}
+func TestInitializerSuccess(t *testing.T) {
+	locator, err := CreateAndBind(DILocator1, func(binder Binder) error {
+		binder.Bind(AServiceName, ASimpleService{})
+		binder.Bind(BServiceName, BSimpleService{})
 
-func runExample() error {
-	locator, err := ioc.CreateAndBind("example", func(binder ioc.Binder) error {
-		binder.Bind("SimpleService", SimpleServiceData{})
-		binder.BindWithCreator(LoggerServiceName, newLogger).InScope(ioc.PerLookup)
 		return nil
 	})
 	if err != nil {
-		return err
+		t.Error("", err)
+		return
 	}
 
-	raw, err := locator.GetDService("SimpleService")
+	aRaw, err := locator.GetDService(AServiceName)
 	if err != nil {
-		return err
+		t.Error("", err)
+		return
 	}
 
-	ss, ok := raw.(SimpleService)
+	a, ok := aRaw.(*ASimpleService)
 	if !ok {
-		return fmt.Errorf("Invalid type for simple service %v", ss)
+		assert.True(t, ok, "invalid type")
+		return
 	}
 
-	ss.CallMe()
+	assert.True(t, a.initialized, "initializer not called")
+}
+
+type BSimpleService struct {
+	initialized bool
+}
+
+func (b *BSimpleService) DargoInitialize() error {
+	b.initialized = true
+	return nil
+}
+
+type ASimpleService struct {
+	B           *BSimpleService `inject:"B"`
+	initialized bool
+}
+
+func (a *ASimpleService) DargoInitialize() error {
+	if !a.B.initialized {
+		return fmt.Errorf("Injected service B MUST have been initialized before this is called")
+	}
+
+	a.initialized = true
 
 	return nil
 }

@@ -55,7 +55,7 @@ type DynamicConfigurationService interface {
 // DynamicConfiguration use this to add and remove descriptors to
 // the service locator
 type DynamicConfiguration interface {
-	// Bind adds a descriptor to be bound into the service locator
+	// BindWithCreator adds a descriptor to be bound into the service locator
 	// returns the copy of the descriptor that will bound in if
 	// commit succeeds
 	Bind(desc Descriptor) (Descriptor, error)

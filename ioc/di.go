@@ -101,5 +101,15 @@ func (di *diData) create(locator ServiceLocator, desc Descriptor) (interface{}, 
 		fieldValue.Set(value)
 	}
 
-	return retVal.Interface(), nil
+	iFace := retVal.Interface()
+
+	initializer, ok := iFace.(DargoInitializer)
+	if ok {
+		err := initializer.DargoInitialize()
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return iFace, nil
 }

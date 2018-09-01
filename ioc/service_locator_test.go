@@ -92,7 +92,7 @@ func TestGetSystemServices(t *testing.T) {
 
 func TestShutdownServiceLocator(t *testing.T) {
 	locator, err := CreateAndBind(testLocatorName3, func(binder Binder) error {
-		binder.Bind(ShutdownService, createShuttableService).AndDestroyWith(destroyShuttableService)
+		binder.BindWithCreator(ShutdownService, createShuttableService).AndDestroyWith(destroyShuttableService)
 
 		return nil
 	})

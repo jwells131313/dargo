@@ -83,7 +83,7 @@ func TestAddServiceWithDCS(t *testing.T) {
 	assert.True(t, wdb.GetLocatorID() >= 0, "Got incorrect locator ID")
 	assert.True(t, wdb.GetServiceID() > 0, "Gog incorrect service ID")
 
-	// Bind music as well
+	// BindWithCreator music as well
 	_, err = config.Bind(wdm)
 	assert.Nil(t, err, "could not bind music descriptor")
 
@@ -115,8 +115,8 @@ func TestAddServiceWithDCS(t *testing.T) {
 // in order to add a service (echo) and then look up the service
 func TestSimpleService(t *testing.T) {
 	locator, err := ioc.CreateAndBind(ServiceTestLocatorName2, func(binder ioc.Binder) error {
-		binder.Bind(EchoServiceName, createEcho)
-		binder.Bind(MusicServiceName, createMusic)
+		binder.BindWithCreator(EchoServiceName, createEcho)
+		binder.BindWithCreator(MusicServiceName, createMusic)
 
 		return nil
 	})
@@ -134,15 +134,15 @@ func TestSimpleService(t *testing.T) {
 
 func TestRankOverrideService(t *testing.T) {
 	locator, err := ioc.CreateAndBind(ServiceTestLocatorName3, func(binder ioc.Binder) error {
-		binder.Bind(EchoServiceName, createEcho)
-		binder.Bind(MusicServiceName, createMusic)
+		binder.BindWithCreator(EchoServiceName, createEcho)
+		binder.BindWithCreator(MusicServiceName, createMusic)
 
 		return nil
 	})
 	assert.Nil(t, err, "could not create locator using binder")
 
 	err = ioc.BindIntoLocator(locator, func(binder ioc.Binder) error {
-		binder.Bind(EchoServiceName, createTestEcho).Ranked(1)
+		binder.BindWithCreator(EchoServiceName, createTestEcho).Ranked(1)
 		return nil
 	})
 	assert.Nil(t, err, "added in the test echo service at rank 1")
