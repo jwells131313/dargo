@@ -125,7 +125,7 @@ func EnableContextScope(locator ServiceLocator) error {
 	}
 
 	return BindIntoLocator(locator, func(binder Binder) error {
-		binder.Bind(ContextScope, contextCreator).InNamespace(ContextualScopeNamespace)
+		binder.BindWithCreator(ContextScope, contextCreator).InNamespace(ContextualScopeNamespace)
 
 		return nil
 	})

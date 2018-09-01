@@ -69,8 +69,8 @@ type testDargoContextHolder struct {
 
 func TestSingleCallToDargoContext(t *testing.T) {
 	locator, err := CreateAndBind(testDargoContextLocator1, func(binder Binder) error {
-		binder.Bind(testDargoService, createDargoService).InScope(ContextScope)
-		binder.Bind(testToUpperService, createToUpperService)
+		binder.BindWithCreator(testDargoService, createDargoService).InScope(ContextScope)
+		binder.BindWithCreator(testToUpperService, createToUpperService)
 		return nil
 	})
 	if err != nil {
@@ -103,7 +103,7 @@ func TestManyDargoContexts(t *testing.T) {
 	creationGeneration = 0
 
 	locator, err := CreateAndBind(testDargoContextLocator2, func(binder Binder) error {
-		binder.Bind(testDargoService, createDargoService).InScope(ContextScope)
+		binder.BindWithCreator(testDargoService, createDargoService).InScope(ContextScope)
 		return nil
 	})
 	if err != nil {
@@ -164,7 +164,7 @@ func TestDargoContextCancel(t *testing.T) {
 	defer canceller2()
 
 	locator, err := CreateAndBind(testDargoContextLocator3, func(binder Binder) error {
-		binder.Bind(testDargoService, createDargoService).
+		binder.BindWithCreator(testDargoService, createDargoService).
 			InScope(ContextScope).
 			AndDestroyWith(destroyDargoService)
 

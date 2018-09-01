@@ -47,13 +47,34 @@ type BinderMethod func(Binder) error
 
 // Binder A fluent interface for creating descriptors
 type Binder interface {
-	Bind(name string, bindMethod func(ServiceLocator, Descriptor) (interface{}, error)) Binder
-	BindWithStruct(name string, str interface{}) Binder
+	// Bind binds the given name to the structure.  It will be a pointer to an instance of
+	// that structure passed to injection points.  If the structure implements DargoInitializer
+	// then the DargoInitialize method will be called on it prior to being given to other
+	// services
+	Bind(name string, str interface{}) Binder
+	// BindWithCreator binds the given name to a creation function
+	BindWithCreator(name string, bindMethod func(ServiceLocator, Descriptor) (interface{}, error)) Binder
+	// InScope changes the scope to the given scope.  The default scope is Singleton
 	InScope(string) Binder
+	// InNamespace changes the namespace to the given value.  The default namespace is default
 	InNamespace(string) Binder
+	// QualifiedBy adds the given qualifier name
 	QualifiedBy(string) Binder
+	// Ranked changes the rank to the given rank.  Higher ranks are preferred over lower ranks
 	Ranked(int32) Binder
+	// AndDestroyWith sets the destroyer function to the given function
 	AndDestroyWith(func(ServiceLocator, Descriptor, interface{}) error) Binder
+}
+
+// DargoInitializer is used when using Binder.Bind and need
+// to be able to do further initialization after the services have
+// been injected into the structure and before it is given to the injectee
+// or lookup user
+type DargoInitializer interface {
+	// DargoInitialize is a method that will be called after all the
+	// injected fields have been filled in.  If this method returns
+	// a non-nil error then the creation of the service will fail
+	DargoInitialize() error
 }
 
 type binder struct {
@@ -69,7 +90,7 @@ func newBinder() *binder {
 	}
 }
 
-func (binder *binder) Bind(name string, cf func(ServiceLocator, Descriptor) (interface{}, error)) Binder {
+func (binder *binder) BindWithCreator(name string, cf func(ServiceLocator, Descriptor) (interface{}, error)) Binder {
 	if binder.current != nil {
 		if len(binder.qualifiers) > 0 {
 			binder.current.SetQualifiers(binder.qualifiers)
@@ -90,7 +111,7 @@ func (binder *binder) Bind(name string, cf func(ServiceLocator, Descriptor) (int
 	return binder
 }
 
-func (binder *binder) BindWithStruct(name string, str interface{}) Binder {
+func (binder *binder) Bind(name string, str interface{}) Binder {
 	if binder.current != nil {
 		if len(binder.qualifiers) > 0 {
 			binder.current.SetQualifiers(binder.qualifiers)
@@ -105,7 +126,7 @@ func (binder *binder) BindWithStruct(name string, str interface{}) Binder {
 	ty := reflect.TypeOf(str)
 	if ty.Kind() != reflect.Struct {
 		// TODO: We could probably make this a pointer to a struct as well
-		panic("BindWithStruct must be passed a struct (not a pointer to a struct)")
+		panic("Bind must be passed a struct (not a pointer to a struct)")
 	}
 
 	cf := newCreatorFunc(ty)
