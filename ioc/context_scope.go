@@ -129,17 +129,17 @@ func (cs *contextScopeData) getCache() (cache.Cache, error) {
 		return nil, fmt.Errorf("unknown type from thread local")
 	}
 
-	rawID, found := stack.Peek()
+	rawContext, found := stack.Peek()
 	if !found {
 		return nil, fmt.Errorf("must be called from inside a context")
 	}
 
-	contextID, ok := rawID.(int32)
+	context, ok := rawContext.(*dargoContext)
 	if !ok {
 		return nil, fmt.Errorf("unknown type from peek")
 	}
 
-	cache, found := cs.contextCaches[contextID]
+	cache, found := cs.contextCaches[context.ID]
 	if !found {
 		return nil, fmt.Errorf("the context was either closed or was never created")
 	}

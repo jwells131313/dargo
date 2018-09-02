@@ -259,17 +259,6 @@ func createDargoContext(parentContext context.Context, t *testing.T, locator Ser
 		return nil, err
 	}
 
-	dsRaw := retVal.Value(testDargoService)
-	if dsRaw == nil {
-		assert.NotNil(t, dsRaw, "Did not find bound testDargoService")
-		return nil, fmt.Errorf("did not find bound testDargoService")
-	}
-
-	ds, ok := dsRaw.(*testDargoContextHolder)
-	assert.True(t, ok, "raw DS service was not of the correct type")
-
-	ds.context = retVal
-
 	return retVal, nil
 }
 
@@ -278,6 +267,7 @@ func createDargoService(locator ServiceLocator, key Descriptor) (interface{}, er
 
 	return &testDargoContextHolder{
 		creationNumber: val,
+		context:        GetInitializionContext(),
 	}, nil
 }
 

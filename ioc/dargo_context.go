@@ -189,11 +189,52 @@ func (dgo *dargoContext) getGoetheDargoValue(key ServiceKey) (interface{}, error
 		return nil, fmt.Errorf("unexpected type from thread local")
 	}
 
-	err = stack.Push(dgo.ID)
+	err = stack.Push(dgo)
 	if err != nil {
 		return nil, err
 	}
 	defer stack.Pop()
 
 	return dgo.locator.GetService(key)
+}
+
+// GetInitializationContext will return the Dargo implementation of
+// context that is being used when a service in the DargoContext scope
+// is being initialized.  This method is only guaranteed to return
+// a  non-nil Context in the CreatorFunction of a service or in the
+// DargoInitializer.DargoInitialize method when creating a service
+// When called in other methods the results are undefined, but
+// will most likely return nil and will not panic
+func GetInitializionContext() context.Context {
+	tid := threadManager.GetThreadID()
+	if tid < 0 {
+		return nil
+	}
+
+	tl, err := threadManager.GetThreadLocal(dargoContextThreadLocal)
+	if err != nil {
+		return nil
+	}
+
+	rawStack, err := tl.Get()
+	if err != nil {
+		return nil
+	}
+
+	stack, ok := rawStack.(stack)
+	if !ok {
+		return nil
+	}
+
+	rawContext, found := stack.Peek()
+	if !found {
+		return nil
+	}
+
+	context, ok := rawContext.(*dargoContext)
+	if !ok {
+		return nil
+	}
+
+	return context
 }
