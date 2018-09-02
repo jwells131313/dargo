@@ -128,9 +128,9 @@ func (dgo *dargoContext) Value(key interface{}) interface{} {
 
 		return retVal
 	case string:
-		key := DSK(key.(string))
-		retVal, err := dgo.getValue(key)
-		if err != nil {
+		dsk := DSK(key.(string))
+		retVal, err := dgo.getValue(dsk)
+		if retVal == nil || err != nil {
 			return dgo.parent.Value(key)
 		}
 
