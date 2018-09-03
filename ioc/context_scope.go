@@ -43,70 +43,76 @@ package ioc
 import (
 	"fmt"
 	"github.com/jwells131313/goethe/cache"
-	"sync"
 )
 
 type contextScopeData struct {
-	lock          sync.Mutex
-	contextCaches map[int32]cache.Cache
+	// contextCaches is a cache from int32->cache.Cache
+	// The cache.Cache returned is a cache from idKey->interface{}
+	contextCaches cache.Cache
 	locator       ServiceLocator
 }
 
 func newContextScope(locator ServiceLocator) (ContextualScope, error) {
-	return &contextScopeData{
-		contextCaches: make(map[int32]cache.Cache),
-		locator:       locator,
-	}, nil
+	retVal := &contextScopeData{
+		locator: locator,
+	}
+
+	cache, err := cache.NewComputeFunctionCache(func(key interface{}) (interface{}, error) {
+		return cache.NewCache(retVal, func(cycler interface{}) error {
+			return fmt.Errorf("A cycle was detected in ContextScope services involving %v", cycler)
+		})
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	retVal.contextCaches = cache
+
+	return retVal, nil
 }
 
 func (cs *contextScopeData) addContext(dc *dargoContext) error {
-	cs.lock.Lock()
-	defer cs.lock.Unlock()
-
-	_, found := cs.contextCaches[dc.ID]
-	if found {
+	if cs.contextCaches.HasKey(dc.ID) {
 		return fmt.Errorf("there is already a context for dc %v", dc)
 	}
 
-	cache, err := cache.NewCache(cs, nil)
-	if err != nil {
-		return err
-	}
-
-	cs.contextCaches[dc.ID] = cache
+	cs.contextCaches.Compute(dc.ID)
 
 	return nil
 }
 
 func (cs *contextScopeData) removeContext(dc *dargoContext) {
-	cs.lock.Lock()
-	defer cs.lock.Unlock()
+	cs.contextCaches.Remove(func(key interface{}, value interface{}) bool {
+		if key != dc.ID {
+			return false
+		}
 
-	cache, found := cs.contextCaches[dc.ID]
-	if !found {
-		return
-	}
-
-	// Remove cache
-	delete(cs.contextCaches, dc.ID)
-
-	// Destroy all services in this cache
-	cache.Remove(func(key interface{}, value interface{}) bool {
-		idKey, ok := key.(idKey)
+		// Clear the inner cache
+		innerCache, ok := value.(cache.Cache)
 		if !ok {
+			// TODO: weird
 			return true
 		}
 
-		destroyer := idKey.desc.GetDestroyFunction()
-		if destroyer == nil {
-			return true
-		}
+		// Destroy all services in this cache
+		innerCache.Remove(func(key interface{}, value interface{}) bool {
+			idKey, ok := key.(idKey)
+			if !ok {
+				return true
+			}
 
-		destroyer(cs.locator, idKey.desc, value)
+			destroyer := idKey.desc.GetDestroyFunction()
+			if destroyer == nil {
+				return true
+			}
+
+			destroyer(cs.locator, idKey.desc, value)
+
+			return true
+		})
 
 		return true
 	})
-
 }
 
 func (cs *contextScopeData) GetScope() string {
@@ -139,18 +145,20 @@ func (cs *contextScopeData) getCache() (cache.Cache, error) {
 		return nil, fmt.Errorf("unknown type from peek")
 	}
 
-	cache, found := cs.contextCaches[context.ID]
-	if !found {
-		return nil, fmt.Errorf("the context was either closed or was never created")
+	raw2, err := cs.contextCaches.Compute(context.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	cache, ok := raw2.(cache.Cache)
+	if !ok {
+		return nil, fmt.Errorf("unknown type of inner cache")
 	}
 
 	return cache, nil
 }
 
 func (cs *contextScopeData) FindOrCreate(locator ServiceLocator, desc Descriptor) (interface{}, error) {
-	cs.lock.Lock()
-	defer cs.lock.Unlock()
-
 	cache, err := cs.getCache()
 	if err != nil {
 		return nil, err
@@ -164,9 +172,6 @@ func (cs *contextScopeData) FindOrCreate(locator ServiceLocator, desc Descriptor
 }
 
 func (cs *contextScopeData) ContainsKey(locator ServiceLocator, desc Descriptor) bool {
-	cs.lock.Lock()
-	defer cs.lock.Unlock()
-
 	cache, err := cs.getCache()
 	if err != nil {
 		return false
@@ -180,9 +185,6 @@ func (cs *contextScopeData) ContainsKey(locator ServiceLocator, desc Descriptor)
 }
 
 func (cs *contextScopeData) DestroyOne(locator ServiceLocator, desc Descriptor) error {
-	cs.lock.Lock()
-	defer cs.lock.Unlock()
-
 	cache, err := cs.getCache()
 	if err != nil {
 		return err
@@ -218,11 +220,13 @@ func (cs *contextScopeData) IsActive(locator ServiceLocator) bool {
 }
 
 func (cs *contextScopeData) Shutdown(locator ServiceLocator) {
-	cs.lock.Lock()
-	defer cs.lock.Unlock()
+	cs.contextCaches.Remove(func(key interface{}, value interface{}) bool {
+		innerCache, ok := value.(cache.Cache)
+		if !ok {
+			return true
+		}
 
-	for _, cache := range cs.contextCaches {
-		cache.Remove(func(key interface{}, value interface{}) bool {
+		innerCache.Remove(func(key interface{}, v2 interface{}) bool {
 			idKey, ok := key.(idKey)
 			if !ok {
 				return true
@@ -233,14 +237,13 @@ func (cs *contextScopeData) Shutdown(locator ServiceLocator) {
 				return true
 			}
 
-			destroyer(locator, idKey.desc, value)
+			destroyer(locator, idKey.desc, v2)
 
 			return true
 		})
-	}
 
-	// Empty the cache
-	cs.contextCaches = make(map[int32]cache.Cache)
+		return true
+	})
 }
 
 func (cs *contextScopeData) Compute(in interface{}) (interface{}, error) {

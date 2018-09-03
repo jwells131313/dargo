@@ -65,3 +65,8 @@ func TestExperiment(t *testing.T) {
 	err := runExample()
 	assert.Nil(t, err, "experiment failure")
 }
+
+func TestContextExample(t *testing.T) {
+	err := runContextExample()
+	assert.Nil(t, err, "context example failure")
+}

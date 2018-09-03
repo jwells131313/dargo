@@ -111,9 +111,10 @@ the start of your program:
 ```go
 locator, err := ioc.CreateAndBind("InjectionExampleLocator", func(binder ioc.Binder) error {
 	    // Binds SimpleService by providing the structure
-	    binder.BindWithStruct("SimpleService", SimpleServiceData{})
+	    binder.Bind("SimpleService", SimpleServiceData{})
+
 	    // Binds the logger service by providing the creation function 
-	    binder.Bind("LoggerService_Name", newLogger).InScope(ioc.PerLookup)
+	    binder.BindWithCreator("LoggerService_Name", newLogger).InScope(ioc.PerLookup)
 	    return nil
     })
 ```
@@ -143,7 +144,7 @@ Any depth of injection is supported (ServiceA can depend on ServiceB which depen
 A service can also depend on as many services as it would like (ServiceA can depend on service D, E and F etc).
 Howerver, services cannot have circular dependencies.
 
-### An Example
+### Another Example
 
 In the following example we will bind two services.  One provides an EchoService and is in the Singleton
 scope, while the other is a logger service and is in the PerLookup scope.  First, here is the definition
@@ -167,7 +168,7 @@ func (echo *echoServiceData) Echo(in string) string {
 }
 ```
 
-To allow dargo to create the EchoService the user must supply a creation function.  The creation
+To allow Dargo to create the EchoService the user must supply a creation function.  The creation
 function is passed a ServiceLocator to be used to find other services it may depend on and the
 ServiceKey that describes the service further.  This is the creation function for the EchoService:
 
@@ -211,10 +212,10 @@ func CreateEchoLocator() (ioc.ServiceLocator, error) {
 	return ioc.CreateAndBind(Example2LocatorName, func(binder ioc.Binder) error {
 		
 		// binds the echo service into the locator in Singleton scope
-		binder.Bind(EchoServiceName, newEchoService)
+		binder.BindWithCreator(EchoServiceName, newEchoService)
 
 		// binds the logger service into the locator in PerLookup scope
-		binder.Bind(LoggerServiceName, newLogger).InScope(ioc.PerLookup)
+		binder.BindWithCreator(LoggerServiceName, newLogger).InScope(ioc.PerLookup)
 
 		return nil
 	})

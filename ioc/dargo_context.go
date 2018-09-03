@@ -48,6 +48,17 @@ import (
 	"time"
 )
 
+// DargoContextCreationService a service in the DargoContext scope that
+// has a method for getting the DargoContext that was used to create
+// the service itself.  It is useful to inject into other services
+// in the DargoContext that need to know the originating context.Context
+type DargoContextCreationService interface {
+	// GetDargoCreationContext gets the context.Context that was used to originate
+	// this service, which is useful for other services in the DargoContext
+	// scope that need to know the originating context.Context
+	GetDargoCreationContext() context.Context
+}
+
 type dargoContext struct {
 	ID           int32
 	parent       context.Context
@@ -128,9 +139,9 @@ func (dgo *dargoContext) Value(key interface{}) interface{} {
 
 		return retVal
 	case string:
-		key := DSK(key.(string))
-		retVal, err := dgo.getValue(key)
-		if err != nil {
+		dsk := DSK(key.(string))
+		retVal, err := dgo.getValue(dsk)
+		if retVal == nil || err != nil {
 			return dgo.parent.Value(key)
 		}
 
@@ -198,43 +209,44 @@ func (dgo *dargoContext) getGoetheDargoValue(key ServiceKey) (interface{}, error
 	return dgo.locator.GetService(key)
 }
 
-// GetInitializationContext will return the Dargo implementation of
-// context that is being used when a service in the DargoContext scope
-// is being initialized.  This method is only guaranteed to return
-// a  non-nil Context in the CreatorFunction of a service or in the
-// DargoInitializer.DargoInitialize method when creating a service
-// When called in other methods the results are undefined, but
-// will most likely return nil and will not panic
-func GetInitializionContext() context.Context {
+type dargoContextCreationServiceData struct {
+	context context.Context
+}
+
+func (dccsd *dargoContextCreationServiceData) GetDargoCreationContext() context.Context {
+	return dccsd.context
+}
+
+func (dccsd *dargoContextCreationServiceData) DargoInitialize() error {
 	tid := threadManager.GetThreadID()
 	if tid < 0 {
-		return nil
+		return fmt.Errorf("DargoCreationContextService not initialized on goethe thread")
 	}
 
 	tl, err := threadManager.GetThreadLocal(dargoContextThreadLocal)
 	if err != nil {
-		return nil
+		return err
 	}
 
 	rawStack, err := tl.Get()
 	if err != nil {
-		return nil
+		return err
 	}
 
 	stack, ok := rawStack.(stack)
 	if !ok {
-		return nil
+		return fmt.Errorf("unknown type of thread local when creating DargoCreationContextService")
 	}
 
 	rawContext, found := stack.Peek()
 	if !found {
-		return nil
+		return fmt.Errorf("nothing pushed onto stack improperly when creating DargoCreationContextService")
 	}
 
-	context, ok := rawContext.(*dargoContext)
+	dccsd.context, ok = rawContext.(*dargoContext)
 	if !ok {
-		return nil
+		return fmt.Errorf("unknown type of thread local value when creating DargoCreationContextService")
 	}
 
-	return context
+	return nil
 }

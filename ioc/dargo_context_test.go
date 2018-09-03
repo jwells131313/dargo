@@ -265,9 +265,16 @@ func createDargoContext(parentContext context.Context, t *testing.T, locator Ser
 func createDargoService(locator ServiceLocator, key Descriptor) (interface{}, error) {
 	val := atomic.AddInt32(&creationGeneration, 1)
 
+	raw, err := locator.GetDService(DargoCreationContextServiceName)
+	if err != nil {
+		return nil, err
+	}
+
+	creationService := raw.(DargoContextCreationService)
+
 	return &testDargoContextHolder{
 		creationNumber: val,
-		context:        GetInitializionContext(),
+		context:        creationService.GetDargoCreationContext(),
 	}, nil
 }
 

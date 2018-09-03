@@ -93,6 +93,9 @@ const (
 	// DynamicConfigurationServiceName The name of the DynamicConfigurationService (in the system namespace)
 	DynamicConfigurationServiceName = "DynamicConfigurationService"
 
+	// DargoCreationContextServiceName The name of the DargoCreationContextService
+	DargoCreationContextServiceName = "DargoCreationContextService"
+
 	// ServiceWithNameNotFoundExceptionString is the string used in the error when a service descriptor is not found
 	ServiceWithNameNotFoundExceptionString = "service was not found: %s"
 
