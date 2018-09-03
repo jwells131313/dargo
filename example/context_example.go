@@ -71,18 +71,23 @@ func NewRequestContext(parent context.Context, user string) context.Context {
 	}
 }
 
+// Deadline defers to the parent context
 func (rc *RequestContext) Deadline() (deadline time.Time, ok bool) {
 	return rc.parent.Deadline()
 }
 
+// Done defers to the parent context
 func (rc *RequestContext) Done() <-chan struct{} {
 	return rc.parent.Done()
 }
 
+// Err defers to the parent context
 func (rc *RequestContext) Err() error {
 	return rc.parent.Err()
 }
 
+// Value defers to the parent context except for the userNameKey which was
+// used when this context was created
 func (rc *RequestContext) Value(key interface{}) interface{} {
 	switch key.(type) {
 	case string:
@@ -104,6 +109,7 @@ type AuthorizationServiceData struct {
 	ContextService ioc.DargoContextCreationService `inject:"DargoCreationContextService"`
 }
 
+// MotherMayI allows everyone to do everything except Mallory, who isn't allowed to do anything
 func (asd *AuthorizationServiceData) MotherMayI() bool {
 	context := asd.ContextService.GetDargoCreationContext()
 
