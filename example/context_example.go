@@ -106,7 +106,7 @@ func (rc *RequestContext) Value(key interface{}) interface{} {
 // It injects the DargoContextCreationService to get the context under
 // which this service was created
 type AuthorizationServiceData struct {
-	ContextService ioc.DargoContextCreationService `inject:"DargoCreationContextService"`
+	ContextService ioc.DargoContextCreationService `inject:"DargoContextCreationService"`
 }
 
 // MotherMayI allows everyone to do everything except Mallory, who isn't allowed to do anything
@@ -134,7 +134,7 @@ func runContextExample() error {
 		return nil
 	})
 
-	ioc.EnableContextScope(locator)
+	ioc.EnableDargoContextScope(locator)
 
 	aliceContext, aliceCanceller, _ := createContext(locator, "Alice")
 	defer aliceCanceller()

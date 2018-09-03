@@ -85,7 +85,7 @@ func NewDargoContext(parent context.Context, locator ServiceLocator) (context.Co
 	contextImplRaw, err := locator.GetService(CSK(ContextScope))
 	if err != nil {
 		if isServiceNotFound(err) {
-			return nil, fmt.Errorf("there is no ContextScope.  You need to call EnableContextScope in the ioc package to install a ContextScope handler")
+			return nil, fmt.Errorf("there is no ContextScope.  You need to call EnableDargoContextScope in the ioc package to install a ContextScope handler")
 		}
 
 		return nil, errors.Wrap(err, "error getting ContextScope while creating new DargoContext")
