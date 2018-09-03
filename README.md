@@ -305,10 +305,143 @@ Many go programs use the context.Context scope in order to get their services.  
 Context scope which can associate a ServiceLocator with a Context.  So your programs can continue to
 use context.Context and be getting all the dependency-injection goodness from Dargo.
 
-The definition of the lifecycle of the Context Scope is that of the underlying parent Context.  When
+The definition of the lifecycle of the DargoContext scope is that of the underlying parent Context.  When
 the parent Context is finished all of the dargo services associated with that Context will be destroyed.
 For example, if you have something like a per-request scope, you can use that as the parent for the
-Dargo Context scope.  Every service that is bound to the Dargo Context scope will be unique per request
+DargoContext scope.  Every service that is bound to the DargoContext scope will be unique per request
 and will be destroyed when the request has been finished.
 
-Under Construction: Need an example
+To enable the DargoContext scope the method ioc.EnableDargoContextScope must be called.  This method
+will add in the DargoContext ContextualScope implementation and also add a DargoContext scoped
+service named _DargoContextCreationService_ to the ServiceLocator.
+The DargoContextCreationService is a convenient service that returns the DargoContext context.Context
+under which the service was created.
+
+#### Context Scope Example
+
+This example creates a  Per-Request context.Context that carries the name of the user in
+the value.  That Per-Request context.Context is wrapped by a DargoContext which has a
+Per-Context AuthorizationService.  The AuthorizationService uses the context.Context with
+which it was created to get the username, and uses that username to decide if the user
+can proceed.
+
+We will not go into the details of creating the Per-Request context, but the code for this
+example can be found in the context_example.go file in the examples subdirectory.
+
+First lets see the definition of the AuthorizationService and a corresponding structure that
+imlements the interface:
+
+```go
+// AuthorizationService is an example authorization service
+type AuthorizationService interface {
+	// MotherMayI asks the auth service for permission to do something
+	MotherMayI() bool
+}
+
+// AuthorizationServiceData is the struct implementing AuthorizationService
+// It injects the DargoContextCreationService to get the context under
+// which this service was created
+type AuthorizationServiceData struct {
+	ContextService ioc.DargoContextCreationService `inject:"DargoContextCreationService"`
+}
+```
+
+The implementation of AuthorizationService just lets anyone do anything, except for Mallory:
+
+```go
+// MotherMayI allows everyone to do everything except Mallory, who isn't allowed to do anything
+func (asd *AuthorizationServiceData) MotherMayI() bool {
+	context := asd.ContextService.GetDargoCreationContext()
+
+	userRaw := context.Value(userNameKey)
+	if userRaw == nil {
+		return false
+	}
+
+	user := userRaw.(string)
+
+	if user == "Mallory" {
+		return false
+	}
+
+	return true
+}
+```
+
+Now lets see how our initial creation of this ServiceLocator would look:
+
+```go
+locator, _ := ioc.CreateAndBind("ContextExample", func(binder ioc.Binder) error {
+    binder.Bind("AuthService", AuthorizationServiceData{}).InScope(ioc.ContextScope)
+
+    return nil
+})
+
+ioc.EnableDargoContextScope(locator)
+```
+
+Services in the DargoContext scope must be looked up from the context.Context, not through
+the ServiceLocator.  So in order to get an instance of the AuthorizationService the context must
+be used.  Here is some example code of creating a few requests with different users and then
+using the AuthorizationService to grant them access:
+
+```go
+func createContext(locator ioc.ServiceLocator, user string) (context.Context, context.CancelFunc, error) {
+	parent, canceller := context.WithCancel(context.Background())
+
+	requestScoped := NewRequestContext(parent, user)
+
+	dargoContext, err := ioc.NewDargoContext(requestScoped, locator)
+
+	return dargoContext, canceller, err
+}
+
+func getAuthorizeService(context context.Context) AuthorizationService {
+	raw := context.Value("AuthService")
+	if raw == nil {
+		return nil
+	}
+
+	return raw.(AuthorizationService)
+}
+
+func runExample() error {
+	// other code
+	
+    aliceContext, aliceCanceller, _ := createContext(locator, "Alice")
+    defer aliceCanceller()
+    
+    bobContext, bobCanceller, _ := createContext(locator, "Bob")
+    defer bobCanceller()
+    
+    malloryContext, malloryCanceller, _ := createContext(locator, "Mallory")
+    defer malloryCanceller()
+    
+    aliceAuthorizer := getAuthorizeService(aliceContext)
+    bobAuthorizer := getAuthorizeService(bobContext)
+    malloryAuthorizer := getAuthorizeService(malloryContext)
+    
+    canI := aliceAuthorizer.MotherMayI()
+    if !canI {
+        return fmt.Errorf("Alice should have been able to go")
+    }
+    
+    canI = bobAuthorizer.MotherMayI()
+    if !canI {
+        return fmt.Errorf("Alice should have been able to go")
+    }
+    
+    canI = malloryAuthorizer.MotherMayI()
+    if canI {
+        // Mallory should have NOT been allowed
+        return fmt.Errorf("Mallory is a bad person, and should not be allowed to do anything")
+    }
+    
+    return nil
+}
+```
+
+One thing not shown in this example but which is very useful for DargoContext scoped service is the
+use of the destructor function.  Whenever a context is cancelled all services created for that
+context.Context will have their destructor function called, which is a good way to clean up any
+resources that the service might have acquired.

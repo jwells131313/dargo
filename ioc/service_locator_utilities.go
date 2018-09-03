@@ -109,8 +109,8 @@ func getDCS(locator ServiceLocator) (DynamicConfigurationService, error) {
 	return dcs, nil
 }
 
-// EnableContextScope enables the use of the DargoContext
-func EnableContextScope(locator ServiceLocator) error {
+// EnableDargoContextScope enables the use of the DargoContext
+func EnableDargoContextScope(locator ServiceLocator) error {
 	dargoKey := CSK(ContextScope)
 	filter := NewServiceKeyFilter(dargoKey)
 
@@ -126,7 +126,7 @@ func EnableContextScope(locator ServiceLocator) error {
 
 	return BindIntoLocator(locator, func(binder Binder) error {
 		binder.BindWithCreator(ContextScope, contextCreator).InNamespace(ContextualScopeNamespace)
-		binder.Bind(DargoCreationContextServiceName, dargoContextCreationServiceData{}).InScope(ContextScope)
+		binder.Bind(DargoContextCreationServiceName, dargoContextCreationServiceData{}).InScope(ContextScope)
 
 		return nil
 	})
