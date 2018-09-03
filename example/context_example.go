@@ -94,11 +94,13 @@ func (rc *RequestContext) Value(key interface{}) interface{} {
 }
 
 type AuthorizationServiceData struct {
-	DargoContext context.Context
+	ContextService ioc.DargoContextCreationService `inject:"DargoCreationContextService"`
 }
 
 func (asd *AuthorizationServiceData) MotherMayI() bool {
-	userRaw := asd.DargoContext.Value(userNameKey)
+	context := asd.ContextService.GetDargoCreationContext()
+
+	userRaw := context.Value(userNameKey)
 	if userRaw == nil {
 		return false
 	}
@@ -110,11 +112,6 @@ func (asd *AuthorizationServiceData) MotherMayI() bool {
 	}
 
 	return true
-}
-
-func (asd *AuthorizationServiceData) DargoInitialize() error {
-	asd.DargoContext = ioc.GetInitializionContext()
-	return nil
 }
 
 func runContextExample() error {

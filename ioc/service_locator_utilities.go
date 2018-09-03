@@ -126,6 +126,7 @@ func EnableContextScope(locator ServiceLocator) error {
 
 	return BindIntoLocator(locator, func(binder Binder) error {
 		binder.BindWithCreator(ContextScope, contextCreator).InNamespace(ContextualScopeNamespace)
+		binder.Bind(DargoCreationContextServiceName, dargoContextCreationServiceData{}).InScope(ContextScope)
 
 		return nil
 	})
