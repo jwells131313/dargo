@@ -51,15 +51,19 @@ const (
 	userNameKey = "contextUser"
 )
 
+// AuthorizationService is an example authorization service
 type AuthorizationService interface {
+	// MotherMayI asks the auth service for permission to do something
 	MotherMayI() bool
 }
 
+// RequestContext is an example request-scoped context
 type RequestContext struct {
 	parent context.Context
 	user   string
 }
 
+// NewRequestContext creates the example request-scoped context
 func NewRequestContext(parent context.Context, user string) context.Context {
 	return &RequestContext{
 		parent: parent,
@@ -93,6 +97,9 @@ func (rc *RequestContext) Value(key interface{}) interface{} {
 	}
 }
 
+// AuthorizationServiceData is the struct implementing AuthorizationService
+// It injects the DargoContextCreationService to get the context under
+// which this service was created
 type AuthorizationServiceData struct {
 	ContextService ioc.DargoContextCreationService `inject:"DargoCreationContextService"`
 }
