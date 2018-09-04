@@ -105,6 +105,7 @@ type serviceLocatorData struct {
 	singletonContext ContextualScope
 	generation       uint64
 	state            string
+	errorServices    []ErrorService
 }
 
 // NewServiceLocator this will find or create a service locator with the given name, and
@@ -146,6 +147,7 @@ func NewServiceLocator(name string, qos int) (ServiceLocator, error) {
 		allDescriptors:   make([]Descriptor, 0),
 		perLookupContext: newPerLookupContext(),
 		state:            LocatorStateRunning,
+		errorServices:    make([]ErrorService, 0),
 	}
 
 	retVal.singletonContext, err = newSingletonScope(retVal)
@@ -227,16 +229,18 @@ func (locator *serviceLocatorData) GetAllServices(toMe ServiceKey) ([]interface{
 	}
 
 	retVal := make([]interface{}, 0)
+	retErr := NewMultiError()
+
 	for _, desc := range descs {
 		us, err := locator.createService(desc)
 		if err != nil {
-			return retVal, err
+			retErr.AddError(err)
+		} else {
+			retVal = append(retVal, us)
 		}
-
-		retVal = append(retVal, us)
 	}
 
-	return retVal, nil
+	return retVal, retErr.GetFinalError()
 }
 
 func (locator *serviceLocatorData) GetServiceFromDescriptor(desc Descriptor) (interface{}, error) {
@@ -454,6 +458,8 @@ func (locator *serviceLocatorData) update(newDescs []Descriptor,
 
 	newAllDescs := make([]Descriptor, 0)
 
+	var errorServiceUpdate bool
+
 	removedDescriptors := make([]Descriptor, 0)
 	for _, myDesc := range locator.allDescriptors {
 		removeMe := false
@@ -465,6 +471,8 @@ func (locator *serviceLocatorData) update(newDescs []Descriptor,
 		if !removeMe {
 			newAllDescs = append(newAllDescs, myDesc)
 		} else {
+			errorServiceUpdate = errorServiceUpdate || isErrorService(myDesc)
+
 			removedDescriptors = append(removedDescriptors, myDesc)
 		}
 	}
@@ -472,14 +480,73 @@ func (locator *serviceLocatorData) update(newDescs []Descriptor,
 	// TODO: Here the validation service would verify these descriptors were legal removals
 	for _, newDesc := range newDescs {
 		// TODO: Here the validation service would check to see if the new descriptor could be added
+		if isErrorService(newDesc) {
+			if Singleton != newDesc.GetScope() {
+				return fmt.Errorf("implementations of %s must be in the singleton scope",
+					newDesc.GetName())
+			}
+
+			errorServiceUpdate = true
+		}
 
 		newAllDescs = append(newAllDescs, newDesc)
 	}
 
-	// Seems like at this point we've done all the checking and we can do the actual swap
+	var success bool
+
+	// Get old services
+	oldDescriptors := locator.allDescriptors
+	oldErrorServices := locator.errorServices
+
 	locator.allDescriptors = newAllDescs
 
+	defer func() {
+		if success {
+			return
+		}
+
+		locator.errorServices = oldErrorServices
+		locator.allDescriptors = oldDescriptors
+	}()
+
+	if errorServiceUpdate {
+		// Must get all error services again
+		errorServiceKey, err := NewServiceKey(UserServicesNamespace, ErrorServiceName)
+		if err != nil {
+			return errors.Wrap(err, "creation of error service key failed")
+		}
+
+		raws, err := locator.GetAllServices(errorServiceKey)
+		if err != nil {
+			return errors.Wrap(err, "creation of error services failed")
+		}
+
+		newErrorServices := make([]ErrorService, 0)
+		for _, errorServiceRaw := range raws {
+			errorService, ok := errorServiceRaw.(ErrorService)
+			if !ok {
+				return fmt.Errorf("a service %v with error service key does not implement error service",
+					errorServiceRaw)
+			}
+
+			newErrorServices = append(newErrorServices, errorService)
+		}
+
+		locator.errorServices = newErrorServices
+	}
+
+	success = true
+
 	return nil
+}
+
+func isErrorService(desc Descriptor) bool {
+	if UserServicesNamespace == desc.GetNamespace() &&
+		ErrorServiceName == desc.GetName() {
+		return true
+	}
+
+	return false
 }
 
 func (locator *serviceLocatorData) CreateServiceFromDescriptor(desc Descriptor) (interface{}, error) {
@@ -490,7 +557,21 @@ func (locator *serviceLocatorData) CreateServiceFromDescriptor(desc Descriptor) 
 
 	cf := desc.GetCreateFunction()
 
-	return cf(locator, desc)
+	retVal, err := cf(locator, desc)
+	if err != nil {
+		_, isMulti := err.(MultiError)
+		if !isMulti {
+			err = NewMultiError(err)
+		}
+
+		ei := newErrorImformation(ServiceCreationFailure, desc, nil, err)
+
+		for _, errorService := range locator.errorServices {
+			err = errorService.OnFailure(ei)
+		}
+	}
+
+	return retVal, err
 }
 
 func (locator *serviceLocatorData) GetState() string {
