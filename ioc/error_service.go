@@ -45,6 +45,8 @@ import (
 	"reflect"
 )
 
+// ErrorInformation is passed to the ErrorService to provide information about
+// the error that has occurred
 type ErrorInformation interface {
 	// GetType returns the type of error condition that has occurred
 	// The valid values are:<UL>

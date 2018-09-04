@@ -165,6 +165,8 @@ type multiErrorData struct {
 	errors []error
 }
 
+// NewMultiError creates a multi-error error with the
+// provided errors
 func NewMultiError(errors ...error) MultiError {
 	errorsArray := make([]error, 0)
 	for _, err := range errors {
