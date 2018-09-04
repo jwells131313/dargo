@@ -41,84 +41,72 @@
 package ioc
 
 import (
-	"fmt"
-	"reflect"
+	"errors"
+	"github.com/stretchr/testify/assert"
+	"testing"
 )
 
-type diData struct {
-	ty reflect.Type
+const (
+	expectedErrorString = "expected error creating serviceB"
+)
+
+type ServiceB struct {
 }
 
-func newCreatorFunc(ty reflect.Type) func(ServiceLocator, Descriptor) (interface{}, error) {
-	diVal := &diData{
-		ty: ty,
+type ServiceA struct {
+	B ServiceB `inject:"ServiceB"`
+}
+
+func serviceBCreator(locator ServiceLocator, desc Descriptor) (interface{}, error) {
+	return nil, errors.New(expectedErrorString)
+}
+
+type errorServiceData struct{}
+
+var lastErrorInformation ErrorInformation
+
+func (esd *errorServiceData) OnFailure(ei ErrorInformation) error {
+	lastErrorInformation = ei
+	return ei.GetAssociatedError()
+}
+
+func TestCreationError(t *testing.T) {
+	locator, err := CreateAndBind("TestCreationErrorLocator", func(binder Binder) error {
+		binder.BindWithCreator("ServiceB", serviceBCreator)
+		binder.Bind("ServiceA", ServiceA{})
+		binder.Bind(ErrorServiceName, errorServiceData{}).InNamespace(UserServicesNamespace)
+
+		return nil
+	})
+	if err != nil {
+		assert.NotNil(t, err, "could not create locator")
+		return
 	}
 
-	retVal := func(locator ServiceLocator, desc Descriptor) (interface{}, error) {
-		return diVal.create(locator, desc)
-	}
+	raw, err := locator.GetDService("ServiceA")
+	assert.Nil(t, raw, "serviceA should be nil")
 
-	return retVal
-}
+	assert.NotNil(t, lastErrorInformation, "LastError information should not be nil")
 
-type indexAndValueOfDependency struct {
-	index int
-	value reflect.Value
-}
+	assert.Equal(t, ServiceCreationFailure, lastErrorInformation.GetType(), "should be ServiceCreationFailure")
+	assert.Equal(t, err, lastErrorInformation.GetAssociatedError(), "should be same error")
 
-func (di *diData) create(locator ServiceLocator, desc Descriptor) (interface{}, error) {
-	numFields := di.ty.NumField()
+	desc := lastErrorInformation.GetDescriptor()
+	assert.NotNil(t, desc, "should have an associated descriptor")
 
-	dependencies := make([]*indexAndValueOfDependency, 0)
-	depErrors := NewMultiError()
+	assert.Equal(t, "ServiceA", desc.GetName(), "A failed it should be the descriptor that shows up")
 
-	for lcv := 0; lcv < numFields; lcv++ {
-		fieldVal := di.ty.Field(lcv)
+	multi, ok := err.(MultiError)
+	assert.True(t, ok, "returned error must be multi error")
 
-		injectString := fieldVal.Tag.Get("inject")
-
-		if injectString != "" {
-			// TODO: Needs to be a whole, like, parsing discussion...
-			dependency, err := locator.GetDService(injectString)
-			if err != nil {
-				depErrors.AddError(err)
-			} else {
-				dependencyAsValue := reflect.ValueOf(dependency)
-
-				dependencies = append(dependencies, &indexAndValueOfDependency{
-					index: lcv,
-					value: dependencyAsValue,
-				})
-			}
+	found := false
+	for _, internalErr := range multi.GetErrors() {
+		if internalErr.Error() == expectedErrorString {
+			found = true
+			break
 		}
 	}
 
-	if depErrors.HasError() {
-		depErrors.AddError(fmt.Errorf("an error occurred while getting the dependencies of %v", desc))
+	assert.True(t, found, "Did not get the expected error up through the stack")
 
-		return nil, depErrors.GetFinalError()
-	}
-
-	retVal := reflect.New(di.ty)
-	indirect := reflect.Indirect(retVal)
-
-	for _, iav := range dependencies {
-		index := iav.index
-		value := iav.value
-
-		fieldValue := indirect.Field(index)
-		fieldValue.Set(value)
-	}
-
-	iFace := retVal.Interface()
-
-	initializer, ok := iFace.(DargoInitializer)
-	if ok {
-		err := initializer.DargoInitialize()
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return iFace, nil
 }

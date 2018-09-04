@@ -78,6 +78,13 @@ const (
 	// ContextualScopeNamespace A namespace specifically for ContextualScope services
 	ContextualScopeNamespace = "sys/scope"
 
+	// UserServicesNamespace A namespace for user-supplied implementations of
+	// special services, such as the ValidationService or ErrorService
+	UserServicesNamespace = "user/services"
+
+	// ErrorServiceName the name implementations of ErrorService must have
+	ErrorServiceName = "ErrorService"
+
 	// FailIfPresent Return an error if a service locator with that name exists
 	FailIfPresent = 0
 
@@ -104,6 +111,12 @@ const (
 
 	// LocatorStateShutdown This is the state when a locator has been shut down
 	LocatorStateShutdown = "Shutdown"
+
+	// DynamicConfigurationFailure is a type of error returned by ErrorInformation.GetType
+	DynamicConfigurationFailure = "DYNAMIC_CONFIGURATION_FAILURE"
+
+	// ServiceCreationFailure is a type of error returned by ErrorInformation.GetTypeß
+	ServiceCreationFailure = "SERVICE_CREATION_FAILURE"
 )
 
 var (
@@ -127,4 +140,116 @@ func init() {
 		return nil
 
 	}, nil)
+}
+
+// MultiError contains any number of other errors, useful for cases when
+// multiple operations might happen and the user would like to know the
+// details of all of them
+type MultiError interface {
+	// The Error method of this should return a description of all errors
+	error
+	// AddError adds an error to this MultiError
+	AddError(error)
+	// GetErrors returns a copy of the errors in this error
+	GetErrors() []error
+	// GetFinalError returns this MultiError itself if there is at
+	// least one embedded error, or nil if this MultiError has no
+	// associated errors
+	GetFinalError() error
+	// HasError returns true if this error has at least one error
+	HasError() bool
+}
+
+type multiErrorData struct {
+	lock   sync.Mutex
+	errors []error
+}
+
+// NewMultiError creates a multi-error error with the
+// provided errors
+func NewMultiError(errors ...error) MultiError {
+	errorsArray := make([]error, 0)
+	for _, err := range errors {
+		errorsArray = append(errorsArray, err)
+	}
+
+	return &multiErrorData{
+		errors: errors,
+	}
+}
+
+func (med *multiErrorData) Error() string {
+	med.lock.Lock()
+	defer med.lock.Unlock()
+
+	numErrors := len(med.errors)
+	if numErrors == 0 {
+		return "there are no errors"
+	}
+	if numErrors == 1 {
+		return med.errors[0].Error()
+	}
+
+	first := true
+	retVal := ""
+	for index, err := range med.errors {
+		count := index + 1
+
+		if first {
+			first = false
+
+			retVal = fmt.Sprintf("%d. %s", count, err.Error())
+		} else {
+			retVal = fmt.Sprintf("%s\n%d. %s", retVal, count, err.Error())
+		}
+	}
+
+	return retVal
+}
+
+func (med *multiErrorData) AddError(err error) {
+	med.lock.Lock()
+	defer med.lock.Unlock()
+
+	multi, ok := err.(MultiError)
+	if !ok {
+		med.errors = append(med.errors, err)
+	} else {
+		// Get all the internal errors and add them to this error
+		for _, internalErr := range multi.GetErrors() {
+			med.errors = append(med.errors, internalErr)
+		}
+	}
+}
+
+func (med *multiErrorData) GetErrors() []error {
+	med.lock.Lock()
+	defer med.lock.Unlock()
+
+	retVal := make([]error, len(med.errors))
+	copy(retVal, med.errors)
+
+	return retVal
+}
+
+func (med *multiErrorData) GetFinalError() error {
+	med.lock.Lock()
+	defer med.lock.Unlock()
+
+	if len(med.errors) == 0 {
+		return nil
+	}
+
+	return med
+}
+
+func (med *multiErrorData) HasError() bool {
+	med.lock.Lock()
+	defer med.lock.Unlock()
+
+	return len(med.errors) > 0
+}
+
+func (med *multiErrorData) String() string {
+	return fmt.Sprintf("MultiError(%s)", med.Error())
 }
