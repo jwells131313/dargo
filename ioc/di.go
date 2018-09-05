@@ -43,6 +43,7 @@ package ioc
 import (
 	"fmt"
 	"reflect"
+	"strings"
 )
 
 type diData struct {
@@ -80,17 +81,22 @@ func (di *diData) create(locator ServiceLocator, desc Descriptor) (interface{}, 
 		injectString := fieldVal.Tag.Get("inject")
 
 		if injectString != "" {
-			// TODO: Needs to be a whole, like, parsing discussion...
-			dependency, err := locator.GetDService(injectString)
+			serviceKey, err := parseInjectString(injectString)
 			if err != nil {
 				depErrors.AddError(err)
 			} else {
-				dependencyAsValue := reflect.ValueOf(dependency)
+				dependency, err := locator.GetService(serviceKey)
 
-				dependencies = append(dependencies, &indexAndValueOfDependency{
-					index: lcv,
-					value: dependencyAsValue,
-				})
+				if err != nil {
+					depErrors.AddError(err)
+				} else {
+					dependencyAsValue := reflect.ValueOf(dependency)
+
+					dependencies = append(dependencies, &indexAndValueOfDependency{
+						index: lcv,
+						value: dependencyAsValue,
+					})
+				}
 			}
 		}
 	}
@@ -142,6 +148,36 @@ func (di *diData) create(locator ServiceLocator, desc Descriptor) (interface{}, 
 	}
 
 	return iFace, nil
+}
+
+func parseInjectString(parseMe string) (ServiceKey, error) {
+	if parseMe == "" {
+		return nil, fmt.Errorf("no injection string to parse")
+	}
+
+	namespaceAndName := strings.SplitN(parseMe, "#", 2)
+
+	var namespace, name string
+	if len(namespaceAndName) == 2 {
+		namespace = namespaceAndName[0]
+		name = namespaceAndName[1]
+	} else {
+		namespace = DefaultNamespace
+		name = namespaceAndName[0]
+	}
+
+	qualifiers := make([]string, 0)
+	nameAndQualifiers := strings.Split(name, "@")
+
+	for index, val := range nameAndQualifiers {
+		if index == 0 {
+			name = val
+		} else {
+			qualifiers = append(qualifiers, val)
+		}
+	}
+
+	return NewServiceKey(namespace, name, qualifiers...)
 }
 
 type hasRunErrorHandlersError interface {
