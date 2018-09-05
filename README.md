@@ -299,6 +299,22 @@ func SSK(name string, qualifiers ...string) ServiceKey {...}
 func CSK(name string, qualifiers ...string) ServiceKey {...}
 ```
 
+You can also use complex names in the inject key of structures.  The general format is:
+
+```
+namespace#name@qualifier1@qualifier2
+```
+
+Only the name part is required.  For example, if you wanted to inject a service
+named ColorService in the visible/light namespace with qualifier Green, you would do
+something like this:
+
+```go
+type Service struct {
+	Green ColorService `inject:"visible/light#ColorService@Green"`
+}
+```
+
 ### Context Scope
 
 Many go programs use the context.Context scope in order to get their services.  Dargo provides an optional
