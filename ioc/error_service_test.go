@@ -43,6 +43,8 @@ package ioc
 import (
 	"errors"
 	"github.com/stretchr/testify/assert"
+	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -63,14 +65,17 @@ func serviceBCreator(locator ServiceLocator, desc Descriptor) (interface{}, erro
 
 type errorServiceData struct{}
 
-var lastErrorInformation ErrorInformation
+var lastErrorInformation []ErrorInformation
 
 func (esd *errorServiceData) OnFailure(ei ErrorInformation) error {
-	lastErrorInformation = ei
+	lastErrorInformation = append(lastErrorInformation, ei)
+
 	return ei.GetAssociatedError()
 }
 
 func TestCreationError(t *testing.T) {
+	lastErrorInformation = make([]ErrorInformation, 0)
+
 	locator, err := CreateAndBind("TestCreationErrorLocator", func(binder Binder) error {
 		binder.BindWithCreator("ServiceB", serviceBCreator)
 		binder.Bind("ServiceA", ServiceA{})
@@ -78,35 +83,79 @@ func TestCreationError(t *testing.T) {
 
 		return nil
 	})
-	if err != nil {
-		assert.NotNil(t, err, "could not create locator")
+	if !assert.Nil(t, err, "could not create locator") {
 		return
 	}
 
 	raw, err := locator.GetDService("ServiceA")
-	assert.Nil(t, raw, "serviceA should be nil")
+	if !assert.Nil(t, raw, "serviceA should be nil") {
+		return
+	}
 
-	assert.NotNil(t, lastErrorInformation, "LastError information should not be nil")
+	if !assert.Equal(t, 2, len(lastErrorInformation), "should be two errors") {
+		return
+	}
 
-	assert.Equal(t, ServiceCreationFailure, lastErrorInformation.GetType(), "should be ServiceCreationFailure")
-	assert.Equal(t, err, lastErrorInformation.GetAssociatedError(), "should be same error")
+	ei0 := lastErrorInformation[0]
 
-	desc := lastErrorInformation.GetDescriptor()
-	assert.NotNil(t, desc, "should have an associated descriptor")
+	if !checkErrorInformation(t, ei0, ServiceCreationFailure, "ServiceB",
+		nil, expectedErrorString) {
+		return
+	}
 
-	assert.Equal(t, "ServiceA", desc.GetName(), "A failed it should be the descriptor that shows up")
+	ei1 := lastErrorInformation[1]
 
-	multi, ok := err.(MultiError)
-	assert.True(t, ok, "returned error must be multi error")
+	expectedType := reflect.TypeOf(ServiceA{})
 
-	found := false
-	for _, internalErr := range multi.GetErrors() {
-		if internalErr.Error() == expectedErrorString {
-			found = true
-			break
+	checkErrorInformation(t, ei1, ServiceCreationFailure, "ServiceA",
+		expectedType, "an error occurred while getting the dependencies of")
+}
+
+func checkErrorInformation(t *testing.T, ei ErrorInformation, infoType string,
+	descriptorName string, typ reflect.Type, expectedError string) bool {
+	if !assert.NotNil(t, ei, "ErrorInformation should not be nil") {
+		return false
+	}
+
+	if !assert.Equal(t, infoType, ei.GetType(), "unexpected error information type") {
+		return false
+	}
+
+	if descriptorName != "" {
+		if !assert.Equal(t, descriptorName, ei.GetDescriptor().GetName(), "unexpected descriptor name") {
+			return false
 		}
 	}
 
-	assert.True(t, found, "Did not get the expected error up through the stack")
+	if typ != nil {
+		if !assert.Equal(t, typ, ei.GetInjectee(), "type is not the same") {
+			return false
+		}
+	} else {
+		if !assert.Nil(t, ei.GetInjectee(), "injectee should be nil") {
+			return false
+		}
+	}
 
+	if expectedError != "" {
+		rawError := ei.GetAssociatedError()
+		multi, ok := rawError.(MultiError)
+		if !assert.True(t, ok, "unexpected type of error from GetAssociatedError") {
+			return false
+		}
+
+		var found bool
+		for _, internalErr := range multi.GetErrors() {
+			if strings.Contains(internalErr.Error(), expectedError) {
+				found = true
+				break
+			}
+		}
+
+		if !assert.True(t, found, "did not find expected string %s in %v", expectedError, rawError) {
+			return false
+		}
+	}
+
+	return true
 }
