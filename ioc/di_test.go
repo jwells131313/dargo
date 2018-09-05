@@ -49,6 +49,7 @@ import (
 const (
 	DILocator1 = "DITestLocator1"
 	DILocator2 = "DITestLocator2"
+	DILocator3 = "DITestLocator3"
 
 	AServiceName = "A"
 	BServiceName = "B"
@@ -60,6 +61,7 @@ const (
 	BGreen          = "Green"
 
 	CServiceName = "C"
+	DServiceName = "D"
 )
 
 func TestInitializerSuccess(t *testing.T) {
@@ -115,6 +117,32 @@ func TestComplexInjectionName(t *testing.T) {
 	assert.True(t, c.initialized, "initializer not called")
 }
 
+func TestComplexNoNamespaceInjectionName(t *testing.T) {
+	locator, err := CreateAndBind(DILocator3, func(binder Binder) error {
+		binder.Bind(DServiceName, DSimpleService{})
+		binder.Bind(BServiceName, BSimpleService{}).
+			QualifiedBy(BBlue).QualifiedBy(BRed).QualifiedBy(BGreen)
+
+		return nil
+	})
+	if !assert.Nil(t, err, "couldn't create locator %s", DILocator3) {
+		return
+	}
+
+	dRaw, err := locator.GetDService(DServiceName)
+	if !assert.Nil(t, err, "couldn't create DService") {
+		fmt.Println("", err)
+		return
+	}
+
+	d, ok := dRaw.(*DSimpleService)
+	if !assert.True(t, ok, "Invalid type for DService") {
+		return
+	}
+
+	assert.True(t, d.B.initialized, "initializer not called")
+}
+
 type BSimpleService struct {
 	initialized bool
 }
@@ -152,4 +180,8 @@ func (c *CSimpleService) DargoInitialize() error {
 	c.initialized = true
 
 	return nil
+}
+
+type DSimpleService struct {
+	B *BSimpleService `inject:"B@Green"`
 }
