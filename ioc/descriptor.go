@@ -314,7 +314,7 @@ func (di *baseDescriptor) SetRank(rank int32) int32 {
 }
 
 func (di *baseDescriptor) String() string {
-	return fmt.Sprintf("%s#%s@%d-%d", di.namespace, di.name, di.locatorID, di.serviceID)
+	return fmt.Sprintf("%s#%s.%d.%d", di.namespace, di.name, di.locatorID, di.serviceID)
 }
 
 func (di *descriptorImpl) GetServiceID() int64 {
