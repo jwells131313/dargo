@@ -44,6 +44,7 @@ import (
 	"fmt"
 	"github.com/jwells131313/goethe"
 	"github.com/pkg/errors"
+	"reflect"
 	"sort"
 )
 
@@ -559,19 +560,35 @@ func (locator *serviceLocatorData) CreateServiceFromDescriptor(desc Descriptor) 
 
 	retVal, err := cf(locator, desc)
 	if err != nil {
-		_, isMulti := err.(MultiError)
-		if !isMulti {
-			err = NewMultiError(err)
+		var hasRunHandlers bool
+
+		hasRunError, isHasRunError := err.(hasRunErrorHandlersError)
+		if isHasRunError {
+			hasRunHandlers = hasRunError.GetHasRunErrorHandlers()
+
+			err = hasRunError.GetUnderlyingError()
+		} else {
+			_, isMulti := err.(MultiError)
+
+			if !isMulti {
+				err = NewMultiError(err)
+			}
 		}
 
-		ei := newErrorImformation(ServiceCreationFailure, desc, nil, err)
-
-		for _, errorService := range locator.errorServices {
-			err = errorService.OnFailure(ei)
+		if !hasRunHandlers {
+			locator.runErrorHandlers(ServiceCreationFailure, desc, nil, err)
 		}
 	}
 
 	return retVal, err
+}
+
+func (locator *serviceLocatorData) runErrorHandlers(typ string, desc Descriptor, injectee reflect.Type, err error) {
+	ei := newErrorImformation(ServiceCreationFailure, desc, injectee, err)
+
+	for _, errorService := range locator.errorServices {
+		err = errorService.OnFailure(ei)
+	}
 }
 
 func (locator *serviceLocatorData) GetState() string {

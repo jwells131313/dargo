@@ -46,12 +46,14 @@ import (
 )
 
 type diData struct {
-	ty reflect.Type
+	ty      reflect.Type
+	locator *serviceLocatorData
 }
 
-func newCreatorFunc(ty reflect.Type) func(ServiceLocator, Descriptor) (interface{}, error) {
+func newCreatorFunc(ty reflect.Type, parent *serviceLocatorData) func(ServiceLocator, Descriptor) (interface{}, error) {
 	diVal := &diData{
-		ty: ty,
+		ty:      ty,
+		locator: parent,
 	}
 
 	retVal := func(locator ServiceLocator, desc Descriptor) (interface{}, error) {
@@ -96,7 +98,14 @@ func (di *diData) create(locator ServiceLocator, desc Descriptor) (interface{}, 
 	if depErrors.HasError() {
 		depErrors.AddError(fmt.Errorf("an error occurred while getting the dependencies of %v", desc))
 
-		return nil, depErrors.GetFinalError()
+		di.locator.runErrorHandlers(ServiceCreationFailure, desc, di.ty, depErrors)
+
+		replyError := &hasRunHandlers{
+			hasRunHandlers:  true,
+			underlyingError: depErrors,
+		}
+
+		return nil, replyError
 	}
 
 	retVal := reflect.New(di.ty)
@@ -116,9 +125,44 @@ func (di *diData) create(locator ServiceLocator, desc Descriptor) (interface{}, 
 	if ok {
 		err := initializer.DargoInitialize()
 		if err != nil {
-			return nil, err
+			_, isMulti := err.(MultiError)
+			if !isMulti {
+				err = NewMultiError(err)
+			}
+
+			di.locator.runErrorHandlers(ServiceCreationFailure, desc, di.ty, err)
+
+			replyError := &hasRunHandlers{
+				hasRunHandlers:  true,
+				underlyingError: err.(MultiError),
+			}
+
+			return nil, replyError
 		}
 	}
 
 	return iFace, nil
+}
+
+type hasRunErrorHandlersError interface {
+	error
+	GetHasRunErrorHandlers() bool
+	GetUnderlyingError() MultiError
+}
+
+type hasRunHandlers struct {
+	hasRunHandlers  bool
+	underlyingError MultiError
+}
+
+func (hrh *hasRunHandlers) Error() string {
+	return hrh.underlyingError.Error()
+}
+
+func (hrh *hasRunHandlers) GetHasRunErrorHandlers() bool {
+	return hrh.hasRunHandlers
+}
+
+func (hrh *hasRunHandlers) GetUnderlyingError() MultiError {
+	return hrh.underlyingError
 }

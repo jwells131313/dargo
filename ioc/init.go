@@ -174,7 +174,7 @@ func NewMultiError(errors ...error) MultiError {
 	}
 
 	return &multiErrorData{
-		errors: errors,
+		errors: errorsArray,
 	}
 }
 

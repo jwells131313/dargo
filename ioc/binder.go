@@ -78,14 +78,15 @@ type DargoInitializer interface {
 }
 
 type binder struct {
+	parent      *serviceLocatorData
 	descriptors []Descriptor
-
-	current    WriteableDescriptor
-	qualifiers []string
+	current     WriteableDescriptor
+	qualifiers  []string
 }
 
-func newBinder() *binder {
+func newBinder(parent *serviceLocatorData) *binder {
 	return &binder{
+		parent:      parent,
 		descriptors: make([]Descriptor, 0),
 	}
 }
@@ -129,7 +130,7 @@ func (binder *binder) Bind(name string, str interface{}) Binder {
 		panic("Bind must be passed a struct (not a pointer to a struct)")
 	}
 
-	cf := newCreatorFunc(ty)
+	cf := newCreatorFunc(ty, binder.parent)
 
 	binder.current = NewWriteableDescriptor()
 	binder.current.SetCreateFunction(cf)

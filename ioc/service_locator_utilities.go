@@ -66,7 +66,7 @@ func BindIntoLocator(locator ServiceLocator, method BinderMethod) error {
 		return err
 	}
 
-	binder := newBinder()
+	binder := newBinder(locator.(*serviceLocatorData))
 
 	err = method(binder)
 	if err != nil {
