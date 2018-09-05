@@ -124,12 +124,12 @@ func (di *diData) create(locator ServiceLocator, desc Descriptor) (interface{}, 
 	initializer, ok := iFace.(DargoInitializer)
 	if ok {
 		err := initializer.DargoInitialize()
-		_, isMulti := err.(MultiError)
-		if !isMulti {
-			err = NewMultiError(err)
-		}
-
 		if err != nil {
+			_, isMulti := err.(MultiError)
+			if !isMulti {
+				err = NewMultiError(err)
+			}
+
 			di.locator.runErrorHandlers(ServiceCreationFailure, desc, di.ty, err)
 
 			replyError := &hasRunHandlers{
