@@ -51,6 +51,7 @@ const (
 	DILocator2 = "DITestLocator2"
 	DILocator3 = "DITestLocator3"
 	DILocator4 = "DITestLocator4"
+	DILocator5 = "DITestLocator5"
 
 	AServiceName = "A"
 	BServiceName = "B"
@@ -64,6 +65,9 @@ const (
 	CServiceName = "C"
 	DServiceName = "D"
 	EServiceName = "E"
+
+	RainbowName      = "RainbowService"
+	ColorServiceName = "ColorService"
 )
 
 func TestInitializerSuccess(t *testing.T) {
@@ -182,6 +186,54 @@ func TestProviderInjection(t *testing.T) {
 	assert.True(t, bService.initialized, "BService was not initialized")
 }
 
+func TestProviderQualifiedBy(t *testing.T) {
+	locator, err := CreateAndBind(DILocator5, func(binder Binder) error {
+		binder.Bind(RainbowName, RainbowServiceData{})
+
+		binder.Bind(ColorServiceName, colorServiceData{}).QualifiedBy(BRed)
+		binder.Bind(ColorServiceName, colorServiceData{}).QualifiedBy(BBlue)
+		binder.Bind(ColorServiceName, colorServiceData{}).QualifiedBy(BGreen)
+
+		return nil
+	})
+	if !assert.Nil(t, err, "couldn't create locator %s", DILocator5) {
+		return
+	}
+
+	rainbowRaw, err := locator.GetDService(RainbowName)
+	if !assert.Nil(t, err, "couldn't create RainbowService") {
+		fmt.Println("", err)
+		return
+	}
+
+	rainbow, ok := rainbowRaw.(*RainbowServiceData)
+	if !assert.True(t, ok, "Invalid type for RainbowService") {
+		return
+	}
+
+	checkColors := []string{BGreen, BRed, BBlue}
+
+	for _, cc := range checkColors {
+		if !checkColor(t, rainbow, cc) {
+			return
+		}
+	}
+}
+
+func checkColor(t *testing.T, rainbow *RainbowServiceData, color string) bool {
+	raw, err := rainbow.ColorProvider.QualifiedBy(color).Get()
+	if !assert.Nil(t, err, "Did not find service %s", color) {
+		return false
+	}
+
+	colorService, ok := raw.(ColorService)
+	if !assert.True(t, ok, "incorrect type for color service %v", colorService) {
+		return false
+	}
+
+	return assert.Equal(t, color, colorService.GetColor(), "color did not match")
+}
+
 type BSimpleService struct {
 	initialized bool
 }
@@ -236,5 +288,23 @@ func (e *ESimpleService) DargoInitialize(Descriptor) error {
 	return nil
 }
 
+type RainbowServiceData struct {
+	ColorProvider Provider `inject:"ColorService"`
+}
+
 type ColorService interface {
+	GetColor() string
+}
+
+type colorServiceData struct {
+	color string
+}
+
+func (csd *colorServiceData) DargoInitialize(desc Descriptor) error {
+	csd.color = desc.GetQualifiers()[0]
+	return nil
+}
+
+func (csd *colorServiceData) GetColor() string {
+	return csd.color
 }
