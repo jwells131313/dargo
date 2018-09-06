@@ -50,6 +50,7 @@ const (
 	DILocator1 = "DITestLocator1"
 	DILocator2 = "DITestLocator2"
 	DILocator3 = "DITestLocator3"
+	DILocator4 = "DITestLocator4"
 
 	AServiceName = "A"
 	BServiceName = "B"
@@ -62,6 +63,7 @@ const (
 
 	CServiceName = "C"
 	DServiceName = "D"
+	EServiceName = "E"
 )
 
 func TestInitializerSuccess(t *testing.T) {
@@ -143,6 +145,43 @@ func TestComplexNoNamespaceInjectionName(t *testing.T) {
 	assert.True(t, d.B.initialized, "initializer not called")
 }
 
+func TestProviderInjection(t *testing.T) {
+	locator, err := CreateAndBind(DILocator4, func(binder Binder) error {
+		binder.Bind(EServiceName, ESimpleService{})
+		binder.Bind(BServiceName, BSimpleService{})
+
+		return nil
+	})
+	if !assert.Nil(t, err, "couldn't create locator %s", DILocator4) {
+		return
+	}
+
+	eRaw, err := locator.GetDService(EServiceName)
+	if !assert.Nil(t, err, "couldn't create DService") {
+		fmt.Println("", err)
+		return
+	}
+
+	e, ok := eRaw.(*ESimpleService)
+	if !assert.True(t, ok, "Invalid type for DService") {
+		return
+	}
+
+	assert.True(t, e.initialized, "initializer not called")
+
+	bServiceRaw, err := e.BProvider.Get()
+	if !assert.Nil(t, err, "provider should not be nil") {
+		return
+	}
+
+	bService, ok := bServiceRaw.(*BSimpleService)
+	if !assert.True(t, ok, "invalid type for bServiceRaw") {
+		return
+	}
+
+	assert.True(t, bService.initialized, "BService was not initialized")
+}
+
 type BSimpleService struct {
 	initialized bool
 }
@@ -184,4 +223,15 @@ func (c *CSimpleService) DargoInitialize() error {
 
 type DSimpleService struct {
 	B *BSimpleService `inject:"B@Green"`
+}
+
+type ESimpleService struct {
+	BProvider   Provider `inject:"B"`
+	initialized bool
+}
+
+func (e *ESimpleService) DargoInitialize() error {
+	e.initialized = true
+
+	return nil
 }

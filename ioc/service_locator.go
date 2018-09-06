@@ -96,6 +96,32 @@ type ServiceLocator interface {
 	GetState() string
 }
 
+// Provider is used as an injection point in a service for a few different reasons
+// 1.  A service might be injected with Provider if there is a desire for the service
+//     to be instantiated lazily.  This is useful for services that are expensive to
+//     initialize and would benefit from late initialization
+// 2.  A service might be interested in all of the registered implementations with
+//     a certain name (usually all implementing the same interface).  The GetAll
+//     method can be used to iterate over all of the services registered with the
+//     same name
+// 3.  A Provider can be used to select qualified services at run-time
+//     rather than at compile time using the QualifiedBy method
+type Provider interface {
+	// Get gets the best implementation of the service associated with
+	// this injected service
+	Get() (interface{}, error)
+
+	// GetAll gets all the implementions of the service associated with
+	// this injected service
+	GetAll() ([]interface{}, error)
+
+	// QualifiedBy allows the user to select a particularly qualified
+	// service at runtime rather than make the selection at compile
+	// time.  This returns a further specified Provider for which the
+	// Get or GetAll methods will include the qualifier or qualifiers provided
+	QualifiedBy(string) Provider
+}
+
 type serviceLocatorData struct {
 	glock            goethe.Lock
 	name             string
