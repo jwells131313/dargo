@@ -74,7 +74,9 @@ type DargoInitializer interface {
 	// DargoInitialize is a method that will be called after all the
 	// injected fields have been filled in.  If this method returns
 	// a non-nil error then the creation of the service will fail
-	DargoInitialize() error
+	// The descriptor passed in is the descriptor being used to create
+	// the service
+	DargoInitialize(Descriptor) error
 }
 
 type binder struct {

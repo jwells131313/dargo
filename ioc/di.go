@@ -158,7 +158,7 @@ func (di *diData) create(locator ServiceLocator, desc Descriptor) (interface{}, 
 
 	initializer, ok := iFace.(DargoInitializer)
 	if ok {
-		err := initializer.DargoInitialize()
+		err := initializer.DargoInitialize(desc)
 		if err != nil {
 			_, isMulti := err.(MultiError)
 			if !isMulti {

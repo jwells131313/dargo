@@ -186,7 +186,7 @@ type BSimpleService struct {
 	initialized bool
 }
 
-func (b *BSimpleService) DargoInitialize() error {
+func (b *BSimpleService) DargoInitialize(Descriptor) error {
 	b.initialized = true
 	return nil
 }
@@ -196,7 +196,7 @@ type ASimpleService struct {
 	initialized bool
 }
 
-func (a *ASimpleService) DargoInitialize() error {
+func (a *ASimpleService) DargoInitialize(Descriptor) error {
 	if !a.B.initialized {
 		return fmt.Errorf("Injected service B MUST have been initialized before this is called")
 	}
@@ -211,7 +211,7 @@ type CSimpleService struct {
 	initialized bool
 }
 
-func (c *CSimpleService) DargoInitialize() error {
+func (c *CSimpleService) DargoInitialize(Descriptor) error {
 	if !c.B.initialized {
 		return fmt.Errorf("Injected service B must have been initialized in CSimpleService")
 	}
@@ -230,8 +230,11 @@ type ESimpleService struct {
 	initialized bool
 }
 
-func (e *ESimpleService) DargoInitialize() error {
+func (e *ESimpleService) DargoInitialize(Descriptor) error {
 	e.initialized = true
 
 	return nil
+}
+
+type ColorService interface {
 }

@@ -217,7 +217,7 @@ func (dccsd *dargoContextCreationServiceData) GetDargoCreationContext() context.
 	return dccsd.context
 }
 
-func (dccsd *dargoContextCreationServiceData) DargoInitialize() error {
+func (dccsd *dargoContextCreationServiceData) DargoInitialize(Descriptor) error {
 	tid := threadManager.GetThreadID()
 	if tid < 0 {
 		return fmt.Errorf("DargoCreationContextService not initialized on goethe thread")
