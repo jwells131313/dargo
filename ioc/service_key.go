@@ -95,7 +95,10 @@ func (key *serviceKeyData) GetName() string {
 }
 
 func (key *serviceKeyData) GetQualifiers() []string {
-	return key.qualifiers
+	retVal := make([]string, len(key.qualifiers))
+	copy(retVal, key.qualifiers)
+
+	return retVal
 }
 
 func (key *serviceKeyData) String() string {

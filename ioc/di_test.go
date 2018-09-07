@@ -50,6 +50,9 @@ const (
 	DILocator1 = "DITestLocator1"
 	DILocator2 = "DITestLocator2"
 	DILocator3 = "DITestLocator3"
+	DILocator4 = "DITestLocator4"
+	DILocator5 = "DITestLocator5"
+	DILocator6 = "DITestLocator6"
 
 	AServiceName = "A"
 	BServiceName = "B"
@@ -62,6 +65,10 @@ const (
 
 	CServiceName = "C"
 	DServiceName = "D"
+	EServiceName = "E"
+
+	RainbowName      = "RainbowService"
+	ColorServiceName = "ColorService"
 )
 
 func TestInitializerSuccess(t *testing.T) {
@@ -143,11 +150,146 @@ func TestComplexNoNamespaceInjectionName(t *testing.T) {
 	assert.True(t, d.B.initialized, "initializer not called")
 }
 
+func TestProviderInjection(t *testing.T) {
+	locator, err := CreateAndBind(DILocator4, func(binder Binder) error {
+		binder.Bind(EServiceName, ESimpleService{})
+		binder.Bind(BServiceName, BSimpleService{})
+
+		return nil
+	})
+	if !assert.Nil(t, err, "couldn't create locator %s", DILocator4) {
+		return
+	}
+
+	eRaw, err := locator.GetDService(EServiceName)
+	if !assert.Nil(t, err, "couldn't create DService") {
+		fmt.Println("", err)
+		return
+	}
+
+	e, ok := eRaw.(*ESimpleService)
+	if !assert.True(t, ok, "Invalid type for DService") {
+		return
+	}
+
+	assert.True(t, e.initialized, "initializer not called")
+
+	bServiceRaw, err := e.BProvider.Get()
+	if !assert.Nil(t, err, "provider should not be nil") {
+		return
+	}
+
+	bService, ok := bServiceRaw.(*BSimpleService)
+	if !assert.True(t, ok, "invalid type for bServiceRaw") {
+		return
+	}
+
+	assert.True(t, bService.initialized, "BService was not initialized")
+}
+
+func TestProviderGetAll(t *testing.T) {
+	locator, err := CreateAndBind(DILocator6, func(binder Binder) error {
+		binder.Bind(RainbowName, RainbowServiceData{})
+
+		binder.Bind(ColorServiceName, colorServiceData{}).QualifiedBy(BRed)
+		binder.Bind(ColorServiceName, colorServiceData{}).QualifiedBy(BBlue)
+		binder.Bind(ColorServiceName, colorServiceData{}).QualifiedBy(BGreen)
+
+		return nil
+	})
+	if !assert.Nil(t, err, "couldn't create locator %s", DILocator6) {
+		return
+	}
+
+	rainbowRaw, err := locator.GetDService(RainbowName)
+	if !assert.Nil(t, err, "couldn't create RainbowService") {
+		fmt.Println("", err)
+		return
+	}
+
+	rainbow, ok := rainbowRaw.(*RainbowServiceData)
+	if !assert.True(t, ok, "Invalid type for RainbowService") {
+		return
+	}
+
+	checkColors := []string{BRed, BBlue, BGreen}
+
+	allColorServicesRaw, err := rainbow.ColorProvider.GetAll()
+	if !assert.Nil(t, err, "Could not get all color services") {
+		return
+	}
+
+	assert.Equal(t, 3, len(allColorServicesRaw), "unexpected number of services")
+
+	for index, cc := range checkColors {
+		colorServiceRaw := allColorServicesRaw[index]
+
+		colorService, ok := colorServiceRaw.(ColorService)
+		if !assert.True(t, ok, "service from GetAll array has incorrect type") {
+			return
+		}
+
+		fmt.Printf("%d. %s\n", index, colorService.GetColor())
+
+		if !assert.Equal(t, cc, colorService.GetColor(), "invalid color at index %d", index) {
+			// return
+		}
+	}
+}
+
+func TestProviderQualifiedBy(t *testing.T) {
+	locator, err := CreateAndBind(DILocator5, func(binder Binder) error {
+		binder.Bind(RainbowName, RainbowServiceData{})
+
+		binder.Bind(ColorServiceName, colorServiceData{}).QualifiedBy(BRed)
+		binder.Bind(ColorServiceName, colorServiceData{}).QualifiedBy(BBlue)
+		binder.Bind(ColorServiceName, colorServiceData{}).QualifiedBy(BGreen)
+
+		return nil
+	})
+	if !assert.Nil(t, err, "couldn't create locator %s", DILocator5) {
+		return
+	}
+
+	rainbowRaw, err := locator.GetDService(RainbowName)
+	if !assert.Nil(t, err, "couldn't create RainbowService") {
+		fmt.Println("", err)
+		return
+	}
+
+	rainbow, ok := rainbowRaw.(*RainbowServiceData)
+	if !assert.True(t, ok, "Invalid type for RainbowService") {
+		return
+	}
+
+	checkColors := []string{BGreen, BRed, BBlue}
+
+	for _, cc := range checkColors {
+		if !checkColor(t, rainbow, cc) {
+			return
+		}
+	}
+}
+
+func checkColor(t *testing.T, rainbow *RainbowServiceData, color string) bool {
+	raw, err := rainbow.ColorProvider.QualifiedBy(color).Get()
+	if !assert.Nil(t, err, "Did not find service %s", color) {
+		return false
+	}
+
+	colorService, ok := raw.(ColorService)
+	if !assert.True(t, ok, "incorrect type for color service %v", colorService) {
+		return false
+	}
+
+	return assert.Equal(t, color, colorService.GetColor(), "color did not match")
+}
+
 type BSimpleService struct {
 	initialized bool
 }
 
-func (b *BSimpleService) DargoInitialize() error {
+func (b *BSimpleService) DargoInitialize(Descriptor) error {
 	b.initialized = true
 	return nil
 }
@@ -157,7 +299,7 @@ type ASimpleService struct {
 	initialized bool
 }
 
-func (a *ASimpleService) DargoInitialize() error {
+func (a *ASimpleService) DargoInitialize(Descriptor) error {
 	if !a.B.initialized {
 		return fmt.Errorf("Injected service B MUST have been initialized before this is called")
 	}
@@ -172,7 +314,7 @@ type CSimpleService struct {
 	initialized bool
 }
 
-func (c *CSimpleService) DargoInitialize() error {
+func (c *CSimpleService) DargoInitialize(Descriptor) error {
 	if !c.B.initialized {
 		return fmt.Errorf("Injected service B must have been initialized in CSimpleService")
 	}
@@ -184,4 +326,36 @@ func (c *CSimpleService) DargoInitialize() error {
 
 type DSimpleService struct {
 	B *BSimpleService `inject:"B@Green"`
+}
+
+type ESimpleService struct {
+	BProvider   Provider `inject:"B"`
+	initialized bool
+}
+
+func (e *ESimpleService) DargoInitialize(Descriptor) error {
+	e.initialized = true
+
+	return nil
+}
+
+type RainbowServiceData struct {
+	ColorProvider Provider `inject:"ColorService"`
+}
+
+type ColorService interface {
+	GetColor() string
+}
+
+type colorServiceData struct {
+	color string
+}
+
+func (csd *colorServiceData) DargoInitialize(desc Descriptor) error {
+	csd.color = desc.GetQualifiers()[0]
+	return nil
+}
+
+func (csd *colorServiceData) GetColor() string {
+	return csd.color
 }

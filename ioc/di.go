@@ -69,6 +69,10 @@ type indexAndValueOfDependency struct {
 	value reflect.Value
 }
 
+type errorReturn struct {
+	err error
+}
+
 func (di *diData) create(locator ServiceLocator, desc Descriptor) (interface{}, error) {
 	numFields := di.ty.NumField()
 
@@ -85,7 +89,15 @@ func (di *diData) create(locator ServiceLocator, desc Descriptor) (interface{}, 
 			if err != nil {
 				depErrors.AddError(err)
 			} else {
-				dependency, err := locator.GetService(serviceKey)
+				fieldType := fieldVal.Type
+
+				var dependency interface{}
+				var err error
+				if !isProvider(fieldType) {
+					dependency, err = locator.GetService(serviceKey)
+				} else {
+					dependency = newProvider(locator, serviceKey)
+				}
 
 				if err != nil {
 					depErrors.AddError(err)
@@ -122,14 +134,31 @@ func (di *diData) create(locator ServiceLocator, desc Descriptor) (interface{}, 
 		value := iav.value
 
 		fieldValue := indirect.Field(index)
-		fieldValue.Set(value)
+		errRet := &errorReturn{}
+		safeSet(fieldValue, value, errRet)
+		if errRet.err != nil {
+			depErrors.AddError(errRet.err)
+		}
+	}
+
+	if depErrors.HasError() {
+		depErrors.AddError(fmt.Errorf("an error occurred while injecting the dependencies of %v", desc))
+
+		di.locator.runErrorHandlers(ServiceCreationFailure, desc, di.ty, depErrors)
+
+		replyError := &hasRunHandlers{
+			hasRunHandlers:  true,
+			underlyingError: depErrors,
+		}
+
+		return nil, replyError
 	}
 
 	iFace := retVal.Interface()
 
 	initializer, ok := iFace.(DargoInitializer)
 	if ok {
-		err := initializer.DargoInitialize()
+		err := initializer.DargoInitialize(desc)
 		if err != nil {
 			_, isMulti := err.(MultiError)
 			if !isMulti {
@@ -148,6 +177,24 @@ func (di *diData) create(locator ServiceLocator, desc Descriptor) (interface{}, 
 	}
 
 	return iFace, nil
+}
+
+func isProvider(ty reflect.Type) bool {
+	if ty == nil {
+		return false
+	}
+
+	return "github.com/jwells131313/dargo/ioc" == ty.PkgPath() && "Provider" == ty.Name()
+}
+
+func safeSet(v reflect.Value, to reflect.Value, ret *errorReturn) {
+	defer func() {
+		if r := recover(); r != nil {
+			ret.err = fmt.Errorf("%v", r)
+		}
+	}()
+
+	v.Set(to)
 }
 
 func parseInjectString(parseMe string) (ServiceKey, error) {
@@ -201,4 +248,36 @@ func (hrh *hasRunHandlers) GetHasRunErrorHandlers() bool {
 
 func (hrh *hasRunHandlers) GetUnderlyingError() MultiError {
 	return hrh.underlyingError
+}
+
+type providerData struct {
+	locator ServiceLocator
+	key     ServiceKey
+}
+
+func newProvider(locator ServiceLocator, serviceKey ServiceKey) Provider {
+	return &providerData{
+		locator: locator,
+		key:     serviceKey,
+	}
+}
+
+func (pd *providerData) Get() (interface{}, error) {
+	return pd.locator.GetService(pd.key)
+}
+
+func (pd *providerData) GetAll() ([]interface{}, error) {
+	return pd.locator.GetAllServices(pd.key)
+}
+
+func (pd *providerData) QualifiedBy(qualifier string) Provider {
+	currentQualifiers := pd.key.GetQualifiers()
+	currentQualifiers = append(currentQualifiers, qualifier)
+
+	serviceKey, err := NewServiceKey(pd.key.GetNamespace(), pd.key.GetName(), currentQualifiers...)
+	if err != nil {
+		panic(err.Error())
+	}
+
+	return newProvider(pd.locator, serviceKey)
 }

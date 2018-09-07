@@ -73,6 +73,15 @@ Using dargo helps unit test your code as it becomes easy to replace services ser
 If you ensure that your test mocks have a higher rank than the service bound by your normal code then
 all of your internal code will use the mock from the ServiceLocator rather than the original service.
 
+## Table of Contents
+
+1.  [Basic Example](#injection-example)
+2.  [Another Example](#another-example)
+3.  [Service Names](#service-names)
+4.  [Context Scope](#context-scope)
+5.  [Context Scope Example](#context-scope-example)
+6.  [Provider](#provider)
+
 ### Injection Example
 
 In this example a service called SimpleService will inject a logger.  The logger itself is a dargo
@@ -461,3 +470,23 @@ One thing not shown in this example but which is very useful for DargoContext sc
 use of the destructor function.  Whenever a context is cancelled all services created for that
 context.Context will have their destructor function called, which is a good way to clean up any
 resources that the service might have acquired.
+
+### Provider
+
+Rather than injecting an explicit structure it is sometimes useful to inject a Provider.
+The benefits of injecting a Provider are:
+
+1.  Lazy creation of the associated service
+2.  Getting ALL of the services associated with the name rather than just one
+3.  Selecting a particularly qualified service at runtime
+
+You use a provider by making the type of your injection point a Provider, like this:
+
+```go
+type RainbowServiceData struct {
+	ColorProvider ioc.Provider `inject:"ColorService"`
+}
+```
+
+The type of ColorProvider is Provider.  When the ColorProvider Get method is used it will return
+a service named ColorService.  
