@@ -414,7 +414,7 @@ func (locator *serviceLocatorData) internalGetDescriptors(filter Filter) ([]Desc
 			return false
 		}
 
-		if retVal[i].GetServiceID() < retVal[j].GetLocatorID() {
+		if retVal[i].GetServiceID() < retVal[j].GetServiceID() {
 			return true
 		}
 

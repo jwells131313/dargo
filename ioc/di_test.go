@@ -52,6 +52,7 @@ const (
 	DILocator3 = "DITestLocator3"
 	DILocator4 = "DITestLocator4"
 	DILocator5 = "DITestLocator5"
+	DILocator6 = "DITestLocator6"
 
 	AServiceName = "A"
 	BServiceName = "B"
@@ -184,6 +185,56 @@ func TestProviderInjection(t *testing.T) {
 	}
 
 	assert.True(t, bService.initialized, "BService was not initialized")
+}
+
+func TestProviderGetAll(t *testing.T) {
+	locator, err := CreateAndBind(DILocator6, func(binder Binder) error {
+		binder.Bind(RainbowName, RainbowServiceData{})
+
+		binder.Bind(ColorServiceName, colorServiceData{}).QualifiedBy(BRed)
+		binder.Bind(ColorServiceName, colorServiceData{}).QualifiedBy(BBlue)
+		binder.Bind(ColorServiceName, colorServiceData{}).QualifiedBy(BGreen)
+
+		return nil
+	})
+	if !assert.Nil(t, err, "couldn't create locator %s", DILocator6) {
+		return
+	}
+
+	rainbowRaw, err := locator.GetDService(RainbowName)
+	if !assert.Nil(t, err, "couldn't create RainbowService") {
+		fmt.Println("", err)
+		return
+	}
+
+	rainbow, ok := rainbowRaw.(*RainbowServiceData)
+	if !assert.True(t, ok, "Invalid type for RainbowService") {
+		return
+	}
+
+	checkColors := []string{BRed, BBlue, BGreen}
+
+	allColorServicesRaw, err := rainbow.ColorProvider.GetAll()
+	if !assert.Nil(t, err, "Could not get all color services") {
+		return
+	}
+
+	assert.Equal(t, 3, len(allColorServicesRaw), "unexpected number of services")
+
+	for index, cc := range checkColors {
+		colorServiceRaw := allColorServicesRaw[index]
+
+		colorService, ok := colorServiceRaw.(ColorService)
+		if !assert.True(t, ok, "service from GetAll array has incorrect type") {
+			return
+		}
+
+		fmt.Printf("%d. %s\n", index, colorService.GetColor())
+
+		if !assert.Equal(t, cc, colorService.GetColor(), "invalid color at index %d", index) {
+			// return
+		}
+	}
 }
 
 func TestProviderQualifiedBy(t *testing.T) {
