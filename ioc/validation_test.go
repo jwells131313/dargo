@@ -48,6 +48,7 @@ import (
 
 const (
 	ValidationTestLocatorName1 = "ValidationTestLocator1"
+	ValidationTestLocatorName2 = "ValidationTestLocator2"
 
 	DoNotBindService   = "DoNotBindService"
 	NeverUnbindService = "NeverUnbindService"
@@ -80,6 +81,40 @@ func TestBindValidation(t *testing.T) {
 	}
 
 	assert.Nil(t, raw, "there should be no SimpleService")
+}
+
+func TestUnBindValidation(t *testing.T) {
+	locator, err := CreateAndBind(ValidationTestLocatorName2, func(binder Binder) error {
+		binder.Bind(ValidationServiceName, ValidationServiceData{}).InNamespace(UserServicesNamespace)
+		binder.Bind(NeverUnbindService, SimpleService{}).InScope(PerLookup)
+		return nil
+	})
+	if !assert.Nil(t, err, "error creating locator") {
+		return
+	}
+
+	raw, err := locator.GetDService(NeverUnbindService)
+	if !assert.Nil(t, err, "service never to be unbound should not be unbound") {
+		return
+	}
+
+	if !assert.NotNil(t, raw, "got nil NeverUnbind service") {
+		return
+	}
+
+	err = UnbindDServices(locator, NeverUnbindService)
+	if !assert.NotNil(t, err, "should not have been able to unbind the service") {
+		return
+	}
+
+	raw, err = locator.GetDService(NeverUnbindService)
+	if !assert.Nil(t, err, "service never to be unbound should not be unbound (2)") {
+		return
+	}
+
+	if !assert.NotNil(t, raw, "got nil NeverUnbind service (2)") {
+		return
+	}
 
 }
 

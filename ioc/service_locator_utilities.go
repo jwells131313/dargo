@@ -132,6 +132,34 @@ func EnableDargoContextScope(locator ServiceLocator) error {
 	})
 }
 
+// UnbindDServices unbinds the services with the given names from the
+// default namespace
+func UnbindDServices(locator ServiceLocator, serviceNames ...string) error {
+	keys := make([]ServiceKey, len(serviceNames))
+	for index, serviceName := range serviceNames {
+		keys[index] = DSK(serviceName)
+	}
+
+	filter := NewServiceKeyFilter(keys...)
+
+	dcs, err := getDCS(locator)
+	if err != nil {
+		return err
+	}
+
+	config, err := dcs.CreateDynamicConfiguration()
+	if err != nil {
+		return err
+	}
+
+	err = config.AddRemoveFilter(filter)
+	if err != nil {
+		return err
+	}
+
+	return config.Commit()
+}
+
 func contextCreator(locator ServiceLocator, key Descriptor) (interface{}, error) {
 	return newContextScope(locator)
 }

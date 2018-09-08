@@ -46,22 +46,35 @@ type Filter interface {
 }
 
 type serviceKeyFilter struct {
-	key ServiceKey
+	keys []ServiceKey
 }
 
 // NewServiceKeyFilter creates a filter for the given service key
-func NewServiceKeyFilter(key ServiceKey) Filter {
+func NewServiceKeyFilter(keys ...ServiceKey) Filter {
+	cpy := make([]ServiceKey, len(keys))
+	copy(cpy, keys)
+
 	return &serviceKeyFilter{
-		key,
+		cpy,
 	}
 }
 
 func (filter *serviceKeyFilter) Filter(desc Descriptor) bool {
-	if desc.GetNamespace() != filter.key.GetNamespace() {
+	for _, key := range filter.keys {
+		if !filterOne(key, desc) {
+			return false
+		}
+	}
+
+	return true
+}
+
+func filterOne(key ServiceKey, desc Descriptor) bool {
+	if desc.GetNamespace() != key.GetNamespace() {
 		return false
 	}
 
-	if desc.GetName() != filter.key.GetName() {
+	if desc.GetName() != key.GetName() {
 		return false
 	}
 
@@ -69,7 +82,7 @@ func (filter *serviceKeyFilter) Filter(desc Descriptor) bool {
 	first := true
 
 	// Descriptor must have a superset of the descriptors asked for in the key
-	for _, qualifier := range filter.key.GetQualifiers() {
+	for _, qualifier := range key.GetQualifiers() {
 		found := false
 
 		if first {

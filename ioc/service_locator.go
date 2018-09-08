@@ -508,7 +508,31 @@ func (locator *serviceLocatorData) update(newDescs []Descriptor,
 		}
 	}
 
-	// TODO: Here the validation service would verify these descriptors were legal removals
+	for _, removedDescriptor := range removedDescriptors {
+		unbindValidationInformation := newValidationInformation(UnbindOperation,
+			removedDescriptor, nil, nil)
+
+		for _, validationService := range locator.validationServices {
+			validator := validationService.GetValidator()
+			if validator == nil {
+				continue
+			}
+
+			err := validator.Validate(unbindValidationInformation)
+			if err != nil {
+				_, ok := err.(MultiError)
+				if !ok {
+					err = NewMultiError(err)
+				}
+
+				locator.runErrorHandlers(DynamicConfigurationFailure, removedDescriptor,
+					nil, err)
+
+				return err
+			}
+		}
+	}
+
 	for _, newDesc := range newDescs {
 		bindValidationInformation := newValidationInformation(BindOperation, newDesc, nil, nil)
 
@@ -530,6 +554,7 @@ func (locator *serviceLocatorData) update(newDescs []Descriptor,
 				return err
 			}
 		}
+
 		if isErrorService(newDesc) || isValidationService(newDesc) {
 			if Singleton != newDesc.GetScope() {
 				return fmt.Errorf("implementations of %s must be in the singleton scope",
