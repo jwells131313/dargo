@@ -480,7 +480,7 @@ func (locator *serviceLocatorData) update(newDescs []Descriptor,
 	defer locator.glock.WriteUnlock()
 
 	if originalGeneration != locator.generation {
-		return fmt.Errorf("Their was an update to the ServiceLocator after this DynamicConfiguration was created")
+		return fmt.Errorf("there was an update to the ServiceLocator after this DynamicConfiguration was created")
 	}
 
 	newAllDescs := make([]Descriptor, 0)
@@ -529,6 +529,7 @@ func (locator *serviceLocatorData) update(newDescs []Descriptor,
 
 	defer func() {
 		if success {
+			locator.generation = locator.generation + 1
 			return
 		}
 

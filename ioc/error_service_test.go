@@ -155,6 +155,50 @@ func TestPanicyErrorService(t *testing.T) {
 
 }
 
+func TestDynamicConfigurationFailure(t *testing.T) {
+	lastErrorInformation = make([]ErrorInformation, 0)
+
+	locator, err := NewServiceLocator("TestDynamicConfigurationFailureLocator", FailIfPresent)
+	if !assert.Nil(t, err, "could not create locator") {
+		return
+	}
+
+	dcsRaw, err := locator.GetService(SSK(DynamicConfigurationServiceName))
+	if !assert.Nil(t, err, "could not get the dynamic configuration service") {
+		return
+	}
+
+	dcs, ok := dcsRaw.(DynamicConfigurationService)
+	if !assert.True(t, ok, "incorrect type") {
+		return
+	}
+
+	ancientConfig, err := dcs.CreateDynamicConfiguration()
+	if !assert.Nil(t, err, "could not create a dynamic configuration") {
+		return
+	}
+
+	err = BindIntoLocator(locator, func(binder Binder) error {
+		binder.Bind(ErrorServiceName, errorServiceData{}).InNamespace(UserServicesNamespace)
+
+		return nil
+	})
+	if !assert.Nil(t, err, "secondary bind failure") {
+		return
+	}
+
+	desc := NewConstantDescriptor(DSK("anything"), err)
+	ancientConfig.Bind(desc)
+
+	err = ancientConfig.Commit()
+	if !assert.NotNil(t, err, "Should have gotten error from old config") {
+		return
+	}
+
+	checkErrorInformation(t, lastErrorInformation[0], DynamicConfigurationFailure, "",
+		nil, "there was an update to the ServiceLocator after this DynamicConfiguration was created")
+}
+
 func checkErrorHandler(t *testing.T, locator ServiceLocator, qualifier string, expected bool) bool {
 	key, err := NewServiceKey(UserServicesNamespace, ErrorServiceName, qualifier)
 	if !assert.Nil(t, err, "service key creation failure") {
