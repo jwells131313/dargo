@@ -610,11 +610,22 @@ func (locator *serviceLocatorData) CreateServiceFromDescriptor(desc Descriptor) 
 }
 
 func (locator *serviceLocatorData) runErrorHandlers(typ string, desc Descriptor, injectee reflect.Type, err error) {
-	ei := newErrorImformation(ServiceCreationFailure, desc, injectee, err)
+	ei := newErrorImformation(typ, desc, injectee, err)
 
 	for _, errorService := range locator.errorServices {
-		err = errorService.OnFailure(ei)
+		safeCallUserErrorService(errorService, ei)
 	}
+}
+
+// Pesky users can panic, lets not allow that
+func safeCallUserErrorService(errorService ErrorService, ei ErrorInformation) error {
+	defer func() {
+		if r := recover(); r != nil {
+			// Ignore me
+		}
+	}()
+
+	return errorService.OnFailure(ei)
 }
 
 func (locator *serviceLocatorData) GetState() string {
