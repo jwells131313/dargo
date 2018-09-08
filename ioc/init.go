@@ -85,6 +85,9 @@ const (
 	// ErrorServiceName the name implementations of ErrorService must have
 	ErrorServiceName = "ErrorService"
 
+	// ValidationServiceName the name implementations of ValidationService must have
+	ValidationServiceName = "ValidationService"
+
 	// FailIfPresent Return an error if a service locator with that name exists
 	FailIfPresent = 0
 
@@ -117,6 +120,15 @@ const (
 
 	// ServiceCreationFailure is a type of error returned by ErrorInformation.GetTypeß
 	ServiceCreationFailure = "SERVICE_CREATION_FAILURE"
+
+	// BindOperation is the Bind operation passed in the ValidationInformation
+	BindOperation = "BIND"
+
+	// UnbindOperation is the Unbind operation passed in the ValidationInformation
+	UnbindOperation = "UNBIND"
+
+	// LookupOperation is the Lookup operation passed in the ValidationInformation
+	LookupOperation = "LOOKUP"
 )
 
 var (

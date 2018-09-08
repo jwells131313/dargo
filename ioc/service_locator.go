@@ -123,16 +123,17 @@ type Provider interface {
 }
 
 type serviceLocatorData struct {
-	glock            goethe.Lock
-	name             string
-	ID               int64
-	allDescriptors   []Descriptor
-	nextServiceID    int64
-	perLookupContext ContextualScope
-	singletonContext ContextualScope
-	generation       uint64
-	state            string
-	errorServices    []ErrorService
+	glock              goethe.Lock
+	name               string
+	ID                 int64
+	allDescriptors     []Descriptor
+	nextServiceID      int64
+	perLookupContext   ContextualScope
+	singletonContext   ContextualScope
+	generation         uint64
+	state              string
+	errorServices      []ErrorService
+	validationServices []ValidationService
 }
 
 // NewServiceLocator this will find or create a service locator with the given name, and
@@ -168,13 +169,14 @@ func NewServiceLocator(name string, qos int) (ServiceLocator, error) {
 	currentID = currentID + 1
 
 	retVal = &serviceLocatorData{
-		glock:            threadManager.NewGoetheLock(),
-		name:             name,
-		ID:               ID,
-		allDescriptors:   make([]Descriptor, 0),
-		perLookupContext: newPerLookupContext(),
-		state:            LocatorStateRunning,
-		errorServices:    make([]ErrorService, 0),
+		glock:              threadManager.NewGoetheLock(),
+		name:               name,
+		ID:                 ID,
+		allDescriptors:     make([]Descriptor, 0),
+		perLookupContext:   newPerLookupContext(),
+		state:              LocatorStateRunning,
+		errorServices:      make([]ErrorService, 0),
+		validationServices: make([]ValidationService, 0),
 	}
 
 	retVal.singletonContext, err = newSingletonScope(retVal)
@@ -486,6 +488,7 @@ func (locator *serviceLocatorData) update(newDescs []Descriptor,
 	newAllDescs := make([]Descriptor, 0)
 
 	var errorServiceUpdate bool
+	var validationServiceUpdate bool
 
 	removedDescriptors := make([]Descriptor, 0)
 	for _, myDesc := range locator.allDescriptors {
@@ -499,6 +502,7 @@ func (locator *serviceLocatorData) update(newDescs []Descriptor,
 			newAllDescs = append(newAllDescs, myDesc)
 		} else {
 			errorServiceUpdate = errorServiceUpdate || isErrorService(myDesc)
+			validationServiceUpdate = validationServiceUpdate || isValidationService(myDesc)
 
 			removedDescriptors = append(removedDescriptors, myDesc)
 		}
@@ -506,14 +510,38 @@ func (locator *serviceLocatorData) update(newDescs []Descriptor,
 
 	// TODO: Here the validation service would verify these descriptors were legal removals
 	for _, newDesc := range newDescs {
-		// TODO: Here the validation service would check to see if the new descriptor could be added
-		if isErrorService(newDesc) {
+		bindValidationInformation := newValidationInformation(BindOperation, newDesc, nil, nil)
+
+		for _, validationService := range locator.validationServices {
+			validator := validationService.GetValidator()
+			if validator == nil {
+				continue
+			}
+
+			err := validator.Validate(bindValidationInformation)
+			if err != nil {
+				_, ok := err.(MultiError)
+				if !ok {
+					err = NewMultiError(err)
+				}
+
+				locator.runErrorHandlers(DynamicConfigurationFailure, newDesc, nil, err)
+
+				return err
+			}
+		}
+		if isErrorService(newDesc) || isValidationService(newDesc) {
 			if Singleton != newDesc.GetScope() {
 				return fmt.Errorf("implementations of %s must be in the singleton scope",
 					newDesc.GetName())
 			}
 
-			errorServiceUpdate = true
+			if isErrorService(newDesc) {
+				errorServiceUpdate = true
+			}
+			if isValidationService(newDesc) {
+				validationServiceUpdate = true
+			}
 		}
 
 		newAllDescs = append(newAllDescs, newDesc)
@@ -524,6 +552,7 @@ func (locator *serviceLocatorData) update(newDescs []Descriptor,
 	// Get old services
 	oldDescriptors := locator.allDescriptors
 	oldErrorServices := locator.errorServices
+	oldValidationServices := locator.validationServices
 
 	locator.allDescriptors = newAllDescs
 
@@ -533,6 +562,7 @@ func (locator *serviceLocatorData) update(newDescs []Descriptor,
 			return
 		}
 
+		locator.validationServices = oldValidationServices
 		locator.errorServices = oldErrorServices
 		locator.allDescriptors = oldDescriptors
 	}()
@@ -563,6 +593,32 @@ func (locator *serviceLocatorData) update(newDescs []Descriptor,
 		locator.errorServices = newErrorServices
 	}
 
+	if validationServiceUpdate {
+		// Must get all validation services again
+		validationServiceKey, err := NewServiceKey(UserServicesNamespace, ValidationServiceName)
+		if err != nil {
+			return errors.Wrap(err, "creation of validation service key failed")
+		}
+
+		raws, err := locator.GetAllServices(validationServiceKey)
+		if err != nil {
+			return errors.Wrap(err, "creation of error services failed")
+		}
+
+		newValidationServices := make([]ValidationService, 0)
+		for _, validationServiceRaw := range raws {
+			validationService, ok := validationServiceRaw.(ValidationService)
+			if !ok {
+				return fmt.Errorf("a service %v with validation service key does not implement error service",
+					validationServiceRaw)
+			}
+
+			newValidationServices = append(newValidationServices, validationService)
+		}
+
+		locator.validationServices = newValidationServices
+	}
+
 	success = true
 
 	return nil
@@ -571,6 +627,15 @@ func (locator *serviceLocatorData) update(newDescs []Descriptor,
 func isErrorService(desc Descriptor) bool {
 	if UserServicesNamespace == desc.GetNamespace() &&
 		ErrorServiceName == desc.GetName() {
+		return true
+	}
+
+	return false
+}
+
+func isValidationService(desc Descriptor) bool {
+	if UserServicesNamespace == desc.GetNamespace() &&
+		ValidationServiceName == desc.GetName() {
 		return true
 	}
 
