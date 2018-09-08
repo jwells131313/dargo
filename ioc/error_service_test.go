@@ -111,6 +111,145 @@ func TestCreationError(t *testing.T) {
 		expectedType, "an error occurred while getting the dependencies of")
 }
 
+func TestPanicyErrorService(t *testing.T) {
+	locator, err := CreateAndBind("TestPanicyErrorServiceLocator", func(binder Binder) error {
+		binder.BindWithCreator("ServiceB", serviceBCreator)
+
+		binder.Bind(ErrorServiceName, WasCalledErrorService{}).InNamespace(UserServicesNamespace).
+			QualifiedBy("Before")
+		binder.Bind(ErrorServiceName, PanicyErrorService{}).InNamespace(UserServicesNamespace).
+			QualifiedBy("Panicy")
+		binder.Bind(ErrorServiceName, WasCalledErrorService{}).InNamespace(UserServicesNamespace).
+			QualifiedBy("After")
+
+		return nil
+	})
+	if !assert.Nil(t, err, "could not create locator") {
+		return
+	}
+
+	if !checkErrorHandler(t, locator, "Before", false) {
+		return
+	}
+	if !checkErrorHandler(t, locator, "Panicy", false) {
+		return
+	}
+	if !checkErrorHandler(t, locator, "After", false) {
+		return
+	}
+
+	raw, err := locator.GetDService("ServiceB")
+	if !assert.Nil(t, raw, "serviceB should be nil") {
+		return
+	}
+
+	if !checkErrorHandler(t, locator, "Before", true) {
+		return
+	}
+	if !checkErrorHandler(t, locator, "Panicy", true) {
+		return
+	}
+	if !checkErrorHandler(t, locator, "After", true) {
+		return
+	}
+
+}
+
+func TestDynamicConfigurationFailure(t *testing.T) {
+	lastErrorInformation = make([]ErrorInformation, 0)
+
+	locator, err := NewServiceLocator("TestDynamicConfigurationFailureLocator", FailIfPresent)
+	if !assert.Nil(t, err, "could not create locator") {
+		return
+	}
+
+	dcsRaw, err := locator.GetService(SSK(DynamicConfigurationServiceName))
+	if !assert.Nil(t, err, "could not get the dynamic configuration service") {
+		return
+	}
+
+	dcs, ok := dcsRaw.(DynamicConfigurationService)
+	if !assert.True(t, ok, "incorrect type") {
+		return
+	}
+
+	ancientConfig, err := dcs.CreateDynamicConfiguration()
+	if !assert.Nil(t, err, "could not create a dynamic configuration") {
+		return
+	}
+
+	err = BindIntoLocator(locator, func(binder Binder) error {
+		binder.Bind(ErrorServiceName, errorServiceData{}).InNamespace(UserServicesNamespace)
+
+		return nil
+	})
+	if !assert.Nil(t, err, "secondary bind failure") {
+		return
+	}
+
+	desc := NewConstantDescriptor(DSK("anything"), err)
+	ancientConfig.Bind(desc)
+
+	err = ancientConfig.Commit()
+	if !assert.NotNil(t, err, "Should have gotten error from old config") {
+		return
+	}
+
+	checkErrorInformation(t, lastErrorInformation[0], DynamicConfigurationFailure, "",
+		nil, "there was an update to the ServiceLocator after this DynamicConfiguration was created")
+}
+
+func checkErrorHandler(t *testing.T, locator ServiceLocator, qualifier string, expected bool) bool {
+	key, err := NewServiceKey(UserServicesNamespace, ErrorServiceName, qualifier)
+	if !assert.Nil(t, err, "service key creation failure") {
+		return false
+	}
+
+	raw, err := locator.GetService(key)
+	if !assert.Nil(t, err, "error getting service") {
+		return false
+	}
+
+	iWasCalledService, ok := raw.(IWasCalled)
+	if !assert.True(t, ok, "Not an IWasCalled service") {
+		return false
+	}
+
+	return assert.Equal(t, expected, iWasCalledService.GetIWasCalled(),
+		"invalid response for %s", qualifier)
+}
+
+type IWasCalled interface {
+	GetIWasCalled() bool
+}
+
+type WasCalledErrorService struct {
+	wasCalled bool
+}
+
+func (wces *WasCalledErrorService) OnFailure(ei ErrorInformation) error {
+	wces.wasCalled = true
+	return nil
+}
+
+func (wces *WasCalledErrorService) GetIWasCalled() bool {
+	return wces.wasCalled
+}
+
+type PanicyErrorService struct {
+	wasCalled bool
+}
+
+func (pes *PanicyErrorService) OnFailure(ei ErrorInformation) error {
+	pes.wasCalled = true
+
+	panic("expected panic")
+}
+
+func (pes *PanicyErrorService) GetIWasCalled() bool {
+	return pes.wasCalled
+}
+
 func checkErrorInformation(t *testing.T, ei ErrorInformation, infoType string,
 	descriptorName string, typ reflect.Type, expectedError string) bool {
 	if !assert.NotNil(t, ei, "ErrorInformation should not be nil") {

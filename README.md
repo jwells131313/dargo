@@ -38,14 +38,14 @@
 
 # dargo [![GoDoc](https://godoc.org/github.com/jwells131313/dargo/ioc?status.svg)](https://godoc.org/github.com/jwells131313/dargo/ioc) [![wercker status](https://app.wercker.com/status/24379824ff4ec7e885f37323e261a36b/s/master "wercker status")](https://app.wercker.com/project/byKey/24379824ff4ec7e885f37323e261a36b) [![Go Report Card](https://goreportcard.com/badge/github.com/jwells131313/dargo)](https://goreportcard.com/report/github.com/jwells131313/dargo)
 
-Dynamic Service Registry and Inversion of Control for GO
+Dependency Injector for GO
 
-## Depenency Injector for go
+## Depenency Injector
 
-Dargo is an depenency injection system for GO.  It has inversion of control, in that once the
-service descriptions are bound into the registry they are created in response to injection requests
-or lookups.  Services are scoped, and are created based on the defined lifecycle of the scope.  For
-example services in the Singleton scope are only created once.  Services in the PerLookup
+Dargo is an depenency injection system for GO.
+
+Dargo services are scoped and are created and destroyed based on the defined lifecycle of the
+scope.  For example services in the Singleton scope are only created once.  Services in the PerLookup
 scope are created every time they are injected.
 
 NOTE:  The current version of this API is 0.2.0.  This means that the API has
@@ -53,6 +53,16 @@ not settled completely and may change in future revisions.  Once the dargo
 team has decided the API is good as it is we will make the 1.0 version which
 will have some backward compatibility guarantees.  In the meantime, if you
 have questions or comments please open issues.  Thank you.
+
+## Table of Contents
+
+1.  [Basic Usage](#basic-usage)
+2.  [Service Names](#service-names)
+3.  [Context Scope](#context-scope)
+4.  [Provider](#provider)
+5.  [Error Service](#error-service)
+
+## Basic Usage
 
 The general flow of an application that uses dargo is to:
 
@@ -72,15 +82,6 @@ by qualifiers.  In other cases services can be given ranks, with higher ranks be
 Using dargo helps unit test your code as it becomes easy to replace services served by the locator with mocks.
 If you ensure that your test mocks have a higher rank than the service bound by your normal code then
 all of your internal code will use the mock from the ServiceLocator rather than the original service.
-
-## Table of Contents
-
-1.  [Basic Example](#injection-example)
-2.  [Another Example](#another-example)
-3.  [Service Names](#service-names)
-4.  [Context Scope](#context-scope)
-5.  [Context Scope Example](#context-scope-example)
-6.  [Provider](#provider)
 
 ### Injection Example
 
@@ -272,7 +273,7 @@ invoked, which will in turn lookup the logger service, which, since it is in the
 return a new one.  Subsequent lookups of the EchoService, however, will return the **same** EchoService, since
 the EchoService is in the Singleton scope.
 
-### Service Names
+## Service Names
 
 Every service bound into the ServiceLocator has a name.  The names are scoped by a namespace.  There is
 a default namespace which is sufficient for most use cases.  However, there are
@@ -324,7 +325,7 @@ type Service struct {
 }
 ```
 
-### Context Scope
+## Context Scope
 
 Many go programs use the context.Context scope in order to get their services.  Dargo provides an optional
 Context scope which can associate a ServiceLocator with a Context.  So your programs can continue to
@@ -471,7 +472,7 @@ use of the destructor function.  Whenever a context is cancelled all services cr
 context.Context will have their destructor function called, which is a good way to clean up any
 resources that the service might have acquired.
 
-### Provider
+## Provider
 
 Rather than injecting an explicit structure it is sometimes useful to inject a Provider.
 The benefits of injecting a Provider are:
@@ -490,3 +491,87 @@ type RainbowServiceData struct {
 
 The type of ColorProvider is Provider.  When the ColorProvider Get method is used it will return
 a service named ColorService.  
+
+## Error Service
+
+The user can supply an implementation of the ErrorService to be notified about certain errors
+that happen during the lookup and creation of services.  This is useful for centralized logging
+or for other tracing applications.
+
+There are currently two types of errors that are sent to the ErrorService.  They are:
+
+1.  Service creation failure
+2.  Dynamic configuration error
+
+Implementations of ErrorService must be named _ErrorService_ (ioc.ErrorServiceName) in the
+namespace _user/services_ (ioc.UserServicesNamespace).  Implementations of ErrorService
+**must** be in the Singleton scope.  Implementations of ErrorService will be created by
+the system as soon as they are bound into the ServiceLocator.  Any failure during creation
+of the ErrorService will cause the configuration commit to fail.  Care should be taken
+with the services used by an ErrorService since they will also be created as soon as
+the ErrorService is bound into the locator.
+
+### Service Creation Errors
+
+When a service fails during creation the ErrorService OnFailure method will be called with:
+
+1.  The type will be _DYNAMIC_CONFIGURATION_FAILURE_ (ioc.ServiceCreationFailure)
+2.  The error that occurred (possibly wrapped in a MultiError)
+3.  The descriptor of the service that failed during creation
+4.  The injectee struct into which this service was to be injected if appropriate
+
+### Dynamic Configuration Error
+
+When a dynamic configuration of the locator fails the ErrorService OnFailure method will be
+called with:
+
+1.  The type will be _SERVICE_CREATION_FAILURE_ (ioc.DynamicConfigurationFailure)
+2.  The error that occurred (possibly wrapped in a MultiError)
+3.  A nil descriptor
+4.  A nil injectee
+
+### Error Service Example
+
+This is an example of an ErrorService that logs the error with fields from the information
+passed to the OnFailure method.  Not all the code in the example is in the README, please see
+the examples/error_service_example.go for the rest of the code.
+
+Here is an implementation of the ErrorService:
+
+```go
+type ErrorService struct {
+	Logger *logrus.Logger `inject:"Logger"`
+}
+
+func (es *ErrorService) OnFailure(info ioc.ErrorInformation) error {
+	es.Logger.WithField("FailureType", info.GetType()).
+		WithField("ErrorString", info.GetAssociatedError().Error()).
+		WithField("ErrorInjectee", info.GetInjectee()).
+		Errorf("Descriptor %v failed", info.GetDescriptor())
+	return nil
+}
+```
+
+This is how to bind this service (along with the other services):
+
+```go
+locator, err := ioc.CreateAndBind("ErrorServiceExample", func(binder ioc.Binder) error {
+		binder.BindWithCreator("Logger", loggerServiceCreator)
+		binder.BindWithCreator("WonkyService", wonkyServiceCreator)
+		binder.Bind(ioc.ErrorServiceName, ErrorService{}).InNamespace(ioc.UserServicesNamespace)
+```
+
+WonkyService always returns an error in its creation method.  When it does, the error service
+is called, creating a log that looks something like this:
+
+```
+time="2018-09-08T13:49:55-04:00"
+level=error
+msg="Descriptor default#WonkyService.5.3 failed"
+ErrorInjectee="<nil>"
+ErrorString="wonky service error"
+FailureType=SERVICE_CREATION_FAILURE
+```
+
+
+

@@ -156,6 +156,13 @@ func (mod *dynamicConfigModificationData) Commit() error {
 	err = mod.parent.update(mod.binds, mod.removeFilters, mod.originalGeneration)
 	mod.state = 1
 	if err != nil {
+		_, ok := err.(MultiError)
+		if !ok {
+			err = NewMultiError(err)
+		}
+
+		mod.parent.runErrorHandlers(DynamicConfigurationFailure, nil, nil, err)
+
 		return err
 	}
 

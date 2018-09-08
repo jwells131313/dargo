@@ -74,11 +74,8 @@ type ErrorInformation interface {
 // they are added to Dargo in order to avoid deadlocks and circular references
 type ErrorService interface {
 	// OnFailure is invoked by the system when certain failures happen
-	// during processing.  If this method returns an error that error
-	// will be rethrown up the stack (so the error returned from some
-	// Dargo API can be changed).  If this method does NOT return an
-	// error then in some cases that implies that no error will be
-	// returned to the user
+	// during processing.  Any panic or error from this method is
+	// currently ignored
 	OnFailure(ErrorInformation) error
 }
 
