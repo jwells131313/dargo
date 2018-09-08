@@ -50,10 +50,12 @@ func loggerServiceCreator(ioc.ServiceLocator, ioc.Descriptor) (interface{}, erro
 	return logrus.New(), nil
 }
 
+// ErrorService is an example implementation of ErrorService
 type ErrorService struct {
 	Logger *logrus.Logger `inject:"Logger"`
 }
 
+// OnFailure is the one method of ErrorService
 func (es *ErrorService) OnFailure(info ioc.ErrorInformation) error {
 	es.Logger.WithField("FailureType", info.GetType()).
 		WithField("ErrorString", info.GetAssociatedError().Error()).
