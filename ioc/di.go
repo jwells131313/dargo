@@ -99,9 +99,9 @@ func (di *diData) create(rawLocator ServiceLocator, desc Descriptor) (interface{
 				var dependency interface{}
 				var err error
 				if !isProvider(fieldType) {
-					dependency, err = locator.getServiceFor(serviceKey, di.ty)
+					dependency, err = locator.getServiceFor(serviceKey, desc)
 				} else {
-					dependency = newProvider(locator, serviceKey, di.ty)
+					dependency = newProvider(locator, serviceKey, desc)
 				}
 
 				if err != nil {
@@ -121,7 +121,7 @@ func (di *diData) create(rawLocator ServiceLocator, desc Descriptor) (interface{
 	if depErrors.HasError() {
 		depErrors.AddError(fmt.Errorf("an error occurred while getting the dependencies of %v", desc))
 
-		di.locator.runErrorHandlers(ServiceCreationFailure, desc, di.ty, depErrors)
+		di.locator.runErrorHandlers(ServiceCreationFailure, desc, di.ty, nil, depErrors)
 
 		replyError := &hasRunHandlers{
 			hasRunHandlers:  true,
@@ -149,7 +149,7 @@ func (di *diData) create(rawLocator ServiceLocator, desc Descriptor) (interface{
 	if depErrors.HasError() {
 		depErrors.AddError(fmt.Errorf("an error occurred while injecting the dependencies of %v", desc))
 
-		di.locator.runErrorHandlers(ServiceCreationFailure, desc, di.ty, depErrors)
+		di.locator.runErrorHandlers(ServiceCreationFailure, desc, di.ty, nil, depErrors)
 
 		replyError := &hasRunHandlers{
 			hasRunHandlers:  true,
@@ -170,7 +170,7 @@ func (di *diData) create(rawLocator ServiceLocator, desc Descriptor) (interface{
 				err = NewMultiError(err)
 			}
 
-			di.locator.runErrorHandlers(ServiceCreationFailure, desc, di.ty, err)
+			di.locator.runErrorHandlers(ServiceCreationFailure, desc, di.ty, nil, err)
 
 			replyError := &hasRunHandlers{
 				hasRunHandlers:  true,
@@ -258,10 +258,10 @@ func (hrh *hasRunHandlers) GetUnderlyingError() MultiError {
 type providerData struct {
 	locator *serviceLocatorData
 	key     ServiceKey
-	mother  reflect.Type
+	mother  Descriptor
 }
 
-func newProvider(locator *serviceLocatorData, serviceKey ServiceKey, mother reflect.Type) Provider {
+func newProvider(locator *serviceLocatorData, serviceKey ServiceKey, mother Descriptor) Provider {
 	return &providerData{
 		locator: locator,
 		key:     serviceKey,

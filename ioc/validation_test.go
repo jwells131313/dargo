@@ -270,7 +270,8 @@ func TestInjectValidationErrorService(t *testing.T) {
 		"incorrect type")
 	assert.Equal(t, ClientOrServerService, ei0.GetDescriptor().GetName(),
 		"incorrect descriptor %v", ei0.GetDescriptor())
-	assert.Equal(t, reflect.TypeOf(UsesAClientServiceData{}), ei0.GetInjectee(), "invalid type")
+	assert.Nil(t, ei0.GetInjectee(), "no injectee for Lookup failure")
+	assert.Equal(t, UsesAClientService, ei0.GetInjecteeDescriptor().GetName(), "invalid parent descriptor")
 	assert.Equal(t, NoClientString, ei0.GetAssociatedError().Error(),
 		"invalid error")
 
@@ -278,7 +279,8 @@ func TestInjectValidationErrorService(t *testing.T) {
 		"incorrect type")
 	assert.Equal(t, UsesAClientService, ei1.GetDescriptor().GetName(),
 		"incorrect descriptor %v", ei1.GetDescriptor())
-	assert.Equal(t, reflect.TypeOf(UsesAClientServiceData{}), ei0.GetInjectee(), "invalid type")
+	assert.Equal(t, reflect.TypeOf(UsesAClientServiceData{}), ei1.GetInjectee(), "invalid type")
+	assert.Nil(t, ei1.GetInjecteeDescriptor(), "should be no injectee descriptor for ServiceCreationFailure")
 	assert.True(t, strings.Contains(ei1.GetAssociatedError().Error(), "service was not found"),
 		"invalid error %s", ei1.GetAssociatedError().Error())
 }

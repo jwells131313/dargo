@@ -54,10 +54,10 @@ type ValidationInformation interface {
 	// bound or unbound in this operation
 	GetCandidate() Descriptor
 
-	// GetInjectee returns the structure into which this service will
-	// be injected if known.  Returns nil if there is no Injectee or
-	// this is a bind/unbind operation
-	getInjectee() interface{}
+	// GetInjecteeDescriptor returns the descriptor of the service which
+	// will be injected if known.  Returns nil if there is no Injectee (for
+	// example on a direct lookup) or if this is a bind/unbind operation
+	GetInjecteeDescriptor() Descriptor
 
 	// GetFilter returns the Filter being used to lookup the service
 	// or nil if this is a struct injection or a bind/unbind operation
@@ -110,12 +110,12 @@ type ValidationService interface {
 type validationInformationData struct {
 	operation  string
 	descriptor Descriptor
-	injectee   interface{}
+	injectee   Descriptor
 	filter     Filter
 }
 
 func newValidationInformation(operation string,
-	desc Descriptor, injectee interface{}, filter Filter) ValidationInformation {
+	desc Descriptor, injectee Descriptor, filter Filter) ValidationInformation {
 	return &validationInformationData{
 		operation:  operation,
 		descriptor: desc,
@@ -132,7 +132,7 @@ func (vid *validationInformationData) GetCandidate() Descriptor {
 	return vid.descriptor
 }
 
-func (vid *validationInformationData) getInjectee() interface{} {
+func (vid *validationInformationData) GetInjecteeDescriptor() Descriptor {
 	return vid.injectee
 }
 

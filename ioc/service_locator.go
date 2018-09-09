@@ -219,7 +219,7 @@ func (locator *serviceLocatorData) GetService(toMe ServiceKey) (interface{}, err
 	return locator.getServiceFor(toMe, nil)
 }
 
-func (locator *serviceLocatorData) getServiceFor(toMe ServiceKey, forMe reflect.Type) (interface{}, error) {
+func (locator *serviceLocatorData) getServiceFor(toMe ServiceKey, forMe Descriptor) (interface{}, error) {
 	err := locator.checkState()
 	if err != nil {
 		return nil, err
@@ -252,7 +252,7 @@ func (locator *serviceLocatorData) GetAllServices(toMe ServiceKey) ([]interface{
 	return locator.getAllServicesFor(toMe, nil)
 }
 
-func (locator *serviceLocatorData) getAllServicesFor(toMe ServiceKey, forMe reflect.Type) ([]interface{}, error) {
+func (locator *serviceLocatorData) getAllServicesFor(toMe ServiceKey, forMe Descriptor) ([]interface{}, error) {
 	err := locator.checkState()
 	if err != nil {
 		return nil, err
@@ -293,7 +293,7 @@ func (locator *serviceLocatorData) GetDescriptors(filter Filter) ([]Descriptor, 
 	return locator.getDescriptorsFor(filter, nil)
 }
 
-func (locator *serviceLocatorData) getDescriptorsFor(filter Filter, forMe reflect.Type) ([]Descriptor, error) {
+func (locator *serviceLocatorData) getDescriptorsFor(filter Filter, forMe Descriptor) ([]Descriptor, error) {
 	err := locator.checkState()
 	if err != nil {
 		return nil, err
@@ -317,7 +317,7 @@ func (locator *serviceLocatorData) GetBestDescriptor(filter Filter) (Descriptor,
 	return locator.getBestDescriptorFor(filter, nil)
 }
 
-func (locator *serviceLocatorData) getBestDescriptorFor(filter Filter, forMe reflect.Type) (Descriptor, error) {
+func (locator *serviceLocatorData) getBestDescriptorFor(filter Filter, forMe Descriptor) (Descriptor, error) {
 	err := locator.checkState()
 	if err != nil {
 		return nil, err
@@ -396,7 +396,7 @@ type igsRet struct {
 	err         error
 }
 
-func (locator *serviceLocatorData) channelGetDescriptors(filter Filter, forMe reflect.Type,
+func (locator *serviceLocatorData) channelGetDescriptors(filter Filter, forMe Descriptor,
 	retChan chan *igsRet) {
 	descs, err := locator.internalGetDescriptors(filter, forMe)
 
@@ -409,7 +409,7 @@ func (locator *serviceLocatorData) channelGetDescriptors(filter Filter, forMe re
 }
 
 // TODO: This will one day need to keep caches
-func (locator *serviceLocatorData) internalGetDescriptors(filter Filter, forMe reflect.Type) ([]Descriptor, error) {
+func (locator *serviceLocatorData) internalGetDescriptors(filter Filter, forMe Descriptor) ([]Descriptor, error) {
 	locator.glock.ReadLock()
 	defer locator.glock.ReadUnlock()
 
@@ -418,7 +418,7 @@ func (locator *serviceLocatorData) internalGetDescriptors(filter Filter, forMe r
 		if filter.Filter(desc) {
 			passedValidation := true
 
-			vi := newValidationInformation(LookupOperation, desc, nil, filter)
+			vi := newValidationInformation(LookupOperation, desc, forMe, filter)
 
 			for _, validationService := range locator.validationServices {
 				validationFilter := validationService.GetFilter()
@@ -434,7 +434,7 @@ func (locator *serviceLocatorData) internalGetDescriptors(filter Filter, forMe r
 						}
 
 						// TODO: Should be able to get the injectee
-						locator.runErrorHandlers(LookupValidationFailure, desc, forMe, valError)
+						locator.runErrorHandlers(LookupValidationFailure, desc, nil, forMe, valError)
 
 						passedValidation = false
 					}
@@ -571,7 +571,7 @@ func (locator *serviceLocatorData) update(newDescs []Descriptor,
 				}
 
 				locator.runErrorHandlers(DynamicConfigurationFailure, removedDescriptor,
-					nil, err)
+					nil, nil, err)
 
 				return err
 			}
@@ -594,7 +594,7 @@ func (locator *serviceLocatorData) update(newDescs []Descriptor,
 					err = NewMultiError(err)
 				}
 
-				locator.runErrorHandlers(DynamicConfigurationFailure, newDesc, nil, err)
+				locator.runErrorHandlers(DynamicConfigurationFailure, newDesc, nil, nil, err)
 
 				return err
 			}
@@ -738,15 +738,15 @@ func (locator *serviceLocatorData) CreateServiceFromDescriptor(desc Descriptor) 
 		}
 
 		if !hasRunHandlers {
-			locator.runErrorHandlers(ServiceCreationFailure, desc, nil, err)
+			locator.runErrorHandlers(ServiceCreationFailure, desc, nil, nil, err)
 		}
 	}
 
 	return retVal, err
 }
 
-func (locator *serviceLocatorData) runErrorHandlers(typ string, desc Descriptor, injectee reflect.Type, err error) {
-	ei := newErrorImformation(typ, desc, injectee, err)
+func (locator *serviceLocatorData) runErrorHandlers(typ string, desc Descriptor, injectee reflect.Type, forMe Descriptor, err error) {
+	ei := newErrorImformation(typ, desc, injectee, forMe, err)
 
 	for _, errorService := range locator.errorServices {
 		safeCallUserErrorService(errorService, ei)
