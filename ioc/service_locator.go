@@ -249,6 +249,10 @@ func (locator *serviceLocatorData) GetDService(name string, qualifiers ...string
 }
 
 func (locator *serviceLocatorData) GetAllServices(toMe ServiceKey) ([]interface{}, error) {
+	return locator.getAllServicesFor(toMe, nil)
+}
+
+func (locator *serviceLocatorData) getAllServicesFor(toMe ServiceKey, forMe reflect.Type) ([]interface{}, error) {
 	err := locator.checkState()
 	if err != nil {
 		return nil, err
@@ -256,7 +260,7 @@ func (locator *serviceLocatorData) GetAllServices(toMe ServiceKey) ([]interface{
 
 	f := NewServiceKeyFilter(toMe)
 
-	descs, err := locator.GetDescriptors(f)
+	descs, err := locator.getDescriptorsFor(f, forMe)
 	if err != nil {
 		return nil, err
 	}
