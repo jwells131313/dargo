@@ -101,7 +101,7 @@ func (di *diData) create(rawLocator ServiceLocator, desc Descriptor) (interface{
 				if !isProvider(fieldType) {
 					dependency, err = locator.getServiceFor(serviceKey, di.ty)
 				} else {
-					dependency = newProvider(locator, serviceKey)
+					dependency = newProvider(locator, serviceKey, di.ty)
 				}
 
 				if err != nil {
@@ -256,23 +256,25 @@ func (hrh *hasRunHandlers) GetUnderlyingError() MultiError {
 }
 
 type providerData struct {
-	locator ServiceLocator
+	locator *serviceLocatorData
 	key     ServiceKey
+	mother  reflect.Type
 }
 
-func newProvider(locator ServiceLocator, serviceKey ServiceKey) Provider {
+func newProvider(locator *serviceLocatorData, serviceKey ServiceKey, mother reflect.Type) Provider {
 	return &providerData{
 		locator: locator,
 		key:     serviceKey,
+		mother:  mother,
 	}
 }
 
 func (pd *providerData) Get() (interface{}, error) {
-	return pd.locator.GetService(pd.key)
+	return pd.locator.getServiceFor(pd.key, pd.mother)
 }
 
 func (pd *providerData) GetAll() ([]interface{}, error) {
-	return pd.locator.GetAllServices(pd.key)
+	return pd.locator.getAllServicesFor(pd.key, pd.mother)
 }
 
 func (pd *providerData) QualifiedBy(qualifier string) Provider {
@@ -284,5 +286,5 @@ func (pd *providerData) QualifiedBy(qualifier string) Provider {
 		panic(err.Error())
 	}
 
-	return newProvider(pd.locator, serviceKey)
+	return newProvider(pd.locator, serviceKey, pd.mother)
 }
