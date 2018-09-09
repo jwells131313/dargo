@@ -49,11 +49,21 @@ import (
 const (
 	ValidationTestLocatorName1 = "ValidationTestLocator1"
 	ValidationTestLocatorName2 = "ValidationTestLocator2"
+	ValidationTestLocatorName3 = "ValidationTestLocator3"
+	ValidationTestLocatorName4 = "ValidationTestLocator4"
 
 	DoNotBindService   = "DoNotBindService"
 	NeverUnbindService = "NeverUnbindService"
 	SimpleServiceName  = "SimpleService"
+
+	ClientOrServerService = "ClientOrServerService"
+	Server                = "ServerQualifier"
+	Client                = "ClientQualifier"
+
+	NoServerString = "no server allowed in client environment"
 )
+
+var isServer bool
 
 func TestBindValidation(t *testing.T) {
 	locator, err := CreateAndBind(ValidationTestLocatorName1, func(binder Binder) error {
@@ -118,6 +128,129 @@ func TestUnBindValidation(t *testing.T) {
 
 }
 
+func TestLookukpValidation(t *testing.T) {
+	locator, err := CreateAndBind(ValidationTestLocatorName3, func(binder Binder) error {
+		binder.Bind(ValidationServiceName, ValidationServiceData{}).InNamespace(UserServicesNamespace)
+		binder.Bind(ClientOrServerService, ClientService{}).QualifiedBy(Client).InScope(PerLookup)
+		binder.Bind(ClientOrServerService, ServerService{}).QualifiedBy(Server).InScope(PerLookup)
+		return nil
+	})
+	if !assert.Nil(t, err, "error creating locator") {
+		return
+	}
+
+	isServer = false
+
+	_, err = getClientService(t, locator)
+	if !assert.Nil(t, err, "in client should have been able to see client") {
+		return
+	}
+
+	_, err = getServerService(t, locator)
+	if !assert.NotNil(t, err, "should think there is no server service") {
+		return
+	}
+
+	cos, err := locator.GetAllServices(DSK(ClientOrServerService))
+	if !assert.Nil(t, err, "should have gotten one service") {
+		return
+	}
+
+	if !assert.Equal(t, 1, len(cos), "should be only one service") {
+		return
+	}
+
+	_, ok := cos[0].(*ClientService)
+	if !assert.True(t, ok, "One service returned should be client") {
+		return
+	}
+
+	isServer = true
+
+	_, err = getClientService(t, locator)
+	if !assert.NotNil(t, err, "in server should not have been able to see client") {
+		return
+	}
+
+	_, err = getServerService(t, locator)
+	if !assert.Nil(t, err, "should have been able to see server service") {
+		return
+	}
+
+	sin, err := locator.GetAllServices(DSK(ClientOrServerService))
+	if !assert.Nil(t, err, "should have gotten one service") {
+		return
+	}
+
+	if !assert.Equal(t, 1, len(sin), "should be only one service") {
+		return
+	}
+
+	_, ok = sin[0].(*ServerService)
+	if !assert.True(t, ok, "One service returned should be server") {
+		return
+	}
+
+}
+
+func TestLookukpValidationErrorService(t *testing.T) {
+	locator, err := CreateAndBind(ValidationTestLocatorName4, func(binder Binder) error {
+		binder.Bind(ValidationServiceName, ValidationServiceData{}).InNamespace(UserServicesNamespace)
+		binder.Bind(ClientOrServerService, ServerService{}).QualifiedBy(Server).InScope(PerLookup)
+		binder.Bind(ErrorServiceName, ValidationErrorServiceData{}).InNamespace(UserServicesNamespace)
+		return nil
+	})
+	if !assert.Nil(t, err, "error creating locator") {
+		return
+	}
+
+	lastValidationErrorInformation = nil
+	isServer = false
+
+	_, err = getServerService(t, locator)
+	if !assert.NotNil(t, err, "should think there is no server service") {
+		return
+	}
+
+	assert.NotNil(t, lastValidationErrorInformation, "error service not called")
+
+	assert.Equal(t, LookupValidationFailure, lastValidationErrorInformation.GetType(),
+		"incorrect type")
+	assert.Equal(t, ClientOrServerService, lastValidationErrorInformation.GetDescriptor().GetName(),
+		"incorrect descriptor %v", lastValidationErrorInformation.GetDescriptor())
+	assert.Nil(t, lastValidationErrorInformation.GetInjectee())
+	assert.Equal(t, NoServerString, lastValidationErrorInformation.GetAssociatedError().Error(),
+		"invalid error")
+}
+
+func getClientService(t *testing.T, locator ServiceLocator) (*ClientService, error) {
+	raw, err := locator.GetDService(ClientOrServerService, Client)
+	if err != nil {
+		return nil, err
+	}
+
+	client, ok := raw.(*ClientService)
+	if !assert.True(t, ok, "incorrect type for client service") {
+		return nil, err
+	}
+
+	return client, nil
+}
+
+func getServerService(t *testing.T, locator ServiceLocator) (*ServerService, error) {
+	raw, err := locator.GetDService(ClientOrServerService, Server)
+	if err != nil {
+		return nil, err
+	}
+
+	server, ok := raw.(*ServerService)
+	if !assert.True(t, ok, "incorrect type for server service") {
+		return nil, err
+	}
+
+	return server, nil
+}
+
 type ValidationServiceData struct {
 }
 
@@ -142,14 +275,56 @@ func (vsd *ValidationServiceData) Validate(info ValidationInformation) error {
 			return fmt.Errorf("we will not unbind %v", info.GetCandidate())
 		}
 		break
+	case LookupOperation:
+		if isServer {
+			if hasQualifier(Client, info.GetCandidate()) {
+				return fmt.Errorf("no client allowed in server environment")
+			}
+		} else {
+			if hasQualifier(Server, info.GetCandidate()) {
+				return fmt.Errorf(NoServerString)
+			}
+		}
+		break
 	default:
+		return fmt.Errorf("unexpected operation %s", info.GetOperation())
 	}
 
 	return nil
+}
+
+func hasQualifier(qualifier string, desc Descriptor) bool {
+	for _, q := range desc.GetQualifiers() {
+		if qualifier == q {
+			return true
+		}
+	}
+
+	return false
 }
 
 type SimpleService struct {
 }
 
 type InvalidService struct {
+}
+
+type ClientService struct {
+}
+
+type ServerService struct {
+}
+
+type UsesAClientServiceData struct {
+	InjectedClientService *ClientService `inject:"ClientOrServerService@Client"`
+}
+
+type ValidationErrorServiceData struct {
+}
+
+var lastValidationErrorInformation ErrorInformation
+
+func (vesd *ValidationErrorServiceData) OnFailure(ei ErrorInformation) error {
+	lastValidationErrorInformation = ei
+	return nil
 }

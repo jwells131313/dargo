@@ -118,8 +118,11 @@ const (
 	// DynamicConfigurationFailure is a type of error returned by ErrorInformation.GetType
 	DynamicConfigurationFailure = "DYNAMIC_CONFIGURATION_FAILURE"
 
-	// ServiceCreationFailure is a type of error returned by ErrorInformation.GetTypeß
+	// ServiceCreationFailure is a type of error returned by ErrorInformation.GetType
 	ServiceCreationFailure = "SERVICE_CREATION_FAILURE"
+
+	// LookupValidationFailure is a type of error returned by ErrorInformation.GetType
+	LookupValidationFailure = "LOOKUP_VALIDATION_FAILURE"
 
 	// BindOperation is the Bind operation passed in the ValidationInformation
 	BindOperation = "BIND"

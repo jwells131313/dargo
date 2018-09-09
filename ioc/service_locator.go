@@ -391,7 +391,7 @@ func (locator *serviceLocatorData) channelGetDescriptors(filter Filter, retChan 
 	retChan <- retVal
 }
 
-// TODO: This will one day need to, you know, honor the rank and maybe keep caches
+// TODO: This will one day need to keep caches
 func (locator *serviceLocatorData) internalGetDescriptors(filter Filter) ([]Descriptor, error) {
 	locator.glock.ReadLock()
 	defer locator.glock.ReadUnlock()
@@ -399,7 +399,35 @@ func (locator *serviceLocatorData) internalGetDescriptors(filter Filter) ([]Desc
 	retVal := make([]Descriptor, 0)
 	for _, desc := range locator.allDescriptors {
 		if filter.Filter(desc) {
-			retVal = append(retVal, desc)
+			passedValidation := true
+
+			vi := newValidationInformation(LookupOperation, desc, nil, filter)
+
+			for _, validationService := range locator.validationServices {
+				validationFilter := validationService.GetFilter()
+
+				if validationFilter.Filter(desc) {
+					validator := validationService.GetValidator()
+
+					valError := validator.Validate(vi)
+					if valError != nil {
+						_, ok := valError.(MultiError)
+						if !ok {
+							valError = NewMultiError(valError)
+						}
+
+						// TODO: Should be able to get the injectee
+						locator.runErrorHandlers(LookupValidationFailure, desc, nil, valError)
+
+						passedValidation = false
+					}
+				}
+
+			}
+
+			if passedValidation {
+				retVal = append(retVal, desc)
+			}
 		}
 	}
 

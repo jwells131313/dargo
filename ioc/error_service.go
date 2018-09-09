@@ -49,15 +49,17 @@ import (
 // the error that has occurred
 type ErrorInformation interface {
 	// GetType returns the type of error condition that has occurred
-	// The valid values are:<UL>
-	// <LI>DYNAMIC_CONFIGURATION_FAILURE</LI>
-	// <LI>SERVICE_CREATION_FAILURE</LI>
-	// </UL>
+	// The valid values are:
+	// DYNAMIC_CONFIGURATION_FAILURE
+	// SERVICE_CREATION_FAILURE
+	// LOOKUP_VALIDATION_FAILURE
 	GetType() string
 	// GetDescriptor returns the Descriptor associated with the failure
 	GetDescriptor() Descriptor
 	// GetInjectee returns the injectee for which the SERVICE_CREATION_FAILURE
-	// occurred, if it is known, and nil otherwise
+	// occurred, if it is known, and nil otherwise.  It also returns
+	// the injectee for LOOKUP_VALIDATION_FAILURE if the lookup was
+	// from an injection point
 	GetInjectee() reflect.Type
 	// GetAssociatedError returns the underlying error that occurred to cause
 	// the failure, or nil if the underlying error is not known
