@@ -43,6 +43,8 @@ package ioc
 import (
 	"fmt"
 	"github.com/stretchr/testify/assert"
+	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -51,6 +53,7 @@ const (
 	ValidationTestLocatorName2 = "ValidationTestLocator2"
 	ValidationTestLocatorName3 = "ValidationTestLocator3"
 	ValidationTestLocatorName4 = "ValidationTestLocator4"
+	ValidationTestLocatorName5 = "ValidationTestLocator5"
 
 	DoNotBindService   = "DoNotBindService"
 	NeverUnbindService = "NeverUnbindService"
@@ -61,6 +64,9 @@ const (
 	Client                = "ClientQualifier"
 
 	NoServerString = "no server allowed in client environment"
+	NoClientString = "no client allowed in server environment"
+
+	UsesAClientService = "UsesAClientService"
 )
 
 var isServer bool
@@ -213,14 +219,68 @@ func TestLookukpValidationErrorService(t *testing.T) {
 	}
 
 	assert.NotNil(t, lastValidationErrorInformation, "error service not called")
+	if !assert.Equal(t, 1, len(lastValidationErrorInformation), "should be 1") {
+		return
+	}
 
-	assert.Equal(t, LookupValidationFailure, lastValidationErrorInformation.GetType(),
+	ei := lastValidationErrorInformation[0]
+
+	assert.Equal(t, LookupValidationFailure, ei.GetType(),
 		"incorrect type")
-	assert.Equal(t, ClientOrServerService, lastValidationErrorInformation.GetDescriptor().GetName(),
-		"incorrect descriptor %v", lastValidationErrorInformation.GetDescriptor())
-	assert.Nil(t, lastValidationErrorInformation.GetInjectee())
-	assert.Equal(t, NoServerString, lastValidationErrorInformation.GetAssociatedError().Error(),
+	assert.Equal(t, ClientOrServerService, ei.GetDescriptor().GetName(),
+		"incorrect descriptor %v", ei.GetDescriptor())
+	assert.Nil(t, ei.GetInjectee())
+	assert.Equal(t, NoServerString, ei.GetAssociatedError().Error(),
 		"invalid error")
+}
+
+func TestInjectValidationErrorService(t *testing.T) {
+	locator, err := CreateAndBind(ValidationTestLocatorName5, func(binder Binder) error {
+		binder.Bind(ValidationServiceName, ValidationServiceData{}).InNamespace(UserServicesNamespace)
+		binder.Bind(ClientOrServerService, ClientService{}).QualifiedBy(Client).InScope(PerLookup)
+		binder.Bind(ErrorServiceName, ValidationErrorServiceData{}).InNamespace(UserServicesNamespace)
+		binder.Bind(UsesAClientService, UsesAClientServiceData{})
+
+		return nil
+	})
+	if !assert.Nil(t, err, "error creating locator") {
+		return
+	}
+
+	lastValidationErrorInformation = nil
+	isServer = true
+
+	_, err = locator.GetDService(UsesAClientService)
+	if !assert.NotNil(t, err, "should not be able to get service") {
+		return
+	}
+
+	assert.NotNil(t, lastValidationErrorInformation, "error service not called")
+	if !assert.Equal(t, 2, len(lastValidationErrorInformation), "should be 2") {
+		for index, ve := range lastValidationErrorInformation {
+			t.Logf("%d. %v", (index + 1), ve)
+		}
+		return
+	}
+
+	ei0 := lastValidationErrorInformation[0]
+	ei1 := lastValidationErrorInformation[1]
+
+	assert.Equal(t, LookupValidationFailure, ei0.GetType(),
+		"incorrect type")
+	assert.Equal(t, ClientOrServerService, ei0.GetDescriptor().GetName(),
+		"incorrect descriptor %v", ei0.GetDescriptor())
+	assert.Equal(t, reflect.TypeOf(UsesAClientServiceData{}), ei0.GetInjectee(), "invalid type")
+	assert.Equal(t, NoClientString, ei0.GetAssociatedError().Error(),
+		"invalid error")
+
+	assert.Equal(t, ServiceCreationFailure, ei1.GetType(),
+		"incorrect type")
+	assert.Equal(t, UsesAClientService, ei1.GetDescriptor().GetName(),
+		"incorrect descriptor %v", ei1.GetDescriptor())
+	assert.Equal(t, reflect.TypeOf(UsesAClientServiceData{}), ei0.GetInjectee(), "invalid type")
+	assert.True(t, strings.Contains(ei1.GetAssociatedError().Error(), "service was not found"),
+		"invalid error %s", ei1.GetAssociatedError().Error())
 }
 
 func getClientService(t *testing.T, locator ServiceLocator) (*ClientService, error) {
@@ -278,7 +338,7 @@ func (vsd *ValidationServiceData) Validate(info ValidationInformation) error {
 	case LookupOperation:
 		if isServer {
 			if hasQualifier(Client, info.GetCandidate()) {
-				return fmt.Errorf("no client allowed in server environment")
+				return fmt.Errorf(NoClientString)
 			}
 		} else {
 			if hasQualifier(Server, info.GetCandidate()) {
@@ -316,15 +376,19 @@ type ServerService struct {
 }
 
 type UsesAClientServiceData struct {
-	InjectedClientService *ClientService `inject:"ClientOrServerService@Client"`
+	InjectedClientService *ClientService `inject:"ClientOrServerService@ClientQualifier"`
 }
 
 type ValidationErrorServiceData struct {
 }
 
-var lastValidationErrorInformation ErrorInformation
+var lastValidationErrorInformation []ErrorInformation
 
 func (vesd *ValidationErrorServiceData) OnFailure(ei ErrorInformation) error {
-	lastValidationErrorInformation = ei
+	if lastValidationErrorInformation == nil {
+		lastValidationErrorInformation = make([]ErrorInformation, 0)
+	}
+
+	lastValidationErrorInformation = append(lastValidationErrorInformation, ei)
 	return nil
 }

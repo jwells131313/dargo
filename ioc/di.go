@@ -73,7 +73,12 @@ type errorReturn struct {
 	err error
 }
 
-func (di *diData) create(locator ServiceLocator, desc Descriptor) (interface{}, error) {
+func (di *diData) create(rawLocator ServiceLocator, desc Descriptor) (interface{}, error) {
+	locator, ok := rawLocator.(*serviceLocatorData)
+	if !ok {
+		return nil, fmt.Errorf("unknown service locator type")
+	}
+
 	numFields := di.ty.NumField()
 
 	dependencies := make([]*indexAndValueOfDependency, 0)
@@ -94,7 +99,7 @@ func (di *diData) create(locator ServiceLocator, desc Descriptor) (interface{}, 
 				var dependency interface{}
 				var err error
 				if !isProvider(fieldType) {
-					dependency, err = locator.GetService(serviceKey)
+					dependency, err = locator.getServiceFor(serviceKey, di.ty)
 				} else {
 					dependency = newProvider(locator, serviceKey)
 				}

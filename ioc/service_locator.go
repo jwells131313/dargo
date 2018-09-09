@@ -216,6 +216,10 @@ func (locator *serviceLocatorData) checkState() error {
 }
 
 func (locator *serviceLocatorData) GetService(toMe ServiceKey) (interface{}, error) {
+	return locator.getServiceFor(toMe, nil)
+}
+
+func (locator *serviceLocatorData) getServiceFor(toMe ServiceKey, forMe reflect.Type) (interface{}, error) {
 	err := locator.checkState()
 	if err != nil {
 		return nil, err
@@ -223,7 +227,7 @@ func (locator *serviceLocatorData) GetService(toMe ServiceKey) (interface{}, err
 
 	f := NewServiceKeyFilter(toMe)
 
-	desc, err := locator.GetBestDescriptor(f)
+	desc, err := locator.getBestDescriptorFor(f, forMe)
 	if err != nil {
 		return nil, err
 	}
@@ -282,6 +286,10 @@ func (locator *serviceLocatorData) GetServiceFromDescriptor(desc Descriptor) (in
 }
 
 func (locator *serviceLocatorData) GetDescriptors(filter Filter) ([]Descriptor, error) {
+	return locator.getDescriptorsFor(filter, nil)
+}
+
+func (locator *serviceLocatorData) getDescriptorsFor(filter Filter, forMe reflect.Type) ([]Descriptor, error) {
 	err := locator.checkState()
 	if err != nil {
 		return nil, err
@@ -291,23 +299,27 @@ func (locator *serviceLocatorData) GetDescriptors(filter Filter) ([]Descriptor, 
 	if tid < 0 {
 		c := make(chan *igsRet)
 
-		threadManager.Go(locator.channelGetDescriptors, filter, c)
+		threadManager.Go(locator.channelGetDescriptors, filter, forMe, c)
 
 		ret := <-c
 
 		return ret.descriptors, ret.err
 	}
 
-	return locator.internalGetDescriptors(filter)
+	return locator.internalGetDescriptors(filter, forMe)
 }
 
 func (locator *serviceLocatorData) GetBestDescriptor(filter Filter) (Descriptor, error) {
+	return locator.getBestDescriptorFor(filter, nil)
+}
+
+func (locator *serviceLocatorData) getBestDescriptorFor(filter Filter, forMe reflect.Type) (Descriptor, error) {
 	err := locator.checkState()
 	if err != nil {
 		return nil, err
 	}
 
-	all, err := locator.GetDescriptors(filter)
+	all, err := locator.getDescriptorsFor(filter, forMe)
 	if err != nil {
 		return nil, err
 	}
@@ -380,8 +392,9 @@ type igsRet struct {
 	err         error
 }
 
-func (locator *serviceLocatorData) channelGetDescriptors(filter Filter, retChan chan *igsRet) {
-	descs, err := locator.internalGetDescriptors(filter)
+func (locator *serviceLocatorData) channelGetDescriptors(filter Filter, forMe reflect.Type,
+	retChan chan *igsRet) {
+	descs, err := locator.internalGetDescriptors(filter, forMe)
 
 	retVal := &igsRet{
 		descriptors: descs,
@@ -392,7 +405,7 @@ func (locator *serviceLocatorData) channelGetDescriptors(filter Filter, retChan 
 }
 
 // TODO: This will one day need to keep caches
-func (locator *serviceLocatorData) internalGetDescriptors(filter Filter) ([]Descriptor, error) {
+func (locator *serviceLocatorData) internalGetDescriptors(filter Filter, forMe reflect.Type) ([]Descriptor, error) {
 	locator.glock.ReadLock()
 	defer locator.glock.ReadUnlock()
 
@@ -417,7 +430,7 @@ func (locator *serviceLocatorData) internalGetDescriptors(filter Filter) ([]Desc
 						}
 
 						// TODO: Should be able to get the injectee
-						locator.runErrorHandlers(LookupValidationFailure, desc, nil, valError)
+						locator.runErrorHandlers(LookupValidationFailure, desc, forMe, valError)
 
 						passedValidation = false
 					}
