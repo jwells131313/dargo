@@ -99,7 +99,7 @@ func TestCreationError(t *testing.T) {
 	ei0 := lastErrorInformation[0]
 
 	if !checkErrorInformation(t, ei0, ServiceCreationFailure, "ServiceB",
-		nil, expectedErrorString) {
+		nil, nil, expectedErrorString) {
 		return
 	}
 
@@ -108,7 +108,7 @@ func TestCreationError(t *testing.T) {
 	expectedType := reflect.TypeOf(ServiceA{})
 
 	checkErrorInformation(t, ei1, ServiceCreationFailure, "ServiceA",
-		expectedType, "an error occurred while getting the dependencies of")
+		expectedType, nil, "an error occurred while getting the dependencies of")
 }
 
 func TestPanicyErrorService(t *testing.T) {
@@ -196,7 +196,7 @@ func TestDynamicConfigurationFailure(t *testing.T) {
 	}
 
 	checkErrorInformation(t, lastErrorInformation[0], DynamicConfigurationFailure, "",
-		nil, "there was an update to the ServiceLocator after this DynamicConfiguration was created")
+		nil, nil, "there was an update to the ServiceLocator after this DynamicConfiguration was created")
 }
 
 func checkErrorHandler(t *testing.T, locator ServiceLocator, qualifier string, expected bool) bool {
@@ -251,7 +251,7 @@ func (pes *PanicyErrorService) GetIWasCalled() bool {
 }
 
 func checkErrorInformation(t *testing.T, ei ErrorInformation, infoType string,
-	descriptorName string, typ reflect.Type, expectedError string) bool {
+	descriptorName string, typ reflect.Type, injecteeDescriptor Descriptor, expectedError string) bool {
 	if !assert.NotNil(t, ei, "ErrorInformation should not be nil") {
 		return false
 	}

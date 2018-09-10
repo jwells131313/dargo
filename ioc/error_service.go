@@ -49,16 +49,20 @@ import (
 // the error that has occurred
 type ErrorInformation interface {
 	// GetType returns the type of error condition that has occurred
-	// The valid values are:<UL>
-	// <LI>DYNAMIC_CONFIGURATION_FAILURE</LI>
-	// <LI>SERVICE_CREATION_FAILURE</LI>
-	// </UL>
+	// The valid values are:
+	// DYNAMIC_CONFIGURATION_FAILURE
+	// SERVICE_CREATION_FAILURE
+	// LOOKUP_VALIDATION_FAILURE
 	GetType() string
 	// GetDescriptor returns the Descriptor associated with the failure
 	GetDescriptor() Descriptor
 	// GetInjectee returns the injectee for which the SERVICE_CREATION_FAILURE
 	// occurred, if it is known, and nil otherwise
 	GetInjectee() reflect.Type
+	// GetInjecteeDescriptor returns the descriptor that would have been
+	// injected into for a LOOKUP_VALIDATION_FAILURE or nil if this
+	// was a direct lookup or an any other type
+	GetInjecteeDescriptor() Descriptor
 	// GetAssociatedError returns the underlying error that occurred to cause
 	// the failure, or nil if the underlying error is not known
 	GetAssociatedError() error
@@ -80,18 +84,20 @@ type ErrorService interface {
 }
 
 type errorInformationData struct {
-	typ      string
-	desc     Descriptor
-	injectee reflect.Type
-	err      error
+	typ                string
+	desc               Descriptor
+	injectee           reflect.Type
+	injecteeDescriptor Descriptor
+	err                error
 }
 
-func newErrorImformation(typ string, desc Descriptor, injectee reflect.Type, err error) ErrorInformation {
+func newErrorImformation(typ string, desc Descriptor, injectee reflect.Type, injecteeDescriptor Descriptor, err error) ErrorInformation {
 	return &errorInformationData{
-		typ:      typ,
-		desc:     desc,
-		injectee: injectee,
-		err:      err,
+		typ:                typ,
+		desc:               desc,
+		injectee:           injectee,
+		injecteeDescriptor: injecteeDescriptor,
+		err:                err,
 	}
 }
 
@@ -105,6 +111,10 @@ func (eid *errorInformationData) GetDescriptor() Descriptor {
 
 func (eid *errorInformationData) GetInjectee() reflect.Type {
 	return eid.injectee
+}
+
+func (eid *errorInformationData) GetInjecteeDescriptor() Descriptor {
+	return eid.injecteeDescriptor
 }
 
 func (eid *errorInformationData) GetAssociatedError() error {

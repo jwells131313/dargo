@@ -73,7 +73,12 @@ type errorReturn struct {
 	err error
 }
 
-func (di *diData) create(locator ServiceLocator, desc Descriptor) (interface{}, error) {
+func (di *diData) create(rawLocator ServiceLocator, desc Descriptor) (interface{}, error) {
+	locator, ok := rawLocator.(*serviceLocatorData)
+	if !ok {
+		return nil, fmt.Errorf("unknown service locator type")
+	}
+
 	numFields := di.ty.NumField()
 
 	dependencies := make([]*indexAndValueOfDependency, 0)
@@ -94,9 +99,9 @@ func (di *diData) create(locator ServiceLocator, desc Descriptor) (interface{}, 
 				var dependency interface{}
 				var err error
 				if !isProvider(fieldType) {
-					dependency, err = locator.GetService(serviceKey)
+					dependency, err = locator.getServiceFor(serviceKey, desc)
 				} else {
-					dependency = newProvider(locator, serviceKey)
+					dependency = newProvider(locator, serviceKey, desc)
 				}
 
 				if err != nil {
@@ -116,7 +121,7 @@ func (di *diData) create(locator ServiceLocator, desc Descriptor) (interface{}, 
 	if depErrors.HasError() {
 		depErrors.AddError(fmt.Errorf("an error occurred while getting the dependencies of %v", desc))
 
-		di.locator.runErrorHandlers(ServiceCreationFailure, desc, di.ty, depErrors)
+		di.locator.runErrorHandlers(ServiceCreationFailure, desc, di.ty, nil, depErrors)
 
 		replyError := &hasRunHandlers{
 			hasRunHandlers:  true,
@@ -144,7 +149,7 @@ func (di *diData) create(locator ServiceLocator, desc Descriptor) (interface{}, 
 	if depErrors.HasError() {
 		depErrors.AddError(fmt.Errorf("an error occurred while injecting the dependencies of %v", desc))
 
-		di.locator.runErrorHandlers(ServiceCreationFailure, desc, di.ty, depErrors)
+		di.locator.runErrorHandlers(ServiceCreationFailure, desc, di.ty, nil, depErrors)
 
 		replyError := &hasRunHandlers{
 			hasRunHandlers:  true,
@@ -165,7 +170,7 @@ func (di *diData) create(locator ServiceLocator, desc Descriptor) (interface{}, 
 				err = NewMultiError(err)
 			}
 
-			di.locator.runErrorHandlers(ServiceCreationFailure, desc, di.ty, err)
+			di.locator.runErrorHandlers(ServiceCreationFailure, desc, di.ty, nil, err)
 
 			replyError := &hasRunHandlers{
 				hasRunHandlers:  true,
@@ -251,23 +256,25 @@ func (hrh *hasRunHandlers) GetUnderlyingError() MultiError {
 }
 
 type providerData struct {
-	locator ServiceLocator
+	locator *serviceLocatorData
 	key     ServiceKey
+	mother  Descriptor
 }
 
-func newProvider(locator ServiceLocator, serviceKey ServiceKey) Provider {
+func newProvider(locator *serviceLocatorData, serviceKey ServiceKey, mother Descriptor) Provider {
 	return &providerData{
 		locator: locator,
 		key:     serviceKey,
+		mother:  mother,
 	}
 }
 
 func (pd *providerData) Get() (interface{}, error) {
-	return pd.locator.GetService(pd.key)
+	return pd.locator.getServiceFor(pd.key, pd.mother)
 }
 
 func (pd *providerData) GetAll() ([]interface{}, error) {
-	return pd.locator.GetAllServices(pd.key)
+	return pd.locator.getAllServicesFor(pd.key, pd.mother)
 }
 
 func (pd *providerData) QualifiedBy(qualifier string) Provider {
@@ -279,5 +286,5 @@ func (pd *providerData) QualifiedBy(qualifier string) Provider {
 		panic(err.Error())
 	}
 
-	return newProvider(pd.locator, serviceKey)
+	return newProvider(pd.locator, serviceKey, pd.mother)
 }

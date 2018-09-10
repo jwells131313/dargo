@@ -161,7 +161,7 @@ func (mod *dynamicConfigModificationData) Commit() error {
 			err = NewMultiError(err)
 		}
 
-		mod.parent.runErrorHandlers(DynamicConfigurationFailure, nil, nil, err)
+		mod.parent.runErrorHandlers(DynamicConfigurationFailure, nil, nil, nil, err)
 
 		return err
 	}
