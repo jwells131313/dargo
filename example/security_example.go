@@ -47,8 +47,10 @@ import (
 )
 
 const (
+	// ProtectedNamespace is a namespace that is allowed to inject protected services
 	ProtectedNamespace = "user/protected"
-	SecureQualifier    = "Secure"
+	// SecureQualifier is the qualifer put onto services that should be protected
+	SecureQualifier = "Secure"
 )
 
 type secureValidationService struct {
@@ -100,9 +102,11 @@ func hasSecureQualifier(desc ioc.Descriptor) bool {
 	return false
 }
 
+// SuperSecretService is an example protected service.  It will be annotated with "Secure"
 type SuperSecretService struct {
 }
 
+// ServiceData an example service injecting a protected service
 type ServiceData struct {
 	ProtectedService *SuperSecretService `inject:"SuperSecretService"`
 }
