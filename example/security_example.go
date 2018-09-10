@@ -47,6 +47,7 @@ import (
 
 const (
 	ProtectedNamespace = "user/protected"
+	SecureQualifier    = "Secure"
 )
 
 type secureValidationService struct {
@@ -70,8 +71,83 @@ func (svs *secureValidationService) Validate(info ioc.ValidationInformation) err
 	case ioc.UnbindOperation:
 		break
 	case ioc.LookupOperation:
+		candidate := info.GetCandidate()
+		if hasSecureQualifier(candidate) {
+			// Those with Secure qualifier can only be injected into
+			// services in the ProtectedNamespace and cannot be looked
+			// up directly
+			injectee := info.GetInjecteeDescriptor()
+			if injectee == nil {
+				return fmt.Errorf("Secure services cannot be looked up directly")
+			} else if injectee.GetNamespace() != ProtectedNamespace {
+				return fmt.Errorf("Secure service can only be injected into special services")
+			}
+		}
 		break
 	default:
+	}
+
+	return nil
+}
+
+func hasSecureQualifier(desc ioc.Descriptor) bool {
+	for _, q := range desc.GetQualifiers() {
+		if q == SecureQualifier {
+			return true
+		}
+	}
+	return false
+}
+
+type SuperSecretService struct {
+}
+
+type ServiceData struct {
+	protectedService *SuperSecretService `inject:"SuperSecretService"`
+}
+
+func runSecurityExample() error {
+	locator, err := ioc.CreateAndBind("SecurityExampleLocator", func(binder ioc.Binder) error {
+		binder.Bind("SuperSecretService", SuperSecretService{}).QualifiedBy(SecureQualifier)
+		binder.Bind("SystemProtectedService", ServiceData{}).InNamespace(ProtectedNamespace)
+		binder.Bind("NormalUserService", ServiceData{})
+
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	// A lookup of this service should appear as if the service isn't there
+	_, err = locator.GetDService("SuperSecretService")
+	if err == nil {
+		return fmt.Errorf("service should have appeared to not exist")
+	}
+
+	// Should not be able to bind a service into protected namespace
+	err = ioc.BindIntoLocator(locator, func(binder ioc.Binder) error {
+		binder.Bind("NotAllowedToBindThis", ServiceData{}).InNamespace(ProtectedNamespace)
+		return nil
+	})
+	if err == nil {
+		return fmt.Errorf("should not have been able to bind service into protected namespace")
+	}
+
+	// The NormalService should not be able to inject the secret service since its not
+	// in the ProtectedNamespace
+	_, err = locator.GetDService("NormalUserService")
+	if err == nil {
+		return fmt.Errorf("should not have been able to create normal service with secure injection point")
+	}
+
+	// The service in the protected namespace injecting the secure service should work
+	key, _ := ioc.NewServiceKey(ProtectedNamespace, "SystemProtectedService")
+
+	serviceRaw, _ := locator.GetService(key)
+	service := serviceRaw.(*ServiceData)
+
+	if service.protectedService == nil {
+		return fmt.Errorf("protected service should be available")
 	}
 
 	return nil
