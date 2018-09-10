@@ -327,19 +327,20 @@ type Service struct {
 
 ## Context Scope
 
-Many go programs use the context.Context scope in order to get their services.  Dargo provides an optional
-Context scope which can associate a ServiceLocator with a Context.  So your programs can continue to
-use context.Context and be getting all the dependency-injection goodness from Dargo.
+Many go programs use context.Context to get their services.  Dargo provides an optional
+Context scope called DargoContext which can associate a ServiceLocator with a context.Context.  With the
+DargoContext scope programs can continue to use context.Context and be getting all the dependency-injection
+goodness from Dargo.
 
-The definition of the lifecycle of the DargoContext scope is that of the underlying parent Context.  When
-the parent Context is finished all of the dargo services associated with that Context will be destroyed.
-For example, if you have something like a per-request scope, you can use that as the parent for the
-DargoContext scope.  Every service that is bound to the DargoContext scope will be unique per request
+The definition of the lifecycle of the DargoContext scope is that of the underlying parent context.Context.  
+When the parent context.Context is finished all of the Dargo services associated with that context.Context
+will be destroyed.  For example, if you have a per-request context.Context, you can use that as the parent
+for the DargoContext scope.  Every service that is bound into the DargoContext scope will be unique per request
 and will be destroyed when the request has been finished.
 
 To enable the DargoContext scope the method ioc.EnableDargoContextScope must be called.  This method
-will add in the DargoContext ContextualScope implementation and also add a DargoContext scoped
-service named _DargoContextCreationService_ to the ServiceLocator.
+will add in the DargoContext ContextualScope implementation.   It also adds a DargoContext scoped
+service named _DargoContextCreationService_ (ioc.DargoContextCreationServiceName) to the ServiceLocator.
 The DargoContextCreationService is a convenient service that returns the DargoContext context.Context
 under which the service was created.
 
@@ -494,14 +495,15 @@ a service named ColorService.
 
 ## Error Service
 
-The user can supply an implementation of the ErrorService to be notified about certain errors
+The user can supply an implementation of the ioc.ErrorService interface to be notified about certain errors
 that happen during the lookup and creation of services.  This is useful for centralized logging
 or for other tracing applications.
 
-There are currently two types of errors that are sent to the ErrorService.  They are:
+These are the types of errors that are sent to the ErrorService.  They are:
 
 1.  Service creation failure
 2.  Dynamic configuration error
+3.  Validation lookup failure
 
 Implementations of ErrorService must be named _ErrorService_ (ioc.ErrorServiceName) in the
 namespace _user/services_ (ioc.UserServicesNamespace).  Implementations of ErrorService
@@ -519,6 +521,7 @@ When a service fails during creation the ErrorService OnFailure method will be c
 2.  The error that occurred (possibly wrapped in a MultiError)
 3.  The descriptor of the service that failed during creation
 4.  The injectee struct into which this service was to be injected if appropriate
+5.  A nil injectee descriptor
 
 ### Dynamic Configuration Error
 
@@ -529,6 +532,15 @@ called with:
 2.  The error that occurred (possibly wrapped in a MultiError)
 3.  A nil descriptor
 4.  A nil injectee
+5.  A nil injectee descriptor
+
+### Validation Lookupg Error
+
+1.  The type will be _LOOKUP_VALIDATION_FAILURE_ (ioc.LookupValidationFailure)
+2.  The error that occurred (possibly wrapped in a MultiError)
+3.  The descriptor that failed validation
+4.  A nil injectee
+5.  The descriptor of the parent of the service to be injected, or nil if this is a direct lookup
 
 ### Error Service Example
 
