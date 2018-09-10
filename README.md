@@ -61,6 +61,7 @@ have questions or comments please open issues.  Thank you.
 3.  [Context Scope](#context-scope)
 4.  [Provider](#provider)
 5.  [Error Service](#error-service)
+6.  [Security](#validation-service)
 
 ## Basic Usage
 
@@ -585,5 +586,22 @@ ErrorString="wonky service error"
 FailureType=SERVICE_CREATION_FAILURE
 ```
 
+## Validation Service
+
+The user can supply an implementation of the ioc.ValidationService interface which will be used
+when the user attempts to do the following actions in Dargo:
+
+1.  Bind a service into the ServiceLocator
+2.  Unbind a service from the ServiceLocator
+3.  Lookup a service directly from the ServiceLocator
+4.  Inject a service into another service
+
+Implementations of ValidationService must be named _ValidationService_ (ioc.ValidationServiceName) in the
+namespace _user/services_ (ioc.UserServicesNamespace).  Implementations of ValidationService
+**must** be in the Singleton scope.  Implementations of ValidationService will be created by
+the system as soon as they are bound into the ServiceLocator.  Any failure during creation
+of the ValidationService will cause the configuration commit to fail.  Care should be taken
+with the services used by an ValidationService since they will also be created as soon as
+the ValidationService is bound into the locator.
 
 

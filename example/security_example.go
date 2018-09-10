@@ -43,6 +43,7 @@ package example
 import (
 	"fmt"
 	"github.com/jwells131313/dargo/ioc"
+	"github.com/pkg/errors"
 )
 
 const (
@@ -103,11 +104,12 @@ type SuperSecretService struct {
 }
 
 type ServiceData struct {
-	protectedService *SuperSecretService `inject:"SuperSecretService"`
+	ProtectedService *SuperSecretService `inject:"SuperSecretService"`
 }
 
 func runSecurityExample() error {
 	locator, err := ioc.CreateAndBind("SecurityExampleLocator", func(binder ioc.Binder) error {
+		binder.Bind(ioc.ValidationServiceName, secureValidationService{}).InNamespace(ioc.UserServicesNamespace)
 		binder.Bind("SuperSecretService", SuperSecretService{}).QualifiedBy(SecureQualifier)
 		binder.Bind("SystemProtectedService", ServiceData{}).InNamespace(ProtectedNamespace)
 		binder.Bind("NormalUserService", ServiceData{})
@@ -143,10 +145,13 @@ func runSecurityExample() error {
 	// The service in the protected namespace injecting the secure service should work
 	key, _ := ioc.NewServiceKey(ProtectedNamespace, "SystemProtectedService")
 
-	serviceRaw, _ := locator.GetService(key)
+	serviceRaw, err := locator.GetService(key)
+	if err != nil {
+		return errors.Wrapf(err, "Did not find %v", key)
+	}
 	service := serviceRaw.(*ServiceData)
 
-	if service.protectedService == nil {
+	if service.ProtectedService == nil {
 		return fmt.Errorf("protected service should be available")
 	}
 

@@ -75,3 +75,8 @@ func TestErrorServiceExample(t *testing.T) {
 	err := runErrorServiceExample()
 	assert.Nil(t, err, "error service example failure")
 }
+
+func TestSecurityExample(t *testing.T) {
+	err := runSecurityExample()
+	assert.Nil(t, err, "security example failure")
+}
