@@ -63,6 +63,7 @@ type SomeOtherServiceData struct {
 	ExpensiveService AnExpensiveService `inject:"AnExpensiveService"`
 }
 
+// DoExpensiveThing implements the interface with a long sleep and returns "Normal"
 func (nesd *NormalExpensiveServiceData) DoExpensiveThing(thingToDo string) (string, error) {
 	time.Sleep(5 * time.Second)
 
@@ -83,6 +84,7 @@ func init() {
 	globalLocator = myLocator
 }
 
+// DoSomeUserCode is the user code that uses the injected service
 func (other *SomeOtherServiceData) DoSomeUserCode() (string, error) {
 	return other.ExpensiveService.DoExpensiveThing("foo")
 }
