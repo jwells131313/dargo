@@ -57,11 +57,12 @@ have questions or comments please open issues.  Thank you.
 ## Table of Contents
 
 1.  [Basic Usage](#basic-usage)
-2.  [Service Names](#service-names)
-3.  [Context Scope](#context-scope)
-4.  [Provider](#provider)
-5.  [Error Service](#error-service)
-6.  [Security](#validation-service)
+2.  [Testing](#testing)
+3.  [Service Names](#service-names)
+4.  [Context Scope](#context-scope)
+5.  [Provider](#provider)
+6.  [Error Service](#error-service)
+7.  [Security](#validation-service)
 
 ## Basic Usage
 
