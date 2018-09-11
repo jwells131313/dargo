@@ -274,6 +274,141 @@ invoked, which will in turn lookup the logger service, which, since it is in the
 return a new one.  Subsequent lookups of the EchoService, however, will return the **same** EchoService, since
 the EchoService is in the Singleton scope.
 
+## Testing
+
+Unit testing becomes easier with Dargo services due to the dynamic nature of Dargo services and the fact
+that the choice of service used can be affected with the Rank of the service.  You can create mock versions
+of any of the services bound into a ServiceLocator and then bind them into the ServiceLocator your system uses
+with a higher rank.  When you then run your code in your unit tests the mock services will be chosen instead
+of the services that would normally be injected.
+
+### Testing Example
+
+In this example we have a service that has an expensive operation.
+
+```go
+type AnExpensiveService interface {
+	DoExpensiveThing(string) (string, error)
+}
+```
+
+We then have a normal version of that service that is implemented in the normal user code.  In this example
+the expensive thing merely sleeps and returns "Normal"
+
+```go
+type NormalExpensiveServiceData struct {
+	// whatever stuff is in here
+}
+
+func (nesd *NormalExpensiveServiceData) DoExpensiveThing(thingToDo string) (string, error) {
+	// Do something expensive
+	time.Sleep(5 * time.Second)
+
+	return "Normal", nil
+}
+```
+
+This struct injects an instance of AnExpensiveService.  A method on it uses the expensive service and returns
+the result.
+
+```go
+type SomeOtherServiceData struct {
+	ExpensiveService AnExpensiveService `inject:"AnExpensiveService"`
+}
+
+func (other *SomeOtherServiceData) DoSomeUserCode() (string, error) {
+	// In user code this will be the real service, in test code this will be the mock
+	return other.ExpensiveService.DoExpensiveThing("foo")
+}
+```
+
+In the users code other.ExpensiveService will be injected as the normal, truly expensive service.  The binding of
+these normal services happen in the following initialization block, which is where most Dargo ServiceLocators
+are created and wired.
+
+```go
+var globalLocator ioc.ServiceLocator
+
+func init() {
+	myLocator, err := ioc.CreateAndBind("TestingExampleLocator", func(binder ioc.Binder) error {
+		binder.Bind("UserService", SomeOtherServiceData{})
+		// Bound with default rank of 0
+		binder.Bind("AnExpensiveService", NormalExpensiveServiceData{})
+
+		return nil
+	})
+	if err != nil {
+		panic(err)
+	}
+
+	globalLocator = myLocator
+}
+```
+
+The ExpensiveService is bound with the default rank of 0.  Ranks can have positive or negative values.  Higher
+ranks are preferred above lower ranks.  Ranking order is even honored when getting all instances of a service,
+so higher ranked services will appear first in the slice and lower ranked services will appear later in the slice.
+
+Now we want to test UserService.  But UserService normally injects the ExpensiveService.  This is not appropriate
+for this unit test.  Maybe the ExpensiveService contacts a database, or maybe the ExpensiveService requires
+manual input normally.  In the test code we want to mock this service.  Luckily, in the test code we can
+bind a service with rank 1 or higher, and then that Mock service will be preferred over the normal code.
+
+Here is the full Mock code for AnExpensiveService from the test file:
+
+```go
+type MockExpensiveService struct {
+}
+
+func (mock *MockExpensiveService) DoExpensiveThing(thingToDo string) (string, error) {
+	// This service doesn't really do anything, but does return a different answer that can be checked
+	return "Mock", nil
+}
+```
+
+Here is the full test code, including the code that binds the mock service into the ServiceLocator with
+a Rank of 1, which will cause the mock to get injected in favor of the normal service:
+
+```go
+func putMocksIn() error {
+	return ioc.BindIntoLocator(globalLocator, func(binder ioc.Binder) error {
+		binder.Bind("AnExpensiveService", MockExpensiveService{}).Ranked(1)
+
+		return nil
+	})
+}
+
+func TestWithAMock(t *testing.T) {
+	err := putMocksIn()
+	if err != nil {
+		t.Error(err.Error())
+		return
+	}
+
+	raw, err := globalLocator.GetDService("UserService")
+	if err != nil {
+		t.Error(err.Error())
+		return
+	}
+
+	userService := raw.(*SomeOtherServiceData)
+
+	result, err := userService.DoSomeUserCode()
+	if err != nil {
+		t.Error(err.Error())
+		return
+	}
+
+	if result != "Mock" {
+		t.Errorf("Was expecting mock service but got %s", result)
+		return
+	}
+}
+```
+
+Using a dependency injection framework like Dargo means having a lot of flexibility when unit testing and
+can therefor lead to higher code coverage of your tests.
+
 ## Service Names
 
 Every service bound into the ServiceLocator has a name.  The names are scoped by a namespace.  There is

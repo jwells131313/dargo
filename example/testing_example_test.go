@@ -67,7 +67,15 @@ func TestWithAMock(t *testing.T) {
 		return
 	}
 
-	result, err := DoSomeUserCode()
+	raw, err := globalLocator.GetDService("UserService")
+	if err != nil {
+		t.Error(err.Error())
+		return
+	}
+
+	userService := raw.(*SomeOtherServiceData)
+
+	result, err := userService.DoSomeUserCode()
 	if err != nil {
 		t.Error(err.Error())
 		return

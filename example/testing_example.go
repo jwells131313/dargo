@@ -41,28 +41,32 @@
 package example
 
 import (
-	"fmt"
 	"github.com/jwells131313/dargo/ioc"
 	"time"
 )
 
 var globalLocator ioc.ServiceLocator
 
+// AnExpensiveService is a service that is expensive in some way
 type AnExpensiveService interface {
+	// DoExpensiveThing does some expensive operation
 	DoExpensiveThing(string) (string, error)
 }
 
+// NormalExpensiveServiceData is an implementation of AnExpensiveService in the normal code
 type NormalExpensiveServiceData struct {
+}
+
+// SomeOtherServiceData is another user service which injects the expensive service
+type SomeOtherServiceData struct {
+	// ExpensiveService is the expensive service, injected by Dargo
+	ExpensiveService AnExpensiveService `inject:"AnExpensiveService"`
 }
 
 func (nesd *NormalExpensiveServiceData) DoExpensiveThing(thingToDo string) (string, error) {
 	time.Sleep(5 * time.Second)
 
 	return "Normal", nil
-}
-
-type SomeOtherServiceData struct {
-	ExpensiveService AnExpensiveService `inject:"AnExpensiveService"`
 }
 
 func init() {
@@ -79,17 +83,6 @@ func init() {
 	globalLocator = myLocator
 }
 
-func DoSomeUserCode() (string, error) {
-	raw, err := globalLocator.GetDService("UserService")
-	if err != nil {
-		return "", err
-	}
-
-	userService, ok := raw.(*SomeOtherServiceData)
-	if !ok {
-		return "", fmt.Errorf("Unkonwn type")
-	}
-
-	return userService.ExpensiveService.DoExpensiveThing("foo")
-
+func (other *SomeOtherServiceData) DoSomeUserCode() (string, error) {
+	return other.ExpensiveService.DoExpensiveThing("foo")
 }
