@@ -10,15 +10,15 @@
   version = "v1.1.1"
 
 [[projects]]
-  digest = "1:f409008eacd1168461e616c6d56e2fb0e5192dca91424a21509e26266c8e333c"
+  digest = "1:33c1ad7ae60d5f0212585317c4f063bfb7d57e3e9d419252f6f025333779b91f"
   name = "github.com/jwells131313/goethe"
   packages = [
     ".",
     "cache",
   ]
   pruneopts = "UT"
-  revision = "76b04869b4db5cf2e48ccf549797f6985ea92416"
-  version = "v0.9.0"
+  revision = "0c916a126552e29e63ee7b919a262f4cabbf4402"
+  version = "v1.0.0"
 
 [[projects]]
   digest = "1:40e195917a951a8bf867cd05de2a46aaf1806c50cf92eebf4c16f78cd196f747"
@@ -58,18 +58,18 @@
   name = "golang.org/x/crypto"
   packages = ["ssh/terminal"]
   pruneopts = "UT"
-  revision = "182538f80094b6a8efaade63a8fd8e0d9d5843dd"
+  revision = "0e37d006457bf46f9e6692014ba72ef82c33022c"
 
 [[projects]]
   branch = "master"
-  digest = "1:629034aef6b53eb8ea737e6d82cb5402907e2757fbab5ddf5e74c08b4c6473af"
+  digest = "1:374fc90fcb026e9a367e3fad29e988e5dd944b68ca3f24a184d77abc5307dda4"
   name = "golang.org/x/sys"
   packages = [
     "unix",
     "windows",
   ]
   pruneopts = "UT"
-  revision = "fa5fdf94c78965f1aa8423f0cc50b8b8d728b05a"
+  revision = "d0be0721c37eeb5299f245a996a483160fc36940"
 
 [solve-meta]
   analyzer-name = "dep"
