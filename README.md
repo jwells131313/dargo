@@ -282,7 +282,7 @@ A service that is bound with the Bind method provides an instance of the struct 
 passed in is NOT the one that will be created and injected into, it is only used to determine the items
 that need to be injected and the type to create.  If that structure implements DargoInitializer (see below)
 then the DargoInitialize method will be called after all the service dependencies have been injected.  This
-provides an opportunity to do other initialize to the structure, or to return an error should there be
+provides an opportunity to do other initialization to the structure, or to return an error should there be
 some issue that can't be resolved.
 
 ```go
@@ -299,6 +299,10 @@ type DargoInitializer interface {
 	DargoInitialize(Descriptor) error
 }
 ```
+
+A service that is bound with a Creator function expects the entire initialization of that service to be
+done by the Creator function.  Even if that service implements DargoInitializer it will **not** have the
+DargoInitialize method called on it by the system.
 
 ## Testing
 
