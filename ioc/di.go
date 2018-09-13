@@ -163,7 +163,10 @@ func (di *diData) create(rawLocator ServiceLocator, desc Descriptor) (interface{
 
 	initializer, ok := iFace.(DargoInitializer)
 	if ok {
-		err := initializer.DargoInitialize(desc)
+		errRet := &errorReturn{}
+		safeDargoInitialize(initializer, desc, errRet)
+		err := errRet.err
+
 		if err != nil {
 			_, isMulti := err.(MultiError)
 			if !isMulti {
@@ -200,6 +203,16 @@ func safeSet(v reflect.Value, to reflect.Value, ret *errorReturn) {
 	}()
 
 	v.Set(to)
+}
+
+func safeDargoInitialize(dargoI DargoInitializer, desc Descriptor, ret *errorReturn) {
+	defer func() {
+		if r := recover(); r != nil {
+			ret.err = fmt.Errorf("%v", r)
+		}
+	}()
+
+	dargoI.DargoInitialize(desc)
 }
 
 func parseInjectString(parseMe string) (ServiceKey, error) {

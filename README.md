@@ -86,6 +86,8 @@ Using dargo helps unit test your code as it becomes easy to replace services ser
 If you ensure that your test mocks have a higher rank than the service bound by your normal code then
 all of your internal code will use the mock from the ServiceLocator rather than the original service.
 
+The entire Dargo API is thread-safe.  You can call Dargo API from within callbacks from the Dargo API.
+
 ### Injection Example
 
 In this example a service called SimpleService will inject a logger.  The logger itself is a dargo

@@ -43,6 +43,7 @@ package ioc
 import (
 	"fmt"
 	"github.com/stretchr/testify/assert"
+	"strings"
 	"testing"
 )
 
@@ -53,6 +54,7 @@ const (
 	DILocator4 = "DITestLocator4"
 	DILocator5 = "DITestLocator5"
 	DILocator6 = "DITestLocator6"
+	DILocator7 = "DITestLocator7"
 
 	AServiceName = "A"
 	BServiceName = "B"
@@ -69,6 +71,9 @@ const (
 
 	RainbowName      = "RainbowService"
 	ColorServiceName = "ColorService"
+
+	ExpectedPanicMessage = "expected panic message"
+	PanicService         = "PanicService"
 )
 
 func TestInitializerSuccess(t *testing.T) {
@@ -229,8 +234,6 @@ func TestProviderGetAll(t *testing.T) {
 			return
 		}
 
-		fmt.Printf("%d. %s\n", index, colorService.GetColor())
-
 		if !assert.Equal(t, cc, colorService.GetColor(), "invalid color at index %d", index) {
 			// return
 		}
@@ -269,6 +272,27 @@ func TestProviderQualifiedBy(t *testing.T) {
 			return
 		}
 	}
+}
+
+func TestInitializerPanics(t *testing.T) {
+	locator, err := CreateAndBind(DILocator7, func(binder Binder) error {
+		binder.Bind(PanicService, PanicyInitializerData{})
+		return nil
+	})
+	if !assert.Nil(t, err, "couldn't create locator %s", DILocator7) {
+		return
+	}
+
+	raw, err := locator.GetDService(PanicService)
+	if !assert.Nil(t, raw, "should not have returned a service, got %v", raw) {
+		return
+	}
+
+	if !assert.NotNil(t, err, "Should have gotten a failure") {
+		return
+	}
+
+	assert.True(t, strings.Contains(err.Error(), ExpectedPanicMessage), "should have gotten panic message")
 }
 
 func checkColor(t *testing.T, rainbow *RainbowServiceData, color string) bool {
@@ -358,4 +382,11 @@ func (csd *colorServiceData) DargoInitialize(desc Descriptor) error {
 
 func (csd *colorServiceData) GetColor() string {
 	return csd.color
+}
+
+type PanicyInitializerData struct {
+}
+
+func (pid *PanicyInitializerData) DargoInitialize(desc Descriptor) error {
+	panic(ExpectedPanicMessage)
 }
