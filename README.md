@@ -275,6 +275,30 @@ invoked, which will in turn lookup the logger service, which, since it is in the
 return a new one.  Subsequent lookups of the EchoService, however, will return the **same** EchoService, since
 the EchoService is in the Singleton scope.
 
+## Automatic Service Creation
+
+A service that is bound with the Bind method provides an instance of the struct to create.  The struct
+passed in is NOT the one that will be created and injected into, it is only used to determine the items
+that need to be injected and the type to create.  If that structure implements DargoInitializer (see below)
+then the DargoInitialize method will be called after all the service dependencies have been injected.  This
+provides an opportunity to do other initialize to the structure, or to return an error should there be
+some issue that can't be resolved.
+
+```go
+// DargoInitializer is used when using Binder.Bind and need
+// to be able to do further initialization after the services have
+// been injected into the structure and before it is given to the injectee
+// or lookup user
+type DargoInitializer interface {
+	// DargoInitialize is a method that will be called after all the
+	// injected fields have been filled in.  If this method returns
+	// a non-nil error then the creation of the service will fail
+	// The descriptor passed in is the descriptor being used to create
+	// the service
+	DargoInitialize(Descriptor) error
+}
+```
+
 ## Testing
 
 Unit testing becomes easier with Dargo services due to the dynamic nature of Dargo services and the fact
@@ -743,11 +767,11 @@ the ValidationService is bound into the locator.
 ### Security (Validation) Service Example
 
 This example shows how to create services that can only be injected into services in a special namespace
-_user/protected_ (example.ProtectedNamespace).  Further, once the initial set of services in the special
+_user/protected_.  Further, once the initial set of services in the special
 namespace have been created that namespace will be locked down so that no-one can later add services into it.
 
-Any service qualified with _Secure_ (example.SecureQualifier) will not be able to be directly looked up, and
-can only be injected into services in the _user/protected_ (example.ProtectedNamespace) namespace because the
+Any service qualified with _Secure_ will not be able to be directly looked up, and
+can only be injected into services in the _user/protected_ namespace because the
 Validator checks these conditions and disallows the operation otherwise.  Here is the implementation of the
 Validator (returned from the ValidationService):
 
@@ -792,8 +816,8 @@ func hasSecureQualifier(desc ioc.Descriptor) bool {
 ```
 
 The following code shows the binding of the validation service and a service in the
-_user/protected_ (example.ProtectedNamespace) namespace.  The interesting thing to note about
-that is that since the validation service is bound at the same time as the service in
+_user/protected_ namespace along with some other services.  The interesting thing to note about
+it is that since the validation service is bound at the same time as the service in
 the protected namespace the validator is NOT run, and therefor the service is allowed in.
 However, after that the Validator is run for all Bind/Unbind operations.
 
@@ -818,5 +842,3 @@ However, after that the Validator is run for all Bind/Unbind operations.
 The rest of the security example is found in the examples/security_example.go file.  It is an exercise left to
 the reader to modify the implementation of the Validator to also disallow people from Unbinding the
 ValidationService itself, since if someone could do that they could disable the security checks!
-
-
