@@ -58,11 +58,12 @@ have questions or comments please open issues.  Thank you.
 
 1.  [Basic Usage](#basic-usage)
 2.  [Testing](#testing)
-3.  [Service Names](#service-names)
-4.  [Context Scope](#context-scope)
-5.  [Provider](#provider)
-6.  [Error Service](#error-service)
-7.  [Security](#validation-service)
+3.  [Automatic Service Creation](#automatic-service-creation)
+4.  [Service Names](#service-names)
+5.  [Context Scope](#context-scope)
+6.  [Provider](#provider)
+7.  [Error Service](#error-service)
+8.  [Security](#validation-service)
 
 ## Basic Usage
 
