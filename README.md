@@ -58,11 +58,12 @@ have questions or comments please open issues.  Thank you.
 
 1.  [Basic Usage](#basic-usage)
 2.  [Testing](#testing)
-3.  [Service Names](#service-names)
-4.  [Context Scope](#context-scope)
-5.  [Provider](#provider)
-6.  [Error Service](#error-service)
-7.  [Security](#validation-service)
+3.  [Automatic Service Creation](#automatic-service-creation)
+4.  [Service Names](#service-names)
+5.  [Context Scope](#context-scope)
+6.  [Provider](#provider)
+7.  [Error Service](#error-service)
+8.  [Security](#validation-service)
 
 ## Basic Usage
 
@@ -274,6 +275,35 @@ When the test code does "locator.GetDService(EchoServiceName)" the create method
 invoked, which will in turn lookup the logger service, which, since it is in the PerLookup scope, will always
 return a new one.  Subsequent lookups of the EchoService, however, will return the **same** EchoService, since
 the EchoService is in the Singleton scope.
+
+## Automatic Service Creation
+
+A service that is bound with the Bind method provides an instance of the struct to create.  The struct
+passed in is NOT the one that will be created and injected into, it is only used to determine the items
+that need to be injected and the type to create.  If that structure implements DargoInitializer (see below)
+then the DargoInitialize method will be called after all the service dependencies have been injected.  This
+provides an opportunity to do other initialization to the structure, or to return an error should there be
+some issue that can't be resolved.
+
+```go
+// DargoInitializer is used when using Binder.Bind and need
+// to be able to do further initialization after the services have
+// been injected into the structure and before it is given to the injectee
+// or lookup user
+type DargoInitializer interface {
+	// DargoInitialize is a method that will be called after all the
+	// injected fields have been filled in.  If this method returns
+	// a non-nil error then the creation of the service will fail
+	// The descriptor passed in is the descriptor being used to create
+	// the service
+	DargoInitialize(Descriptor) error
+}
+```
+
+A service that is bound with a Creator function expects the entire initialization of that service to be
+done by the Creator function.  Even if that service implements DargoInitializer it will **not** have the
+DargoInitialize method called on it by the system.  The Creator function is passed the ServiceLocator that
+was used to create the service and the descriptor representing the description of the service.
 
 ## Testing
 
@@ -740,4 +770,81 @@ of the ValidationService will cause the configuration commit to fail.  Care shou
 with the services used by an ValidationService since they will also be created as soon as
 the ValidationService is bound into the locator.
 
+### Security (Validation) Service Example
 
+This example shows how to create services that can only be injected into services in a special namespace
+_user/protected_.  Further, once the initial set of services in the special
+namespace have been created that namespace will be locked down so that no-one can later add services into it.
+
+Any service qualified with _Secure_ will not be able to be directly looked up, and
+can only be injected into services in the _user/protected_ namespace because the
+Validator checks these conditions and disallows the operation otherwise.  Here is the implementation of the
+Validator (returned from the ValidationService):
+
+```go
+func (svs *secureValidationService) Validate(info ioc.ValidationInformation) error {
+	switch info.GetOperation() {
+	case ioc.BindOperation:
+		if info.GetCandidate().GetNamespace() == ProtectedNamespace {
+			return fmt.Errorf("may not bind service into protected namespace")
+		}
+		break
+	case ioc.UnbindOperation:
+		break
+	case ioc.LookupOperation:
+		candidate := info.GetCandidate()
+		if hasSecureQualifier(candidate) {
+			// Those with Secure qualifier can only be injected into
+			// services in the ProtectedNamespace and cannot be looked
+			// up directly
+			injectee := info.GetInjecteeDescriptor()
+			if injectee == nil {
+				return fmt.Errorf("Secure services cannot be looked up directly")
+			} else if injectee.GetNamespace() != ProtectedNamespace {
+				return fmt.Errorf("Secure service can only be injected into special services")
+			}
+		}
+		break
+	default:
+	}
+
+	return nil
+}
+
+func hasSecureQualifier(desc ioc.Descriptor) bool {
+	for _, q := range desc.GetQualifiers() {
+		if q == SecureQualifier {
+			return true
+		}
+	}
+	return false
+}
+```
+
+The following code shows the binding of the validation service and a service in the
+_user/protected_ namespace along with some other services.  The interesting thing to note about
+it is that since the validation service is bound at the same time as the service in
+the protected namespace the validator is NOT run, and therefor the service is allowed in.
+However, after that the Validator is run for all Bind/Unbind operations.
+
+```go
+    ioc.CreateAndBind("SecurityExampleLocator", func(binder ioc.Binder) error {
+	    // The validator is not run against the services bound in this binder
+		binder.Bind(ioc.ValidationServiceName, secureValidationService{}).InNamespace(ioc.UserServicesNamespace)
+		
+		// This service is marked "Secret" and can not be looked up or injected into a normal service
+		binder.Bind("SuperSecretService", SuperSecretService{}).QualifiedBy(SecureQualifier)
+		
+		// This service is in the protected namespace and therefore CAN have Secure services injected
+		binder.Bind("SystemProtectedService", ServiceData{}).InNamespace(ProtectedNamespace)
+		
+		// This is a normal user service, which should NOT be able to inject Secure services
+		binder.Bind("NormalUserService", ServiceData{})
+
+		return nil
+	})
+```
+
+The rest of the security example is found in the examples/security_example.go file.  It is an exercise left to
+the reader to modify the implementation of the Validator to also disallow people from Unbinding the
+ValidationService itself, since if someone could do that they could disable the security checks!
