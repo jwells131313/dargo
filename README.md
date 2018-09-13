@@ -740,4 +740,83 @@ of the ValidationService will cause the configuration commit to fail.  Care shou
 with the services used by an ValidationService since they will also be created as soon as
 the ValidationService is bound into the locator.
 
+### Security (Validation) Service Example
+
+This example shows how to create services that can only be injected into services in a special namespace
+_user/protected_ (example.ProtectedNamespace).  Further, once the initial set of services in the special
+namespace have been created that namespace will be locked down so that no-one can later add services into it.
+
+Any service qualified with _Secure_ (example.SecureQualifier) will not be able to be directly looked up, and
+can only be injected into services in the _user/protected_ (example.ProtectedNamespace) namespace because the
+Validator checks these conditions and disallows the operation otherwise.  Here is the implementation of the
+Validator (returned from the ValidationService):
+
+```go
+func (svs *secureValidationService) Validate(info ioc.ValidationInformation) error {
+	switch info.GetOperation() {
+	case ioc.BindOperation:
+		if info.GetCandidate().GetNamespace() == ProtectedNamespace {
+			return fmt.Errorf("may not bind service into protected namespace")
+		}
+		break
+	case ioc.UnbindOperation:
+		break
+	case ioc.LookupOperation:
+		candidate := info.GetCandidate()
+		if hasSecureQualifier(candidate) {
+			// Those with Secure qualifier can only be injected into
+			// services in the ProtectedNamespace and cannot be looked
+			// up directly
+			injectee := info.GetInjecteeDescriptor()
+			if injectee == nil {
+				return fmt.Errorf("Secure services cannot be looked up directly")
+			} else if injectee.GetNamespace() != ProtectedNamespace {
+				return fmt.Errorf("Secure service can only be injected into special services")
+			}
+		}
+		break
+	default:
+	}
+
+	return nil
+}
+
+func hasSecureQualifier(desc ioc.Descriptor) bool {
+	for _, q := range desc.GetQualifiers() {
+		if q == SecureQualifier {
+			return true
+		}
+	}
+	return false
+}
+```
+
+The following code shows the binding of the validation service and a service in the
+_user/protected_ (example.ProtectedNamespace) namespace.  The interesting thing to note about
+that is that since the validation service is bound at the same time as the service in
+the protected namespace the validator is NOT run, and therefor the service is allowed in.
+However, after that the Validator is run for all Bind/Unbind operations.
+
+```go
+    ioc.CreateAndBind("SecurityExampleLocator", func(binder ioc.Binder) error {
+	    // The validator is not run against the services bound in this binder
+		binder.Bind(ioc.ValidationServiceName, secureValidationService{}).InNamespace(ioc.UserServicesNamespace)
+		
+		// This service is marked "Secret" and can not be looked up or injected into a normal service
+		binder.Bind("SuperSecretService", SuperSecretService{}).QualifiedBy(SecureQualifier)
+		
+		// This service is in the protected namespace and therefore CAN have Secure services injected
+		binder.Bind("SystemProtectedService", ServiceData{}).InNamespace(ProtectedNamespace)
+		
+		// This is a normal user service, which should NOT be able to inject Secure services
+		binder.Bind("NormalUserService", ServiceData{})
+
+		return nil
+	})
+```
+
+The rest of the security example is found in the examples/security_example.go file.  It is an exercise left to
+the reader to modify the implementation of the Validator to also disallow people from Unbinding the
+ValidationService itself, since if someone could do that they could disable the security checks!
+
 

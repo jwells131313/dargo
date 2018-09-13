@@ -67,11 +67,10 @@ func (svs *secureValidationService) GetValidator() ioc.Validator {
 func (svs *secureValidationService) Validate(info ioc.ValidationInformation) error {
 	switch info.GetOperation() {
 	case ioc.BindOperation:
+	case ioc.UnbindOperation:
 		if info.GetCandidate().GetNamespace() == ProtectedNamespace {
 			return fmt.Errorf("may not bind service into protected namespace")
 		}
-		break
-	case ioc.UnbindOperation:
 		break
 	case ioc.LookupOperation:
 		candidate := info.GetCandidate()
