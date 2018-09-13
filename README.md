@@ -302,7 +302,8 @@ type DargoInitializer interface {
 
 A service that is bound with a Creator function expects the entire initialization of that service to be
 done by the Creator function.  Even if that service implements DargoInitializer it will **not** have the
-DargoInitialize method called on it by the system.
+DargoInitialize method called on it by the system.  The Creator function is passed the ServiceLocator that
+was used to create the service and the descriptor representing the description of the service.
 
 ## Testing
 
