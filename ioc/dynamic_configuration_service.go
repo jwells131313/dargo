@@ -153,7 +153,7 @@ func (mod *dynamicConfigModificationData) Commit() error {
 		return err
 	}
 
-	err = mod.parent.update(mod.binds, mod.removeFilters, mod.originalGeneration)
+	handlersAlreadyRun, err := mod.parent.update(mod.binds, mod.removeFilters, mod.originalGeneration)
 	mod.state = 1
 	if err != nil {
 		_, ok := err.(MultiError)
@@ -161,7 +161,9 @@ func (mod *dynamicConfigModificationData) Commit() error {
 			err = NewMultiError(err)
 		}
 
-		mod.parent.runErrorHandlers(DynamicConfigurationFailure, nil, nil, nil, err)
+		if !handlersAlreadyRun {
+			mod.parent.runErrorHandlers(DynamicConfigurationFailure, nil, nil, nil, err)
+		}
 
 		return err
 	}

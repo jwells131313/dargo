@@ -54,6 +54,7 @@ const (
 	ValidationTestLocatorName3 = "ValidationTestLocator3"
 	ValidationTestLocatorName4 = "ValidationTestLocator4"
 	ValidationTestLocatorName5 = "ValidationTestLocator5"
+	ValidationTestLocatorName6 = "ValidationTestLocator6"
 
 	DoNotBindService   = "DoNotBindService"
 	NeverUnbindService = "NeverUnbindService"
@@ -67,6 +68,8 @@ const (
 	NoClientString = "no client allowed in server environment"
 
 	UsesAClientService = "UsesAClientService"
+
+	BrokenValidatorMessage = "broken validator panic"
 )
 
 var isServer bool
@@ -285,6 +288,81 @@ func TestInjectValidationErrorService(t *testing.T) {
 		"invalid error %s", ei1.GetAssociatedError().Error())
 }
 
+func TestPanicyValidationService(t *testing.T) {
+	lastValidationErrorInformation = nil
+
+	locator, err := CreateAndBind(ValidationTestLocatorName6, func(binder Binder) error {
+		binder.Bind(ValidationServiceName, BrokenValidationServiceData{}).InNamespace(UserServicesNamespace)
+		binder.Bind(ErrorServiceName, ValidationErrorServiceData{}).InNamespace(UserServicesNamespace)
+		binder.Bind(ClientOrServerService, ClientService{}).QualifiedBy(Client).InScope(PerLookup)
+		binder.Bind(UsesAClientService, UsesAClientServiceData{})
+
+		return nil
+	})
+	if !assert.Nil(t, err, "error creating locator") {
+		return
+	}
+
+	// Absolutely nothing will work now
+	err = BindIntoLocator(locator, func(binder Binder) error {
+		binder.Bind(ClientOrServerService, ClientService{}).QualifiedBy(Server)
+		return nil
+	})
+	if !assert.NotNil(t, err, "should have failed with expected exception") {
+		return
+	}
+	if !assert.True(t, strings.Contains(err.Error(), BrokenValidatorMessage), "unexpected error %s", err.Error()) {
+		return
+	}
+
+	err = UnbindDServices(locator, ClientOrServerService)
+	if !assert.NotNil(t, err, "should have failed with expected exception") {
+		return
+	}
+	if !assert.True(t, strings.Contains(err.Error(), BrokenValidatorMessage), "unexpected error %s", err.Error()) {
+		return
+	}
+
+	_, err = locator.GetDService(ClientOrServerService)
+	if !assert.NotNil(t, err, "should have failed with expected exception") {
+		return
+	}
+	if !assert.True(t, isServiceNotFound(err), "unexpected error %s", err.Error()) {
+		return
+	}
+
+	_, err = locator.GetDService(UsesAClientService)
+	if !assert.NotNil(t, err, "should have failed with expected exception") {
+		return
+	}
+	if !assert.True(t, isServiceNotFound(err), "unexpected error %s", err.Error()) {
+		return
+	}
+
+	if !assert.Equal(t, 5, len(lastValidationErrorInformation),
+		"should have been three calls to error service") {
+		for index, ei := range lastValidationErrorInformation {
+			t.Errorf("%d. %v\n", (index + 1), ei)
+		}
+		return
+	}
+
+	usesDescriptor, err := locator.GetBestDescriptor(NewServiceKeyFilter(DSK(UsesAClientService)))
+	if !assert.Nil(t, err, "Should have been a descriptor for UsesAClientService") {
+		return
+	}
+	if !assert.NotNil(t, usesDescriptor, "no descriptor found") {
+		return
+	}
+
+	checkErrorInformation(t, lastValidationErrorInformation[0], DynamicConfigurationFailure, ClientOrServerService, nil, nil, BrokenValidatorMessage)
+	checkErrorInformation(t, lastValidationErrorInformation[1], DynamicConfigurationFailure, ClientOrServerService, nil, nil, BrokenValidatorMessage)
+	checkErrorInformation(t, lastValidationErrorInformation[2], LookupValidationFailure, ClientOrServerService, nil, nil, BrokenValidatorMessage)
+	checkErrorInformation(t, lastValidationErrorInformation[3], LookupValidationFailure, ClientOrServerService, nil, usesDescriptor, BrokenValidatorMessage)
+	checkErrorInformation(t, lastValidationErrorInformation[4], ServiceCreationFailure, UsesAClientService,
+		reflect.TypeOf(UsesAClientServiceData{}), nil, "service was not found")
+}
+
 func getClientService(t *testing.T, locator ServiceLocator) (*ClientService, error) {
 	raw, err := locator.GetDService(ClientOrServerService, Client)
 	if err != nil {
@@ -393,4 +471,23 @@ func (vesd *ValidationErrorServiceData) OnFailure(ei ErrorInformation) error {
 
 	lastValidationErrorInformation = append(lastValidationErrorInformation, ei)
 	return nil
+}
+
+type BrokenValidationServiceData struct{}
+
+func (broken *BrokenValidationServiceData) Validate(info ValidationInformation) error {
+	desc := info.GetCandidate()
+	if desc == nil || desc.GetName() == ClientOrServerService {
+		panic(BrokenValidatorMessage)
+	}
+
+	return nil
+}
+
+func (broken *BrokenValidationServiceData) GetFilter() Filter {
+	return AllFilter
+}
+
+func (broken *BrokenValidationServiceData) GetValidator() Validator {
+	return broken
 }

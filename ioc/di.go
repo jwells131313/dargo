@@ -212,7 +212,7 @@ func safeDargoInitialize(dargoI DargoInitializer, desc Descriptor, ret *errorRet
 		}
 	}()
 
-	dargoI.DargoInitialize(desc)
+	ret.err = dargoI.DargoInitialize(desc)
 }
 
 func parseInjectString(parseMe string) (ServiceKey, error) {

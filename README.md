@@ -40,7 +40,7 @@
 
 Dependency Injector for GO
 
-## Depenency Injector
+## Dependency Injector
 
 Dargo is an depenency injection system for GO.
 
@@ -53,6 +53,9 @@ not settled completely and may change in future revisions.  Once the dargo
 team has decided the API is good as it is we will make the 1.0 version which
 will have some backward compatibility guarantees.  In the meantime, if you
 have questions or comments please open issues.  Thank you.
+
+The similarities between this library and the java Dependency Injection framework [hk2](https://javaee.github.io/hk2/)
+is intentional.  The plan is to port many of the features of hk2 to this library.
 
 ## Table of Contents
 
