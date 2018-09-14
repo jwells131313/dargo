@@ -421,12 +421,21 @@ func (locator *serviceLocatorData) internalGetDescriptors(filter Filter, forMe D
 			vi := newValidationInformation(LookupOperation, desc, forMe, filter)
 
 			for _, validationService := range locator.validationServices {
-				validationFilter := validationService.GetFilter()
+				errRet := &errorReturn{}
+
+				validationFilter := safeGetFilter(validationService, errRet)
+				if errRet.err != nil {
+					return nil, errRet.err
+				}
 
 				if validationFilter.Filter(desc) {
-					validator := validationService.GetValidator()
-
 					errRet := &errorReturn{}
+
+					validator := safeGetValidator(validationService, errRet)
+					if errRet.err != nil {
+						return nil, errRet.err
+					}
+
 					safeValidate(validator, vi, errRet)
 					valError := errRet.err
 					if valError != nil {
@@ -560,12 +569,16 @@ func (locator *serviceLocatorData) update(newDescs []Descriptor,
 			removedDescriptor, nil, nil)
 
 		for _, validationService := range locator.validationServices {
-			validator := validationService.GetValidator()
+			errRet := &errorReturn{}
+
+			validator := safeGetValidator(validationService, errRet)
+			if errRet.err != nil {
+				return false, errRet.err
+			}
 			if validator == nil {
 				continue
 			}
 
-			errRet := &errorReturn{}
 			safeValidate(validator, unbindValidationInformation, errRet)
 			err := errRet.err
 			if err != nil {
@@ -586,12 +599,16 @@ func (locator *serviceLocatorData) update(newDescs []Descriptor,
 		bindValidationInformation := newValidationInformation(BindOperation, newDesc, nil, nil)
 
 		for _, validationService := range locator.validationServices {
-			validator := validationService.GetValidator()
+			errRet := &errorReturn{}
+
+			validator := safeGetValidator(validationService, errRet)
+			if errRet.err != nil {
+				return false, errRet.err
+			}
 			if validator == nil {
 				continue
 			}
 
-			errRet := &errorReturn{}
 			safeValidate(validator, bindValidationInformation, errRet)
 			err := errRet.err
 			if err != nil {
@@ -782,6 +799,26 @@ func safeValidate(validator Validator, info ValidationInformation, ret *errorRet
 	}()
 
 	ret.err = validator.Validate(info)
+}
+
+func safeGetFilter(validationService ValidationService, ret *errorReturn) Filter {
+	defer func() {
+		if r := recover(); r != nil {
+			ret.err = fmt.Errorf("%v", r)
+		}
+	}()
+
+	return validationService.GetFilter()
+}
+
+func safeGetValidator(validationService ValidationService, ret *errorReturn) Validator {
+	defer func() {
+		if r := recover(); r != nil {
+			ret.err = fmt.Errorf("%v", r)
+		}
+	}()
+
+	return validationService.GetValidator()
 }
 
 func (locator *serviceLocatorData) String() string {
