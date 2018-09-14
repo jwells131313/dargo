@@ -53,7 +53,7 @@ type stack interface {
 }
 
 func isServiceNotFound(e error) bool {
-	return strings.Contains(e.Error(), ServiceWithNameNotFoundExceptionString)
+	return strings.Contains(e.Error(), "service was not found: ")
 }
 
 type stackData struct {

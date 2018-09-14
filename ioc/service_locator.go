@@ -421,19 +421,29 @@ func (locator *serviceLocatorData) internalGetDescriptors(filter Filter, forMe D
 			vi := newValidationInformation(LookupOperation, desc, forMe, filter)
 
 			for _, validationService := range locator.validationServices {
-				validationFilter := validationService.GetFilter()
+				errRet := &errorReturn{}
+
+				validationFilter := safeGetFilter(validationService, errRet)
+				if errRet.err != nil {
+					return nil, errRet.err
+				}
 
 				if validationFilter.Filter(desc) {
-					validator := validationService.GetValidator()
+					errRet := &errorReturn{}
 
-					valError := validator.Validate(vi)
+					validator := safeGetValidator(validationService, errRet)
+					if errRet.err != nil {
+						return nil, errRet.err
+					}
+
+					safeValidate(validator, vi, errRet)
+					valError := errRet.err
 					if valError != nil {
 						_, ok := valError.(MultiError)
 						if !ok {
 							valError = NewMultiError(valError)
 						}
 
-						// TODO: Should be able to get the injectee
 						locator.runErrorHandlers(LookupValidationFailure, desc, nil, forMe, valError)
 
 						passedValidation = false
@@ -521,13 +531,14 @@ func (locator *serviceLocatorData) getNextServiceID() int64 {
 	return retVal
 }
 
+// update returns true if the error handlers have already been run
 func (locator *serviceLocatorData) update(newDescs []Descriptor,
-	removers []Filter, originalGeneration uint64) error {
+	removers []Filter, originalGeneration uint64) (bool, error) {
 	locator.glock.WriteLock()
 	defer locator.glock.WriteUnlock()
 
 	if originalGeneration != locator.generation {
-		return fmt.Errorf("there was an update to the ServiceLocator after this DynamicConfiguration was created")
+		return false, fmt.Errorf("there was an update to the ServiceLocator after this DynamicConfiguration was created")
 	}
 
 	newAllDescs := make([]Descriptor, 0)
@@ -558,12 +569,18 @@ func (locator *serviceLocatorData) update(newDescs []Descriptor,
 			removedDescriptor, nil, nil)
 
 		for _, validationService := range locator.validationServices {
-			validator := validationService.GetValidator()
+			errRet := &errorReturn{}
+
+			validator := safeGetValidator(validationService, errRet)
+			if errRet.err != nil {
+				return false, errRet.err
+			}
 			if validator == nil {
 				continue
 			}
 
-			err := validator.Validate(unbindValidationInformation)
+			safeValidate(validator, unbindValidationInformation, errRet)
+			err := errRet.err
 			if err != nil {
 				_, ok := err.(MultiError)
 				if !ok {
@@ -573,7 +590,7 @@ func (locator *serviceLocatorData) update(newDescs []Descriptor,
 				locator.runErrorHandlers(DynamicConfigurationFailure, removedDescriptor,
 					nil, nil, err)
 
-				return err
+				return true, err
 			}
 		}
 	}
@@ -582,12 +599,18 @@ func (locator *serviceLocatorData) update(newDescs []Descriptor,
 		bindValidationInformation := newValidationInformation(BindOperation, newDesc, nil, nil)
 
 		for _, validationService := range locator.validationServices {
-			validator := validationService.GetValidator()
+			errRet := &errorReturn{}
+
+			validator := safeGetValidator(validationService, errRet)
+			if errRet.err != nil {
+				return false, errRet.err
+			}
 			if validator == nil {
 				continue
 			}
 
-			err := validator.Validate(bindValidationInformation)
+			safeValidate(validator, bindValidationInformation, errRet)
+			err := errRet.err
 			if err != nil {
 				_, ok := err.(MultiError)
 				if !ok {
@@ -596,13 +619,13 @@ func (locator *serviceLocatorData) update(newDescs []Descriptor,
 
 				locator.runErrorHandlers(DynamicConfigurationFailure, newDesc, nil, nil, err)
 
-				return err
+				return true, err
 			}
 		}
 
 		if isErrorService(newDesc) || isValidationService(newDesc) {
 			if Singleton != newDesc.GetScope() {
-				return fmt.Errorf("implementations of %s must be in the singleton scope",
+				return false, fmt.Errorf("implementations of %s must be in the singleton scope",
 					newDesc.GetName())
 			}
 
@@ -641,19 +664,19 @@ func (locator *serviceLocatorData) update(newDescs []Descriptor,
 		// Must get all error services again
 		errorServiceKey, err := NewServiceKey(UserServicesNamespace, ErrorServiceName)
 		if err != nil {
-			return errors.Wrap(err, "creation of error service key failed")
+			return false, errors.Wrap(err, "creation of error service key failed")
 		}
 
 		raws, err := locator.GetAllServices(errorServiceKey)
 		if err != nil {
-			return errors.Wrap(err, "creation of error services failed")
+			return false, errors.Wrap(err, "creation of error services failed")
 		}
 
 		newErrorServices := make([]ErrorService, 0)
 		for _, errorServiceRaw := range raws {
 			errorService, ok := errorServiceRaw.(ErrorService)
 			if !ok {
-				return fmt.Errorf("a service %v with error service key does not implement error service",
+				return false, fmt.Errorf("a service %v with error service key does not implement error service",
 					errorServiceRaw)
 			}
 
@@ -667,19 +690,19 @@ func (locator *serviceLocatorData) update(newDescs []Descriptor,
 		// Must get all validation services again
 		validationServiceKey, err := NewServiceKey(UserServicesNamespace, ValidationServiceName)
 		if err != nil {
-			return errors.Wrap(err, "creation of validation service key failed")
+			return false, errors.Wrap(err, "creation of validation service key failed")
 		}
 
 		raws, err := locator.GetAllServices(validationServiceKey)
 		if err != nil {
-			return errors.Wrap(err, "creation of error services failed")
+			return false, errors.Wrap(err, "creation of error services failed")
 		}
 
 		newValidationServices := make([]ValidationService, 0)
 		for _, validationServiceRaw := range raws {
 			validationService, ok := validationServiceRaw.(ValidationService)
 			if !ok {
-				return fmt.Errorf("a service %v with validation service key does not implement error service",
+				return false, fmt.Errorf("a service %v with validation service key does not implement error service",
 					validationServiceRaw)
 			}
 
@@ -691,7 +714,7 @@ func (locator *serviceLocatorData) update(newDescs []Descriptor,
 
 	success = true
 
-	return nil
+	return false, nil
 }
 
 func isErrorService(desc Descriptor) bool {
@@ -766,6 +789,36 @@ func safeCallUserErrorService(errorService ErrorService, ei ErrorInformation) er
 
 func (locator *serviceLocatorData) GetState() string {
 	return locator.state
+}
+
+func safeValidate(validator Validator, info ValidationInformation, ret *errorReturn) {
+	defer func() {
+		if r := recover(); r != nil {
+			ret.err = fmt.Errorf("%v", r)
+		}
+	}()
+
+	ret.err = validator.Validate(info)
+}
+
+func safeGetFilter(validationService ValidationService, ret *errorReturn) Filter {
+	defer func() {
+		if r := recover(); r != nil {
+			ret.err = fmt.Errorf("%v", r)
+		}
+	}()
+
+	return validationService.GetFilter()
+}
+
+func safeGetValidator(validationService ValidationService, ret *errorReturn) Validator {
+	defer func() {
+		if r := recover(); r != nil {
+			ret.err = fmt.Errorf("%v", r)
+		}
+	}()
+
+	return validationService.GetValidator()
 }
 
 func (locator *serviceLocatorData) String() string {

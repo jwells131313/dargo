@@ -40,6 +40,8 @@
 
 package ioc
 
+import "fmt"
+
 // ValidationInformation is passed into the Validator.Validate method
 // to provide information about the service being validated
 type ValidationInformation interface {
@@ -138,4 +140,10 @@ func (vid *validationInformationData) GetInjecteeDescriptor() Descriptor {
 
 func (vid *validationInformationData) GetFilter() Filter {
 	return vid.filter
+}
+
+func (vid *validationInformationData) String() string {
+	retVal := fmt.Sprintf("ValidationInformation(%s,%v,%v,%v)", vid.operation,
+		vid.descriptor, vid.injectee, vid.filter)
+	return retVal
 }

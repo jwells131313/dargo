@@ -276,6 +276,21 @@ func checkErrorInformation(t *testing.T, ei ErrorInformation, infoType string,
 		}
 	}
 
+	if injecteeDescriptor != nil {
+		eiInjecteeDescriptor := ei.GetInjecteeDescriptor()
+
+		if !assert.Equal(t, injecteeDescriptor, eiInjecteeDescriptor, "not the same injectee descriptor") {
+			return false
+		}
+
+	} else {
+		eiInjecteeDescriptor := ei.GetInjecteeDescriptor()
+
+		if !assert.Nil(t, eiInjecteeDescriptor, "the injectee descriptor should be nil, it is %v", eiInjecteeDescriptor) {
+			return false
+		}
+	}
+
 	if expectedError != "" {
 		rawError := ei.GetAssociatedError()
 		multi, ok := rawError.(MultiError)
