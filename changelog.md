@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add other improvements to README
 - Add API Inject to ServiceLocator
 - Some code refactoring
+- Binder.Bind method now takes a pointer to a struct as well as the struct itself
 
 ## [0.3.0] - 2018-09-12
 ### Added

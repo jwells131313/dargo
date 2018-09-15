@@ -124,7 +124,7 @@ func TestShutdownServiceLocator(t *testing.T) {
 
 func TestRawInject(t *testing.T) {
 	locator, err := CreateAndBind(testLocatorName4, func(binder Binder) error {
-		binder.Bind("Service", Service{})
+		binder.Bind("Service", &Service{})
 		return nil
 	})
 	if !assert.Nil(t, err, "error creating locator") {
