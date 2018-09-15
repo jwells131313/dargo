@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 ### Changed
 - Add ValidationService example to README
+- Add other improvements to README
+- Add API Inject to ServiceLocator
+- Some code refactoring
 
 ## [0.3.0] - 2018-09-12
 ### Added

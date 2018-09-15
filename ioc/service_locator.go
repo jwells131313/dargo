@@ -82,13 +82,13 @@ type ServiceLocator interface {
 	// lowest serviceId or if the serviceId are the same the one with the highest locatorId
 	GetBestDescriptor(Filter) (Descriptor, error)
 
-	// Inject takes a structure or structure pointer and injects into it any
+	// Inject takes a pointer to a structure and injects into it any
 	// injection points from the services in this ServiceLocator.  The struct
 	// passed in will not be managed by this ServiceLocator after this method
 	// returns.  If an injection point cannot be resolved by this ServiceLocator
-	// an error is returned.  It is possible that only a partial set of injection
-	// points are injected into the structure.  If the input is not a structure
-	// or a pointer to a structure this will return an error
+	// an error is returned.  If the input is not a pointer to a structure this
+	// will return an error.  The locators error handlers will not be run in error
+	// cases but validators will be run
 	Inject(interface{}) error
 
 	// GetName gets the name of this ServiceLocator
