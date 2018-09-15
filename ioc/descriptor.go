@@ -59,6 +59,9 @@ type Descriptor interface {
 	// GetName Returns the name of this service (may not be empty string)
 	GetName() string
 
+	// GetFullName Returns namespace#name
+	GetFullName() string
+
 	// GetScope Returns the scope of this service
 	GetScope() string
 
@@ -247,6 +250,13 @@ func (di *baseDescriptor) GetName() string {
 	defer di.lock.Unlock()
 
 	return di.name
+}
+
+func (di *baseDescriptor) GetFullName() string {
+	di.lock.Lock()
+	defer di.lock.Unlock()
+
+	return fmt.Sprintf("%s#%s", di.namespace, di.name)
 }
 
 func (di *baseDescriptor) GetScope() string {

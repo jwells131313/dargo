@@ -168,5 +168,15 @@ func (mod *dynamicConfigModificationData) Commit() error {
 		return err
 	}
 
+	configListenersRaw, err := mod.parent.GetAllServices(USK(ConfigurationListenerName))
+	if err == nil {
+		for _, raw := range configListenersRaw {
+			configListener, ok := raw.(ConfigurationListener)
+			if ok {
+				safeConfigurationChanged(configListener)
+			}
+		}
+	}
+
 	return nil
 }

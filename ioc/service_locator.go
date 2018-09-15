@@ -557,6 +557,39 @@ func (locator *serviceLocatorData) getNextServiceID() int64 {
 	return retVal
 }
 
+func (locator *serviceLocatorData) CreateServiceFromDescriptor(desc Descriptor) (interface{}, error) {
+	err := locator.checkState()
+	if err != nil {
+		return nil, err
+	}
+
+	cf := desc.GetCreateFunction()
+
+	retVal, err := cf(locator, desc)
+	if err != nil {
+		var hasRunHandlers bool
+
+		hasRunError, isHasRunError := err.(hasRunErrorHandlersError)
+		if isHasRunError {
+			hasRunHandlers = hasRunError.GetHasRunErrorHandlers()
+
+			err = hasRunError.GetUnderlyingError()
+		} else {
+			_, isMulti := err.(MultiError)
+
+			if !isMulti {
+				err = NewMultiError(err)
+			}
+		}
+
+		if !hasRunHandlers {
+			locator.runErrorHandlers(ServiceCreationFailure, desc, nil, nil, err)
+		}
+	}
+
+	return retVal, err
+}
+
 // update returns true if the error handlers have already been run
 func (locator *serviceLocatorData) update(newDescs []Descriptor,
 	removers []Filter, originalGeneration uint64) (bool, error) {
@@ -649,7 +682,7 @@ func (locator *serviceLocatorData) update(newDescs []Descriptor,
 			}
 		}
 
-		if isErrorService(newDesc) || isValidationService(newDesc) {
+		if isErrorService(newDesc) || isValidationService(newDesc) || isConfigurationListener(newDesc) {
 			if Singleton != newDesc.GetScope() {
 				return false, fmt.Errorf("implementations of %s must be in the singleton scope",
 					newDesc.GetName())
@@ -743,57 +776,6 @@ func (locator *serviceLocatorData) update(newDescs []Descriptor,
 	return false, nil
 }
 
-func isErrorService(desc Descriptor) bool {
-	if UserServicesNamespace == desc.GetNamespace() &&
-		ErrorServiceName == desc.GetName() {
-		return true
-	}
-
-	return false
-}
-
-func isValidationService(desc Descriptor) bool {
-	if UserServicesNamespace == desc.GetNamespace() &&
-		ValidationServiceName == desc.GetName() {
-		return true
-	}
-
-	return false
-}
-
-func (locator *serviceLocatorData) CreateServiceFromDescriptor(desc Descriptor) (interface{}, error) {
-	err := locator.checkState()
-	if err != nil {
-		return nil, err
-	}
-
-	cf := desc.GetCreateFunction()
-
-	retVal, err := cf(locator, desc)
-	if err != nil {
-		var hasRunHandlers bool
-
-		hasRunError, isHasRunError := err.(hasRunErrorHandlersError)
-		if isHasRunError {
-			hasRunHandlers = hasRunError.GetHasRunErrorHandlers()
-
-			err = hasRunError.GetUnderlyingError()
-		} else {
-			_, isMulti := err.(MultiError)
-
-			if !isMulti {
-				err = NewMultiError(err)
-			}
-		}
-
-		if !hasRunHandlers {
-			locator.runErrorHandlers(ServiceCreationFailure, desc, nil, nil, err)
-		}
-	}
-
-	return retVal, err
-}
-
 func (locator *serviceLocatorData) runErrorHandlers(typ string, desc Descriptor, injectee reflect.Type, forMe Descriptor, err error) {
 	ei := newErrorImformation(typ, desc, injectee, forMe, err)
 
@@ -802,49 +784,8 @@ func (locator *serviceLocatorData) runErrorHandlers(typ string, desc Descriptor,
 	}
 }
 
-// Pesky users can panic, lets not allow that
-func safeCallUserErrorService(errorService ErrorService, ei ErrorInformation) error {
-	defer func() {
-		if r := recover(); r != nil {
-			// Ignore me
-		}
-	}()
-
-	return errorService.OnFailure(ei)
-}
-
 func (locator *serviceLocatorData) GetState() string {
 	return locator.state
-}
-
-func safeValidate(validator Validator, info ValidationInformation, ret *errorReturn) {
-	defer func() {
-		if r := recover(); r != nil {
-			ret.err = fmt.Errorf("%v", r)
-		}
-	}()
-
-	ret.err = validator.Validate(info)
-}
-
-func safeGetFilter(validationService ValidationService, ret *errorReturn) Filter {
-	defer func() {
-		if r := recover(); r != nil {
-			ret.err = fmt.Errorf("%v", r)
-		}
-	}()
-
-	return validationService.GetFilter()
-}
-
-func safeGetValidator(validationService ValidationService, ret *errorReturn) Validator {
-	defer func() {
-		if r := recover(); r != nil {
-			ret.err = fmt.Errorf("%v", r)
-		}
-	}()
-
-	return validationService.GetValidator()
 }
 
 func (locator *serviceLocatorData) String() string {

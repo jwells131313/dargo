@@ -233,3 +233,81 @@ func createAndInject(locator *serviceLocatorData, desc Descriptor, dity reflect.
 
 	return iFace, nil
 }
+
+func safeValidate(validator Validator, info ValidationInformation, ret *errorReturn) {
+	defer func() {
+		if r := recover(); r != nil {
+			ret.err = fmt.Errorf("%v", r)
+		}
+	}()
+
+	ret.err = validator.Validate(info)
+}
+
+func safeGetFilter(validationService ValidationService, ret *errorReturn) Filter {
+	defer func() {
+		if r := recover(); r != nil {
+			ret.err = fmt.Errorf("%v", r)
+		}
+	}()
+
+	return validationService.GetFilter()
+}
+
+func safeGetValidator(validationService ValidationService, ret *errorReturn) Validator {
+	defer func() {
+		if r := recover(); r != nil {
+			ret.err = fmt.Errorf("%v", r)
+		}
+	}()
+
+	return validationService.GetValidator()
+}
+
+// Pesky users can panic, lets not allow that
+func safeCallUserErrorService(errorService ErrorService, ei ErrorInformation) error {
+	defer func() {
+		if r := recover(); r != nil {
+			// Ignore me
+		}
+	}()
+
+	return errorService.OnFailure(ei)
+}
+
+func safeConfigurationChanged(configurationListener ConfigurationListener) {
+	defer func() {
+		if r := recover(); r != nil {
+			// Ignore me
+		}
+	}()
+
+	configurationListener.ConfigurationChanged()
+}
+
+func isErrorService(desc Descriptor) bool {
+	if UserServicesNamespace == desc.GetNamespace() &&
+		ErrorServiceName == desc.GetName() {
+		return true
+	}
+
+	return false
+}
+
+func isValidationService(desc Descriptor) bool {
+	if UserServicesNamespace == desc.GetNamespace() &&
+		ValidationServiceName == desc.GetName() {
+		return true
+	}
+
+	return false
+}
+
+func isConfigurationListener(desc Descriptor) bool {
+	if UserServicesNamespace == desc.GetNamespace() &&
+		ConfigurationListenerName == desc.GetName() {
+		return true
+	}
+
+	return false
+}
