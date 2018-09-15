@@ -119,6 +119,8 @@ type idFilterData struct {
 	serviceID int64
 }
 
+// NewIDFilter is a filter specific to a descriptor with
+// the exact locatorID and serviceID given
 func NewIDFilter(locatorID, serviceID int64) Filter {
 	return &idFilterData{
 		locatorID: locatorID,
