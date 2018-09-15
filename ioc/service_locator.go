@@ -82,6 +82,15 @@ type ServiceLocator interface {
 	// lowest serviceId or if the serviceId are the same the one with the highest locatorId
 	GetBestDescriptor(Filter) (Descriptor, error)
 
+	// Inject takes a pointer to a structure and injects into it any
+	// injection points from the services in this ServiceLocator.  The struct
+	// passed in will not be managed by this ServiceLocator after this method
+	// returns.  If an injection point cannot be resolved by this ServiceLocator
+	// an error is returned.  If the input is not a pointer to a structure this
+	// will return an error.  The locators error handlers will not be run in error
+	// cases but validators will be run
+	Inject(interface{}) error
+
 	// GetName gets the name of this ServiceLocator
 	GetName() string
 
@@ -341,6 +350,23 @@ func (locator *serviceLocatorData) GetName() string {
 
 func (locator *serviceLocatorData) GetID() int64 {
 	return locator.ID
+}
+
+func (locator *serviceLocatorData) Inject(input interface{}) error {
+	ty := reflect.TypeOf(input)
+	if ty.Kind() != reflect.Ptr {
+		return fmt.Errorf("input to inject must be a pointer")
+	}
+	val := reflect.ValueOf(input)
+
+	iType := ty.Elem()
+	if iType.Kind() != reflect.Struct {
+		return fmt.Errorf("input to inject must be a pointer to a struct")
+	}
+
+	_, err := createAndInject(locator, nil, iType, &val)
+
+	return err
 }
 
 func (locator *serviceLocatorData) Shutdown() {

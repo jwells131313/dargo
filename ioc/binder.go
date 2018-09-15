@@ -47,11 +47,12 @@ type BinderMethod func(Binder) error
 
 // Binder A fluent interface for creating descriptors
 type Binder interface {
-	// Bind binds the given name to the structure.  It will be a pointer to an instance of
-	// that structure passed to injection points.  If the structure implements DargoInitializer
+	// Bind binds the given name to the structure.  prototype can be the struct to be created
+	// or can be a pointer to the struct to be created.  prototype is NOT the structure
+	// that will be used as a service by Dargo.  If prototype implements DargoInitializer
 	// then the DargoInitialize method will be called on it prior to being given to other
 	// services
-	Bind(name string, str interface{}) Binder
+	Bind(name string, prototype interface{}) Binder
 	// BindWithCreator binds the given name to a creation function
 	BindWithCreator(name string, bindMethod func(ServiceLocator, Descriptor) (interface{}, error)) Binder
 	// InScope changes the scope to the given scope.  The default scope is Singleton
@@ -127,9 +128,11 @@ func (binder *binder) Bind(name string, str interface{}) Binder {
 	}
 
 	ty := reflect.TypeOf(str)
+	if ty.Kind() == reflect.Ptr {
+		ty = ty.Elem()
+	}
 	if ty.Kind() != reflect.Struct {
-		// TODO: We could probably make this a pointer to a struct as well
-		panic("Bind must be passed a struct (not a pointer to a struct)")
+		panic("Bind must be passed a struct")
 	}
 
 	cf := newCreatorFunc(ty, binder.parent)

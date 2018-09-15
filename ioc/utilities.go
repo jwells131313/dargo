@@ -42,6 +42,7 @@ package ioc
 
 import (
 	"fmt"
+	"reflect"
 	"strings"
 	"sync"
 )
@@ -105,4 +106,130 @@ func (stack *stackData) Peek() (interface{}, bool) {
 	}
 
 	return stack.stack[sLen-1], true
+}
+
+func createAndInject(locator *serviceLocatorData, desc Descriptor, dity reflect.Type, preCreated *reflect.Value) (interface{}, error) {
+	numFields := dity.NumField()
+
+	dependencies := make([]*indexAndValueOfDependency, 0)
+	depErrors := NewMultiError()
+
+	for lcv := 0; lcv < numFields; lcv++ {
+		fieldVal := dity.Field(lcv)
+
+		injectString := fieldVal.Tag.Get("inject")
+
+		if injectString != "" {
+			serviceKey, err := parseInjectString(injectString)
+			if err != nil {
+				depErrors.AddError(err)
+			} else {
+				fieldType := fieldVal.Type
+
+				var dependency interface{}
+				var err error
+				if !isProvider(fieldType) {
+					dependency, err = locator.getServiceFor(serviceKey, desc)
+				} else {
+					dependency = newProvider(locator, serviceKey, desc)
+				}
+
+				if err != nil {
+					depErrors.AddError(err)
+				} else {
+					dependencyAsValue := reflect.ValueOf(dependency)
+
+					dependencies = append(dependencies, &indexAndValueOfDependency{
+						index: lcv,
+						value: dependencyAsValue,
+					})
+				}
+			}
+		}
+	}
+
+	if depErrors.HasError() {
+		depErrors.AddError(fmt.Errorf("an error occurred while getting the dependencies of %v", desc))
+
+		var replyError error
+		if preCreated == nil {
+			locator.runErrorHandlers(ServiceCreationFailure, desc, dity, nil, depErrors)
+
+			replyError = &hasRunHandlers{
+				hasRunHandlers:  true,
+				underlyingError: depErrors,
+			}
+		} else {
+			replyError = depErrors
+		}
+
+		return nil, replyError
+	}
+
+	var retVal *reflect.Value
+	if preCreated != nil {
+		retVal = preCreated
+	} else {
+		newVal := reflect.New(dity)
+		retVal = &newVal
+	}
+
+	indirect := reflect.Indirect(*retVal)
+
+	for _, iav := range dependencies {
+		index := iav.index
+		value := iav.value
+
+		fieldValue := indirect.Field(index)
+		errRet := &errorReturn{}
+		safeSet(fieldValue, value, errRet)
+		if errRet.err != nil {
+			depErrors.AddError(errRet.err)
+		}
+	}
+
+	if depErrors.HasError() {
+		depErrors.AddError(fmt.Errorf("an error occurred while injecting the dependencies of %v", desc))
+
+		var replyError error
+		if preCreated == nil {
+			locator.runErrorHandlers(ServiceCreationFailure, desc, dity, nil, depErrors)
+
+			replyError = &hasRunHandlers{
+				hasRunHandlers:  true,
+				underlyingError: depErrors,
+			}
+		} else {
+			replyError = depErrors
+		}
+
+		return nil, replyError
+	}
+
+	iFace := retVal.Interface()
+
+	initializer, ok := iFace.(DargoInitializer)
+	if preCreated == nil && ok {
+		errRet := &errorReturn{}
+		safeDargoInitialize(initializer, desc, errRet)
+		err := errRet.err
+
+		if err != nil {
+			_, isMulti := err.(MultiError)
+			if !isMulti {
+				err = NewMultiError(err)
+			}
+
+			locator.runErrorHandlers(ServiceCreationFailure, desc, dity, nil, err)
+
+			replyError := &hasRunHandlers{
+				hasRunHandlers:  true,
+				underlyingError: err.(MultiError),
+			}
+
+			return nil, replyError
+		}
+	}
+
+	return iFace, nil
 }
