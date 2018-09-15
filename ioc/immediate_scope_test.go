@@ -41,6 +41,7 @@
 package ioc
 
 import (
+	"fmt"
 	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
@@ -48,6 +49,9 @@ import (
 
 const (
 	ImmediateTestLocator1 = "ImmediateTestLocator1"
+	ImmediateTestLocator2 = "ImmediateTestLocator2"
+
+	ImmediateServiceName = "ImmediateService"
 )
 
 var globalStarted bool
@@ -56,7 +60,7 @@ func TestExistingAreStarted(t *testing.T) {
 	globalStarted = false
 
 	locator, err := CreateAndBind(ImmediateTestLocator1, func(binder Binder) error {
-		binder.Bind("ImmediateService", &ImmediateService{}).InScope(ImmediateScope)
+		binder.Bind(ImmediateServiceName, &ImmediateService{}).InScope(ImmediateScope)
 		return nil
 	})
 	if !assert.Nil(t, err, "could not create locator") {
@@ -81,6 +85,82 @@ func TestExistingAreStarted(t *testing.T) {
 	}
 
 	assert.True(t, globalStarted, "service was not started")
+}
+
+func TestAddedAreStartedAndStopped(t *testing.T) {
+	globalStarted = false
+
+	locator, err := CreateAndBind(ImmediateTestLocator2, func(binder Binder) error {
+		return nil
+	})
+	if !assert.Nil(t, err, "could not create locator") {
+		return
+	}
+
+	if !assert.False(t, globalStarted, "should not have started yet") {
+		return
+	}
+
+	err = EnableImmediateScope(locator)
+	if !assert.Nil(t, err, "could not enable immediate scope %v", err) {
+		return
+	}
+
+	if !assert.False(t, globalStarted, "should not have started yet") {
+		return
+	}
+
+	err = BindIntoLocator(locator, func(binder Binder) error {
+		binder.Bind(ImmediateServiceName, &ImmediateService{}).InScope(ImmediateScope).
+			AndDestroyWith(func(l ServiceLocator, d Descriptor, o interface{}) error {
+				immediate, ok := o.(*ImmediateService)
+				if !ok {
+					return fmt.Errorf("incorrect type")
+				}
+
+				immediate.stopped = true
+
+				return nil
+			})
+		return nil
+	})
+
+	for lcv := 0; lcv < 20; lcv++ {
+		if globalStarted {
+			break
+		}
+
+		time.Sleep(1 * time.Second)
+	}
+
+	assert.True(t, globalStarted, "service was not started")
+
+	raw, err := locator.GetDService(ImmediateServiceName)
+	if !assert.Nil(t, err, "didn't find immediate service?") {
+		return
+	}
+
+	is, ok := raw.(*ImmediateService)
+	if !assert.True(t, ok, "invalid type") {
+		return
+	}
+
+	if !assert.False(t, is.stopped, "already stopped?") {
+		return
+	}
+
+	err = UnbindDServices(locator, ImmediateServiceName)
+	if !assert.Nil(t, err, "could not unbind immediate service") {
+		return
+	}
+
+	for lcv := 0; lcv < 20; lcv++ {
+		if is.stopped {
+			break
+		}
+
+		time.Sleep(1 * time.Second)
+	}
 }
 
 type ImmediateService struct {

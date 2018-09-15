@@ -50,23 +50,28 @@ import (
 
 var immediateFilter = &immediateFilterData{}
 
+// ImmediateScopeData is the implementation of ContextualScope for ImmediateScope
 type ImmediateScopeData struct {
 	Locator ServiceLocator `inject:"system#ServiceLocator"`
 	cache   cache.Cache
 }
 
+// GetScope implements the ContextualScope interface
 func (isd *ImmediateScopeData) GetScope() string {
 	return ImmediateScope
 }
 
+// FindOrCreate implements the ContextualScope interface
 func (isd *ImmediateScopeData) FindOrCreate(locator ServiceLocator, desc Descriptor) (interface{}, error) {
 	return isd.cache.Compute(idKey{desc: desc})
 }
 
+// ContainsKey implements the ContextualScope interface
 func (isd *ImmediateScopeData) ContainsKey(locator ServiceLocator, desc Descriptor) bool {
 	return isd.cache.HasKey(idKey{desc: desc})
 }
 
+// DestroyOne implements the ContextualScope interface
 func (isd *ImmediateScopeData) DestroyOne(locator ServiceLocator, desc Descriptor) error {
 	lookForMe := idKey{desc: desc}
 
@@ -83,14 +88,17 @@ func (isd *ImmediateScopeData) DestroyOne(locator ServiceLocator, desc Descripto
 	return nil
 }
 
+// GetSupportsNilCreation implements the ContextualScope interface
 func (isd *ImmediateScopeData) GetSupportsNilCreation(locator ServiceLocator) bool {
 	return false
 }
 
+// IsActive implements the ContextualScope interface
 func (isd *ImmediateScopeData) IsActive(locator ServiceLocator) bool {
 	return true
 }
 
+// Shutdown implements the ContextualScope interface
 func (isd *ImmediateScopeData) Shutdown(locator ServiceLocator) {
 	tid := threadManager.GetThreadID()
 	if tid < 0 {
@@ -106,6 +114,7 @@ func (isd *ImmediateScopeData) Shutdown(locator ServiceLocator) {
 	isd.internalShutdown()
 }
 
+// DargoInitialize initializes the scope
 func (isd *ImmediateScopeData) DargoInitialize(desc Descriptor) error {
 	c, err := cache.NewCache(isd, func(in interface{}) error {
 		return fmt.Errorf("cycle detected in immediate scope involving %v", in)
@@ -120,6 +129,7 @@ func (isd *ImmediateScopeData) DargoInitialize(desc Descriptor) error {
 	return nil
 }
 
+// Compute gets the singleton-like service value
 func (isd *ImmediateScopeData) Compute(in interface{}) (interface{}, error) {
 	key, ok := in.(idKey)
 	if !ok {
@@ -159,6 +169,7 @@ func (isd *ImmediateScopeData) actualDestruction(desc Descriptor, value interfac
 	df(isd.Locator, desc, value)
 }
 
+// ImmediateConfigurationListerData structure for the ImmediateService configuration listener service
 type ImmediateConfigurationListerData struct {
 	lock              sync.Mutex
 	Locator           ServiceLocator  `inject:"system#ServiceLocator"`
@@ -168,16 +179,17 @@ type ImmediateConfigurationListerData struct {
 	threadPool        goethe.Pool
 }
 
+// DargoInitialize initializes the configuration listener
 func (listener *ImmediateConfigurationListerData) DargoInitialize(desc Descriptor) error {
 	descriptors, err := listener.Locator.GetDescriptors(immediateFilter)
 	if err != nil {
 		return err
 	}
 
-	listener.workQueue = goethe.NewBoundedFunctionQueue(1000000)
+	listener.workQueue = goethe.NewBoundedFunctionQueue(10000000)
 
-	p, err := threadManager.NewPool("ImmediateThreadPool", 0, 1,
-		1*time.Hour, listener.workQueue, nil)
+	p, err := threadManager.NewPool(listener.Locator.GetName(), 0, 1,
+		5*time.Minute, listener.workQueue, nil)
 	if err != nil {
 		return err
 	}
@@ -205,6 +217,7 @@ func (listener *ImmediateConfigurationListerData) DargoInitialize(desc Descripto
 	return nil
 }
 
+// ConfigurationChanged is called whenever there was a change to the set of descriptors
 func (listener *ImmediateConfigurationListerData) ConfigurationChanged() {
 	listener.lock.Lock()
 	defer listener.lock.Unlock()
@@ -249,6 +262,7 @@ func (listener *ImmediateConfigurationListerData) ConfigurationChanged() {
 
 type immediateFilterData struct{}
 
+// Filter gets all the services in the Immediate scope
 func (filter *immediateFilterData) Filter(desc Descriptor) bool {
 	if desc.GetScope() == ImmediateScope {
 		return true
