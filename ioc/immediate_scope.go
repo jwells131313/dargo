@@ -208,7 +208,7 @@ func (listener *ImmediateConfigurationListerData) DargoInitialize(desc Descripto
 
 	listener.immediateServices = services
 
-	for desc, _ := range services {
+	for desc := range services {
 		listener.workQueue.Enqueue(func() {
 			listener.Locator.GetServiceFromDescriptor(desc)
 		})
@@ -246,7 +246,7 @@ func (listener *ImmediateConfigurationListerData) ConfigurationChanged() {
 
 	listener.immediateServices = newValue
 
-	for desc, _ := range removed {
+	for desc := range removed {
 		listener.workQueue.Enqueue(func() {
 			listener.Context.DestroyOne(listener.Locator, desc)
 		})

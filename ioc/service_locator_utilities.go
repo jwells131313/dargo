@@ -109,6 +109,10 @@ func getDCS(locator ServiceLocator) (DynamicConfigurationService, error) {
 	return dcs, nil
 }
 
+// EnableImmediateScope enables the ImmediateScope, which starts
+// services when they are bound into the ServiceLocator, and destroys
+// them on shutdown or when an ImmediateService that was previously
+// started is Unbound
 func EnableImmediateScope(locator ServiceLocator) error {
 	dargoKey := CSK(ImmediateScope)
 	filter := NewServiceKeyFilter(dargoKey)

@@ -183,7 +183,7 @@ func (listener *ConfigListenerServiceData) ConfigurationChanged() {
 	}
 
 	added := make(map[string]Descriptor)
-	for desc, _ := range currentAsMap {
+	for desc := range currentAsMap {
 		delete(removedDescriptors, desc)
 		_, found := listener.simpleServices[desc]
 		if !found {
@@ -197,7 +197,7 @@ func (listener *ConfigListenerServiceData) ConfigurationChanged() {
 	}
 
 	removed := make(map[string]Descriptor)
-	for desc, _ := range removedDescriptors {
+	for desc := range removedDescriptors {
 		zero := getZeroQualifier(desc)
 		if zero == "" {
 			panic("Should not have empty qualifier for removal")
