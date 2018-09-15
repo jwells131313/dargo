@@ -88,6 +88,9 @@ const (
 	// ValidationServiceName the name implementations of ValidationService must have
 	ValidationServiceName = "ValidationService"
 
+	// ConfigurationListenerName the name implementation of ConfigurationListener must have
+	ConfigurationListenerName = "ConfigurationListener"
+
 	// FailIfPresent Return an error if a service locator with that name exists
 	FailIfPresent = 0
 
