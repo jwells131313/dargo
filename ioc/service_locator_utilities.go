@@ -109,6 +109,10 @@ func getDCS(locator ServiceLocator) (DynamicConfigurationService, error) {
 	return dcs, nil
 }
 
+func EnableImmediateScope(locator ServiceLocator) error {
+	panic("implement EnableImmediateService")
+}
+
 // EnableDargoContextScope enables the use of the DargoContext
 func EnableDargoContextScope(locator ServiceLocator) error {
 	dargoKey := CSK(ContextScope)

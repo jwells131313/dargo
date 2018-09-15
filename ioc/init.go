@@ -69,6 +69,9 @@ const (
 	// ContextScope scope is per context
 	ContextScope = "ContextScope"
 
+	// ImmediateScope scope services are started immediately
+	ImmediateScope = "ImmediateScope"
+
 	// SystemNamespace The namespace for system services
 	SystemNamespace = "system"
 
