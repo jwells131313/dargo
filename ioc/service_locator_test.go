@@ -50,6 +50,7 @@ const (
 	testLocatorName  = "TestLocator"
 	testLocatorName2 = "TestLocator2"
 	testLocatorName3 = "TestLocator3"
+	testLocatorName4 = "TestLocator4"
 
 	ShutdownService = "ShutdownService"
 )
@@ -121,6 +122,23 @@ func TestShutdownServiceLocator(t *testing.T) {
 
 }
 
+func TestRawInject(t *testing.T) {
+	locator, err := CreateAndBind(testLocatorName4, func(binder Binder) error {
+		binder.Bind("Service", Service{})
+		return nil
+	})
+	if !assert.Nil(t, err, "error creating locator") {
+		return
+	}
+
+	myService1 := MyService{}
+
+	err = locator.Inject(&myService1)
+	if !assert.Nil(t, err, "error injecting first service %v", err) {
+		return
+	}
+}
+
 type shuttableService struct {
 	isShut bool
 }
@@ -138,4 +156,11 @@ func destroyShuttableService(locator ServiceLocator, key Descriptor, instance in
 	shuttable.isShut = true
 
 	return nil
+}
+
+type Service struct {
+}
+
+type MyService struct {
+	MyService *Service `inject:"Service"`
 }
