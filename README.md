@@ -858,4 +858,6 @@ ValidationService itself, since if someone could do that they could disable the 
 ### Configuration Listener
 
 A user may register an implementation of ConfigurationListener to be notified whenever the set of
-Descriptors in a ServiceLocator has changed. The ConfigurationListener must be in the Singleton scope.
+Descriptors in a ServiceLocator has changed. The ConfigurationListener must be in the Singleton scope,
+be named _ConfigurationListener_ (ioc.ConfigurationListenerName) and be in the _user/services_
+(ioc.UserServicesNamespace) namespace.
