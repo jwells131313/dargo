@@ -56,7 +56,7 @@ func TestExistingAreStarted(t *testing.T) {
 	globalStarted = false
 
 	locator, err := CreateAndBind(ImmediateTestLocator1, func(binder Binder) error {
-		binder.Bind("ImmediateService", &ImmediateService{})
+		binder.Bind("ImmediateService", &ImmediateService{}).InScope(ImmediateScope)
 		return nil
 	})
 	if !assert.Nil(t, err, "could not create locator") {
@@ -68,7 +68,7 @@ func TestExistingAreStarted(t *testing.T) {
 	}
 
 	err = EnableImmediateScope(locator)
-	if !assert.Nil(t, err, "could not enable immediate scope") {
+	if !assert.Nil(t, err, "could not enable immediate scope %v", err) {
 		return
 	}
 

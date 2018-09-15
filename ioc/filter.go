@@ -113,3 +113,19 @@ type allFilterData struct {
 func (allFilterData) Filter(Descriptor) bool {
 	return true
 }
+
+type idFilterData struct {
+	locatorID int64
+	serviceID int64
+}
+
+func NewIDFilter(locatorID, serviceID int64) Filter {
+	return &idFilterData{
+		locatorID: locatorID,
+		serviceID: serviceID,
+	}
+}
+
+func (idFilter *idFilterData) Filter(desc Descriptor) bool {
+	return (desc.GetLocatorID() == idFilter.locatorID) && (desc.GetServiceID() == idFilter.serviceID)
+}
