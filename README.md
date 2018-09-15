@@ -67,6 +67,7 @@ is intentional.  The plan is to port many of the features of hk2 to this library
 6.  [Provider](#provider)
 7.  [Error Service](#error-service)
 8.  [Security](#validation-service)
+9.  [Configuration Listener](#configuration-listener)
 
 ## Basic Usage
 
@@ -853,3 +854,8 @@ However, after that the Validator is run for all Bind/Unbind operations.
 The rest of the security example is found in the examples/security_example.go file.  It is an exercise left to
 the reader to modify the implementation of the Validator to also disallow people from Unbinding the
 ValidationService itself, since if someone could do that they could disable the security checks!
+
+### Configuration Listener
+
+A user may register an implementation of ConfigurationListener to be notified whenever the set of
+Descriptors in a ServiceLocator has changed. The ConfigurationListener must be in the Singleton scope.

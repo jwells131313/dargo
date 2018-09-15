@@ -143,6 +143,16 @@ func CSK(name string, qualifiers ...string) ServiceKey {
 	return retVal
 }
 
+// USK creates a service key in the user supplied service namespace with the given name
+func USK(name string, qualifiers ...string) ServiceKey {
+	retVal, err := NewServiceKey(UserServicesNamespace, name, qualifiers...)
+	if err != nil {
+		panic(err)
+	}
+
+	return retVal
+}
+
 func newServiceKeyFromDescriptor(desc Descriptor) (ServiceKey, error) {
 	return NewServiceKey(desc.GetNamespace(), desc.GetName(), desc.GetQualifiers()...)
 }

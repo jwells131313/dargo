@@ -53,7 +53,7 @@ const (
 	Q2 = "Q2"
 )
 
-func TestListenerCalledForAdd(t *testing.T) {
+func TestListenerCalledForAddAndRemove(t *testing.T) {
 	locator, err := CreateAndBind(ConfigListenerLocator1, func(binder Binder) error {
 		binder.Bind(SimpleServiceName, &SimpleService{}).QualifiedBy(Q1)
 		binder.Bind(ConfigurationListenerName, &ConfigListenerServiceData{}).InNamespace(UserServicesNamespace)
