@@ -48,8 +48,10 @@ import (
 
 var immediateExampleStarted = false
 
+// IShoutImmediately an immediate service that shouts eagerly
 type IShoutImmediately struct{}
 
+// DargoInitialize shouts out when the service is started, which it will be immediately
 func (shouter *IShoutImmediately) DargoInitialize(ioc.Descriptor) error {
 	fmt.Println("*********************************")
 	fmt.Println("*                               *")
