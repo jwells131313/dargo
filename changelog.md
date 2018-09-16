@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Some code refactoring
 - Binder.Bind method now takes a pointer to a struct as well as the struct itself
 - ConfigurationListener service
+- ImmediateScope implemented
 
 ## [0.3.0] - 2018-09-12
 ### Added

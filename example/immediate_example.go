@@ -41,48 +41,50 @@
 package example
 
 import (
-	"github.com/stretchr/testify/assert"
-	"testing"
+	"fmt"
+	"github.com/jwells131313/dargo/ioc"
+	"time"
 )
 
-func TestExample(t *testing.T) {
-	locator, err := start()
-	assert.Nil(t, err, "could not start the player")
+var immediateExampleStarted = false
 
-	err = bindPlayer(locator)
-	assert.Nil(t, err, "could not bind the player")
+type IShoutImmediately struct{}
 
-	rawService, err := locator.GetDService(MusicServiceName)
-	assert.Nil(t, err, "could not find music service")
+func (shouter *IShoutImmediately) DargoInitialize(ioc.Descriptor) error {
+	fmt.Println("*********************************")
+	fmt.Println("*                               *")
+	fmt.Println("*       Hello, World            *")
+	fmt.Println("*                               *")
+	fmt.Println("*********************************")
 
-	musicService := rawService.(MusicService)
+	immediateExampleStarted = true
 
-	scale := musicService.PlayCScale()
-	assert.Equal(t, "<<<cdefgab>>>", scale, "scale didn't match")
+	return nil
 }
 
-func TestExperiment(t *testing.T) {
-	err := runExample()
-	assert.Nil(t, err, "experiment failure")
-}
+func runImmediateExample() error {
+	locator, err := ioc.CreateAndBind("ImmediateLocator", func(binder ioc.Binder) error {
+		binder.Bind("Shouter", &IShoutImmediately{}).InScope(ioc.ImmediateScope)
+		return nil
+	})
+	if err != nil {
+		return err
+	}
 
-func TestContextExample(t *testing.T) {
-	err := runContextExample()
-	assert.Nil(t, err, "context example failure")
-}
+	ioc.EnableImmediateScope(locator)
 
-func TestErrorServiceExample(t *testing.T) {
-	err := runErrorServiceExample()
-	assert.Nil(t, err, "error service example failure")
-}
+	for lcv := 0; lcv < 200; lcv++ {
+		if immediateExampleStarted == true {
+			break
+		}
 
-func TestSecurityExample(t *testing.T) {
-	err := runSecurityExample()
-	assert.Nil(t, err, "security example failure")
-}
+		time.Sleep(100 * time.Millisecond)
+	}
 
-func TestImmediateExample(t *testing.T) {
-	err := runImmediateExample()
-	assert.Nil(t, err, "immediate example failure")
+	if !immediateExampleStarted {
+		return fmt.Errorf("did not start immediate service")
+	}
+
+	return nil
 
 }
