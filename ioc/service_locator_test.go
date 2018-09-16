@@ -51,6 +51,7 @@ const (
 	testLocatorName2 = "TestLocator2"
 	testLocatorName3 = "TestLocator3"
 	testLocatorName4 = "TestLocator4"
+	testLocatorName5 = "TestLocator5"
 
 	ShutdownService = "ShutdownService"
 )
@@ -139,6 +140,48 @@ func TestRawInject(t *testing.T) {
 	}
 }
 
+func TestInjectConstants(t *testing.T) {
+	locator, err := CreateAndBind(testLocatorName5, func(binder Binder) error {
+		binder.Bind("WeirdInjectorService", &InjectsSomeWeirdThingsService{})
+
+		var ten uint32 = 10
+
+		sa := make([]string, 0)
+		sa = append(sa, "EAGLES")
+
+		ma := make(map[string]string)
+		ma["EAGLES"] = "EAGLES"
+
+		binder.BindConstant("10", 10).InScope(PerLookup)
+		binder.BindConstant("u10", ten).InScope(PerLookup)
+		binder.BindConstant("EAGLES", "EAGLES")
+		binder.BindConstant("stringArray", sa)
+		binder.BindConstant("map", ma)
+
+		return nil
+	})
+	if !assert.Nil(t, err, "error creating locator") {
+		return
+	}
+
+	wisRaw, err := locator.GetDService("WeirdInjectorService")
+	if !assert.Nil(t, err, "could not find service %v", err) {
+		return
+	}
+
+	var eTen uint32 = 10
+
+	wis := wisRaw.(*InjectsSomeWeirdThingsService)
+
+	assert.Equal(t, 10, wis.InjectInt10, "int wrong")
+	assert.Equal(t, eTen, wis.InjectUint10, "uint wrong")
+	assert.Equal(t, "EAGLES", wis.InjectString, "string wrong")
+	assert.Equal(t, 1, len(wis.InjectArray), "incorrect length of array")
+	assert.Equal(t, "EAGLES", wis.InjectArray[0], "incorrect zero array")
+	assert.Equal(t, 1, len(wis.InjectMap), "map wrong size")
+	assert.Equal(t, "EAGLES", wis.InjectMap["EAGLES"], "wrong value in map")
+}
+
 type shuttableService struct {
 	isShut bool
 }
@@ -163,4 +206,12 @@ type Service struct {
 
 type MyService struct {
 	MyService *Service `inject:"Service"`
+}
+
+type InjectsSomeWeirdThingsService struct {
+	InjectInt10  int               `inject:"10"`
+	InjectUint10 uint32            `inject:"u10"`
+	InjectString string            `inject:"EAGLES"`
+	InjectArray  []string          `inject:"stringArray"`
+	InjectMap    map[string]string `inject:"map"`
 }

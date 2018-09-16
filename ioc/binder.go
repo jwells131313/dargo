@@ -55,6 +55,8 @@ type Binder interface {
 	Bind(name string, prototype interface{}) Binder
 	// BindWithCreator binds the given name to a creation function
 	BindWithCreator(name string, bindMethod func(ServiceLocator, Descriptor) (interface{}, error)) Binder
+	// BindConstant binds the exact constant as-is into the ServiceLocator
+	BindConstant(name string, constant interface{}) Binder
 	// InScope changes the scope to the given scope.  The default scope is Singleton
 	InScope(string) Binder
 	// InNamespace changes the namespace to the given value.  The default namespace is default
@@ -113,6 +115,12 @@ func (binder *binder) BindWithCreator(name string, cf func(ServiceLocator, Descr
 	binder.qualifiers = make([]string, 0)
 
 	return binder
+}
+
+func (binder *binder) BindConstant(name string, constant interface{}) Binder {
+	return binder.BindWithCreator(name, func(ServiceLocator, Descriptor) (interface{}, error) {
+		return constant, nil
+	})
 }
 
 func (binder *binder) Bind(name string, str interface{}) Binder {
