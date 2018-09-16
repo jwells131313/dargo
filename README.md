@@ -63,11 +63,12 @@ is intentional.  The plan is to port many of the features of hk2 to this library
 2.  [Testing](#testing)
 3.  [Automatic Service Creation](#automatic-service-creation)
 4.  [Service Names](#service-names)
-5.  [Context Scope](#context-scope)
-6.  [Provider](#provider)
-7.  [Error Service](#error-service)
-8.  [Security](#validation-service)
-9.  [Configuration Listener](#configuration-listener)
+5.  [Immediate Services](#immediate-scope)
+6.  [Context Scope](#context-scope)
+7.  [Provider](#provider)
+8.  [Error Service](#error-service)
+9.  [Security](#validation-service)
+10.  [Configuration Listener](#configuration-listener)
 
 ## Basic Usage
 
