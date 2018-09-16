@@ -503,14 +503,16 @@ type Service struct {
 
 Services bound into _ImmediateScope_ (ioc.ImmediateScope) will be started immediately.  These are not
 lazy services, but instead services that will be started as soon as the system sees that they have been
-bound into the system.  When service descriptions in the ImmediateScope are unbound from the 
-ServiceLocator the services corresponding to the unbound descriptor will be destroyed.  If a service
-in the ImmediateScope fails during creation the [ErrorService](#error-service) can be used to catch
-the error and do some remediation.
+bound into the system.  The Immediate scope is enabled by calling the method ioc.EnableImmediateScope.
+Services in the ImmediateScope will only be started once the immediate scope has been enabled.
+
+When service descriptions in the ImmediateScope are unbound from the ServiceLocator the services corresponding
+to the unbound descriptor will be destroyed.  If a service in the ImmediateScope fails during creation the
+[ErrorService](#error-service) can be used to catch the error and do remediation.
 
 Care should be taken with the services injected into an Immediate service, since they will also become
-non-lazy.  Instead, injecting [Providers](#provider) should be considered which will enable other services
-to remain lazy.
+immediate.  Instead consider injecting [Providers](#provider) into immediate scoped services which enable
+those injected services to remain lazy.
 
 ### Immediate Scope Example
 
