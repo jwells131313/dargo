@@ -38,96 +38,53 @@
  * holder.
  */
 
-package ioc
+package example
 
-// Filter is used to filter descriptors for matching services
-type Filter interface {
-	Filter(Descriptor) bool
+import (
+	"fmt"
+	"github.com/jwells131313/dargo/ioc"
+	"time"
+)
+
+var immediateExampleStarted = false
+
+type IShoutImmediately struct{}
+
+func (shouter *IShoutImmediately) DargoInitialize(ioc.Descriptor) error {
+	fmt.Println("*********************************")
+	fmt.Println("*                               *")
+	fmt.Println("*       Hello, World            *")
+	fmt.Println("*                               *")
+	fmt.Println("*********************************")
+
+	immediateExampleStarted = true
+
+	return nil
 }
 
-type serviceKeyFilter struct {
-	keys []ServiceKey
-}
-
-// NewServiceKeyFilter creates a filter for the given service key
-func NewServiceKeyFilter(keys ...ServiceKey) Filter {
-	cpy := make([]ServiceKey, len(keys))
-	copy(cpy, keys)
-
-	return &serviceKeyFilter{
-		cpy,
-	}
-}
-
-func (filter *serviceKeyFilter) Filter(desc Descriptor) bool {
-	for _, key := range filter.keys {
-		if !filterOne(key, desc) {
-			return false
-		}
+func runImmediateExample() error {
+	locator, err := ioc.CreateAndBind("ImmediateLocator", func(binder ioc.Binder) error {
+		binder.Bind("Shouter", &IShoutImmediately{}).InScope(ioc.ImmediateScope)
+		return nil
+	})
+	if err != nil {
+		return err
 	}
 
-	return true
-}
+	ioc.EnableImmediateScope(locator)
 
-func filterOne(key ServiceKey, desc Descriptor) bool {
-	if desc.GetNamespace() != key.GetNamespace() {
-		return false
-	}
-
-	if desc.GetName() != key.GetName() {
-		return false
-	}
-
-	cache := make(map[string]string)
-	first := true
-
-	// Descriptor must have a superset of the descriptors asked for in the key
-	for _, qualifier := range key.GetQualifiers() {
-		found := false
-
-		if first {
-			first = false
-
-			for _, dQualifier := range desc.GetQualifiers() {
-				cache[dQualifier] = dQualifier
-
-				if qualifier == dQualifier {
-					found = true
-				}
-			}
-		} else {
-			_, found = cache[qualifier]
+	for lcv := 0; lcv < 200; lcv++ {
+		if immediateExampleStarted == true {
+			break
 		}
 
-		if !found {
-			return false
-		}
+		time.Sleep(100 * time.Millisecond)
 	}
 
-	return true
-}
-
-type allFilterData struct {
-}
-
-func (allFilterData) Filter(Descriptor) bool {
-	return true
-}
-
-type idFilterData struct {
-	locatorID int64
-	serviceID int64
-}
-
-// NewIDFilter is a filter specific to a descriptor with
-// the exact locatorID and serviceID given
-func NewIDFilter(locatorID, serviceID int64) Filter {
-	return &idFilterData{
-		locatorID: locatorID,
-		serviceID: serviceID,
+	if !immediateExampleStarted {
+		return fmt.Errorf("did not start immediate service")
 	}
-}
 
-func (idFilter *idFilterData) Filter(desc Descriptor) bool {
-	return (desc.GetLocatorID() == idFilter.locatorID) && (desc.GetServiceID() == idFilter.serviceID)
+	return nil
+
 }

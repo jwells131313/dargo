@@ -80,3 +80,9 @@ func TestSecurityExample(t *testing.T) {
 	err := runSecurityExample()
 	assert.Nil(t, err, "security example failure")
 }
+
+func TestImmediateExample(t *testing.T) {
+	err := runImmediateExample()
+	assert.Nil(t, err, "immediate example failure")
+
+}

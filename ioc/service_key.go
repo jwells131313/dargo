@@ -109,7 +109,7 @@ func (key *serviceKeyData) String() string {
 		}
 	}
 
-	return fmt.Sprintf("%s/%s%s", key.namespace, key.name, qPart)
+	return fmt.Sprintf("%s#%s%s", key.namespace, key.name, qPart)
 
 }
 
@@ -151,10 +151,6 @@ func USK(name string, qualifiers ...string) ServiceKey {
 	}
 
 	return retVal
-}
-
-func newServiceKeyFromDescriptor(desc Descriptor) (ServiceKey, error) {
-	return NewServiceKey(desc.GetNamespace(), desc.GetName(), desc.GetQualifiers()...)
 }
 
 func checkNamespaceCharacters(input string) error {

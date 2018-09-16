@@ -109,6 +109,56 @@ func getDCS(locator ServiceLocator) (DynamicConfigurationService, error) {
 	return dcs, nil
 }
 
+// EnableImmediateScope enables the ImmediateScope, which starts
+// services when they are bound into the ServiceLocator, and destroys
+// them on shutdown or when an ImmediateService that was previously
+// started is Unbound
+func EnableImmediateScope(locator ServiceLocator) error {
+	dargoKey := CSK(ImmediateScope)
+	filter := NewServiceKeyFilter(dargoKey)
+
+	// TODO: Need idempotent semantics
+	_, err := locator.GetBestDescriptor(filter)
+	if err != nil {
+		if isServiceNotFound(err) {
+			return nil
+		}
+
+		return err
+	}
+
+	err = BindIntoLocator(locator, func(binder Binder) error {
+		binder.Bind(ImmediateScope, &ImmediateScopeData{}).InNamespace(ContextualScopeNamespace).QualifiedBy(ImmediateScope)
+
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	err = BindIntoLocator(locator, func(binder Binder) error {
+		binder.Bind(ConfigurationListenerName, &ImmediateConfigurationListerData{}).InNamespace(UserServicesNamespace).
+			QualifiedBy(ImmediateScope)
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	// Must do initial lookup of ConfigurationListener to start it off
+	key, err := NewServiceKey(UserServicesNamespace, ConfigurationListenerName, ImmediateScope)
+	if err != nil {
+		return err
+	}
+
+	_, err = locator.GetService(key)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // EnableDargoContextScope enables the use of the DargoContext
 func EnableDargoContextScope(locator ServiceLocator) error {
 	dargoKey := CSK(ContextScope)
@@ -125,7 +175,7 @@ func EnableDargoContextScope(locator ServiceLocator) error {
 	}
 
 	return BindIntoLocator(locator, func(binder Binder) error {
-		binder.BindWithCreator(ContextScope, contextCreator).InNamespace(ContextualScopeNamespace)
+		binder.BindWithCreator(ContextScope, contextCreator).InNamespace(ContextualScopeNamespace).QualifiedBy(ContextScope)
 		binder.Bind(DargoContextCreationServiceName, dargoContextCreationServiceData{}).InScope(ContextScope)
 
 		return nil

@@ -63,11 +63,12 @@ is intentional.  The plan is to port many of the features of hk2 to this library
 2.  [Testing](#testing)
 3.  [Automatic Service Creation](#automatic-service-creation)
 4.  [Service Names](#service-names)
-5.  [Context Scope](#context-scope)
-6.  [Provider](#provider)
-7.  [Error Service](#error-service)
-8.  [Security](#validation-service)
-9.  [Configuration Listener](#configuration-listener)
+5.  [Immediate Services](#immediate-scope)
+6.  [Context Scope](#context-scope)
+7.  [Provider](#provider)
+8.  [Error Service](#error-service)
+9.  [Security](#validation-service)
+10.  [Configuration Listener](#configuration-listener)
 
 ## Basic Usage
 
@@ -129,13 +130,13 @@ the start of your program:
 
 ```go
 locator, err := ioc.CreateAndBind("InjectionExampleLocator", func(binder ioc.Binder) error {
-	    // Binds SimpleService by providing the structure
-	    binder.Bind("SimpleService", SimpleServiceData{})
+    // Binds SimpleService by providing the structure
+    binder.Bind("SimpleService", SimpleServiceData{})
 
-	    // Binds the logger service by providing the creation function 
-	    binder.BindWithCreator("LoggerService_Name", newLogger).InScope(ioc.PerLookup)
-	    return nil
-    })
+    // Binds the logger service by providing the creation function 
+    binder.BindWithCreator("LoggerService_Name", newLogger).InScope(ioc.PerLookup)
+    return nil
+})
 ```
 
 The returned locator can be used to lookup the SimpleService service.  The SimpleService is bound
@@ -146,17 +147,17 @@ PerLookup scope, which means that every time it is injected or looked up a new o
 This is the code that uses the looked up service:
 
 ```go
-    raw, err := locator.GetDService("SimpleService")
-	if err != nil {
-		return err
-	}
+raw, err := locator.GetDService("SimpleService")
+if err != nil {
+    return err
+}
 
-	ss, ok := raw.(SimpleService)
-	if !ok {
-		return fmt.Errorf("Invalid type for simple service %v", ss)
-	}
+ss, ok := raw.(SimpleService)
+if !ok {
+    return fmt.Errorf("Invalid type for simple service %v", ss)
+}
 
-	ss.CallMe()
+ss.CallMe()
 ```
 
 Any depth of injection is supported (ServiceA can depend on ServiceB which depends on ServiceC and so on).
@@ -497,6 +498,63 @@ type Service struct {
 	Green ColorService `inject:"visible/light#ColorService@Green"`
 }
 ```
+
+## Immediate Scope
+
+Services bound into _ImmediateScope_ (ioc.ImmediateScope) will be started immediately.  These are not
+lazy services, but instead services that will be started as soon as the system sees that they have been
+bound into the system.  The Immediate scope is enabled by calling the method ioc.EnableImmediateScope.
+Services in the ImmediateScope will only be started once the immediate scope has been enabled.
+
+When service descriptions in the ImmediateScope are unbound from the ServiceLocator the services corresponding
+to the unbound descriptor will be destroyed.  If a service in the ImmediateScope fails during creation the
+[ErrorService](#error-service) can be used to catch the error and do remediation.
+
+Care should be taken with the services injected into an Immediate service, since they will also become
+immediate.  Instead consider injecting [Providers](#provider) into immediate scoped services which enable
+those injected services to remain lazy.
+
+### Immediate Scope Example
+
+In this example there is a service that prints out a "Hello, World!" banner without having to be
+explicitly looked up.  To do so it prints the banner in it's DargoInitialize method:
+
+```go
+var immediateExampleStarted = false
+
+type IShoutImmediately struct{}
+
+func (shouter *IShoutImmediately) DargoInitialize(ioc.Descriptor) error {
+	fmt.Println("*********************************")
+	fmt.Println("*                               *")
+	fmt.Println("*       Hello, World            *")
+	fmt.Println("*                               *")
+	fmt.Println("*********************************")
+
+	immediateExampleStarted = true
+
+	return nil
+}
+```
+
+This service is bound into the locator at the start.  However, it will not be run until the ImmediateContext
+has been enabled.  Here is the binding of the service:
+
+```go
+locator, _ := ioc.CreateAndBind("ImmediateLocator", func(binder ioc.Binder) error {
+    binder.Bind("Shouter", &IShoutImmediately{}).InScope(ioc.ImmediateScope)
+    return nil
+})
+```
+
+Since the immediate scope isn't there yet, the service will not be started yet.  You must call this:
+
+```go
+ioc.EnableImmediateScope(locator)
+```
+
+At that point all services in the immediate scope will be started.  Further, any services bound into
+the locator AFTER EnableImmediateScope is enabled will also be started immediately.
 
 ## Context Scope
 
@@ -858,4 +916,6 @@ ValidationService itself, since if someone could do that they could disable the 
 ### Configuration Listener
 
 A user may register an implementation of ConfigurationListener to be notified whenever the set of
-Descriptors in a ServiceLocator has changed. The ConfigurationListener must be in the Singleton scope.
+Descriptors in a ServiceLocator has changed. The ConfigurationListener must be in the Singleton scope,
+be named _ConfigurationListener_ (ioc.ConfigurationListenerName) and be in the _user/services_
+(ioc.UserServicesNamespace) namespace.
