@@ -174,7 +174,7 @@ type ImmediateConfigurationListerData struct {
 	lock              sync.Mutex
 	Locator           ServiceLocator  `inject:"system#ServiceLocator"`
 	Context           ContextualScope `inject:"sys/scope#ImmediateScope"`
-	immediateServices map[Descriptor]string
+	immediateServices map[string]Descriptor
 	workQueue         goethe.FunctionQueue
 	threadPool        goethe.Pool
 }
@@ -201,17 +201,21 @@ func (listener *ImmediateConfigurationListerData) DargoInitialize(desc Descripto
 		return err
 	}
 
-	services := make(map[Descriptor]string)
+	services := make(map[string]Descriptor)
 	for _, desc := range descriptors {
-		services[desc] = desc.GetFullName()
+		key := descriptorToIDString(desc)
+		services[key] = desc
 	}
 
 	listener.immediateServices = services
 
-	for desc := range services {
-		listener.workQueue.Enqueue(func() {
-			listener.Locator.GetServiceFromDescriptor(desc)
-		})
+	for _, desc := range services {
+		localDesc := desc
+		f := func() {
+			listener.Locator.GetServiceFromDescriptor(localDesc)
+		}
+
+		listener.workQueue.Enqueue(f)
 	}
 
 	return nil
@@ -227,26 +231,28 @@ func (listener *ImmediateConfigurationListerData) ConfigurationChanged() {
 		return
 	}
 
-	removed := make(map[Descriptor]string)
+	removed := make(map[string]Descriptor)
 	for key, value := range listener.immediateServices {
 		removed[key] = value
 	}
 
-	newValue := make(map[Descriptor]string)
+	newValue := make(map[string]Descriptor)
 	added := make([]Descriptor, 0)
 	for _, desc := range descriptors {
-		delete(removed, desc)
-		_, found := listener.immediateServices[desc]
+		key := descriptorToIDString(desc)
+
+		delete(removed, key)
+		_, found := listener.immediateServices[key]
 		if !found {
 			added = append(added, desc)
 		}
 
-		newValue[desc] = desc.GetFullName()
+		newValue[key] = desc
 	}
 
 	listener.immediateServices = newValue
 
-	for desc := range removed {
+	for _, desc := range removed {
 		listener.workQueue.Enqueue(func() {
 			listener.Context.DestroyOne(listener.Locator, desc)
 		})

@@ -43,6 +43,7 @@ package ioc
 import (
 	"fmt"
 	"github.com/stretchr/testify/assert"
+	"sync/atomic"
 	"testing"
 	"time"
 )
@@ -50,11 +51,13 @@ import (
 const (
 	ImmediateTestLocator1 = "ImmediateTestLocator1"
 	ImmediateTestLocator2 = "ImmediateTestLocator2"
+	ImmediateTestLocator3 = "ImmediateTestLocator3"
 
 	ImmediateServiceName = "ImmediateService"
 )
 
 var globalStarted bool
+var howManyStarted int32
 
 func TestExistingAreStarted(t *testing.T) {
 	globalStarted = false
@@ -163,11 +166,57 @@ func TestAddedAreStartedAndStopped(t *testing.T) {
 	}
 }
 
+func TestManyStarted(t *testing.T) {
+	howManyStarted = 0
+
+	locator, err := CreateAndBind(ImmediateTestLocator3, func(binder Binder) error {
+		for lcv := 0; lcv < 100; lcv++ {
+			q := fmt.Sprintf("Qualifier%d", lcv)
+			binder.Bind(ImmediateServiceName, &CountingImmediateService{}).InScope(ImmediateScope).
+				QualifiedBy(q)
+		}
+		return nil
+	})
+	if !assert.Nil(t, err, "could not create locator") {
+		return
+	}
+
+	if !assert.Equal(t, int32(0), howManyStarted, "should not be any started yet") {
+		return
+	}
+
+	// Let the floodgates open
+	err = EnableImmediateScope(locator)
+	if !assert.Nil(t, err, "could not start immediate scope") {
+		return
+	}
+
+	for lcv := 0; lcv < 200; lcv++ {
+		value := atomic.AddInt32(&howManyStarted, 0)
+		if value == 100 {
+			break
+		}
+
+		time.Sleep(100 * time.Millisecond)
+	}
+
+	assert.Equal(t, int32(100), howManyStarted, "did not start expectee number")
+
+}
+
 type ImmediateService struct {
 	stopped bool
 }
 
 func (is *ImmediateService) DargoInitialize(desc Descriptor) error {
 	globalStarted = true
+	return nil
+}
+
+type CountingImmediateService struct {
+}
+
+func (cis *CountingImmediateService) DargoInitialize(Descriptor) error {
+	atomic.AddInt32(&howManyStarted, 1)
 	return nil
 }
