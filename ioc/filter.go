@@ -40,6 +40,8 @@
 
 package ioc
 
+import "fmt"
+
 // Filter is used to filter descriptors for matching services
 type Filter interface {
 	Filter(Descriptor) bool
@@ -117,6 +119,10 @@ func (allFilterData) Filter(Descriptor) bool {
 type idFilterData struct {
 	locatorID int64
 	serviceID int64
+}
+
+func (ifd *idFilterData) String() string {
+	return fmt.Sprintf("idFileterData(%d,%d)", ifd.locatorID, ifd.serviceID)
 }
 
 // NewIDFilter is a filter specific to a descriptor with
