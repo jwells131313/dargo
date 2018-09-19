@@ -253,14 +253,16 @@ func (listener *ImmediateConfigurationListerData) ConfigurationChanged() {
 	listener.immediateServices = newValue
 
 	for _, desc := range removed {
+		localDesc := desc
 		listener.workQueue.Enqueue(func() {
-			listener.Context.DestroyOne(listener.Locator, desc)
+			listener.Context.DestroyOne(listener.Locator, localDesc)
 		})
 	}
 
 	for _, desc := range added {
+		localDesc := desc
 		listener.workQueue.Enqueue(func() {
-			listener.Locator.GetServiceFromDescriptor(desc)
+			listener.Locator.GetServiceFromDescriptor(localDesc)
 		})
 	}
 
