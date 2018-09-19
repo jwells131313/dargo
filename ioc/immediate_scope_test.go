@@ -53,8 +53,13 @@ const (
 	ImmediateTestLocator2 = "ImmediateTestLocator2"
 	ImmediateTestLocator3 = "ImmediateTestLocator3"
 	ImmediateTestLocator4 = "ImmediateTestLocator4"
+	ImmediateTestLocator5 = "ImmediateTestLocator5"
+	ImmediateTestLocator6 = "ImmediateTestLocator6"
 
 	ImmediateServiceName = "ImmediateService"
+
+	ExpectedFailureString = "Expected Failure"
+	ExpectedPanicString   = "Panic attack!!!"
 )
 
 var globalStarted bool
@@ -250,6 +255,97 @@ func TestManyStartedAfterEnabled(t *testing.T) {
 
 }
 
+func TestImmediateWithError(t *testing.T) {
+	howManyStarted = 0
+
+	locator, err := CreateAndBind(ImmediateTestLocator5, func(binder Binder) error {
+		binder.Bind(ErrorServiceName, &ImmediateErrorService{}).InNamespace(UserServicesNamespace)
+		binder.Bind("ErrorImmediateService", &ErrorImmediateService{}).InScope(ImmediateScope)
+
+		return nil
+	})
+	if !assert.Nil(t, err, "could not create locator") {
+		return
+	}
+
+	err = EnableImmediateScope(locator)
+	if !assert.Nil(t, err, "could not enable immediate scope") {
+		return
+	}
+
+	raw, err := locator.GetService(USK(ErrorServiceName))
+	if !assert.Nil(t, err, "could not get the error service") {
+		return
+	}
+
+	ies := raw.(*ImmediateErrorService)
+
+	for lcv := 0; lcv < 200; lcv++ {
+		if len(ies.infos) != 0 {
+			break
+		}
+
+		time.Sleep(100 * time.Millisecond)
+	}
+
+	if !assert.Equal(t, 1, len(ies.infos), "Got wrong number of errors") {
+		return
+	}
+
+	info := ies.infos[0]
+
+	assert.Equal(t, ExpectedFailureString, info.GetAssociatedError().Error())
+}
+
+func TestImmediateWithPanic(t *testing.T) {
+	howManyStarted = 0
+
+	locator, err := CreateAndBind(ImmediateTestLocator6, func(binder Binder) error {
+		return nil
+	})
+	if !assert.Nil(t, err, "could not create locator") {
+		return
+	}
+
+	err = EnableImmediateScope(locator)
+	if !assert.Nil(t, err, "could not enable immediate scope") {
+		return
+	}
+
+	err = BindIntoLocator(locator, func(binder Binder) error {
+		binder.Bind(ErrorServiceName, &ImmediateErrorService{}).InNamespace(UserServicesNamespace)
+		binder.Bind("PanicImmediateService", &PanicImmediateService{}).InScope(ImmediateScope)
+
+		return nil
+	})
+	if !assert.Nil(t, err, "could not bind into existing locator") {
+		return
+	}
+
+	raw, err := locator.GetService(USK(ErrorServiceName))
+	if !assert.Nil(t, err, "could not get the error service") {
+		return
+	}
+
+	ies := raw.(*ImmediateErrorService)
+
+	for lcv := 0; lcv < 200; lcv++ {
+		if len(ies.infos) != 0 {
+			break
+		}
+
+		time.Sleep(100 * time.Millisecond)
+	}
+
+	if !assert.Equal(t, 1, len(ies.infos), "Got wrong number of errors") {
+		return
+	}
+
+	info := ies.infos[0]
+
+	assert.Equal(t, ExpectedPanicMessage, info.GetAssociatedError().Error())
+}
+
 type ImmediateService struct {
 	stopped bool
 }
@@ -264,5 +360,33 @@ type CountingImmediateService struct {
 
 func (cis *CountingImmediateService) DargoInitialize(Descriptor) error {
 	atomic.AddInt32(&howManyStarted, 1)
+	return nil
+}
+
+type ErrorImmediateService struct {
+}
+
+func (eis *ErrorImmediateService) DargoInitialize(Descriptor) error {
+	return fmt.Errorf(ExpectedFailureString)
+}
+
+type PanicImmediateService struct {
+}
+
+func (pis *PanicImmediateService) DargoInitialize(Descriptor) error {
+	panic(ExpectedPanicMessage)
+}
+
+type ImmediateErrorService struct {
+	infos []ErrorInformation
+}
+
+func (ies *ImmediateErrorService) DargoInitialize(Descriptor) error {
+	ies.infos = make([]ErrorInformation, 0)
+	return nil
+}
+
+func (ies *ImmediateErrorService) OnFailure(ei ErrorInformation) error {
+	ies.infos = append(ies.infos, ei)
 	return nil
 }
