@@ -52,6 +52,7 @@ const (
 	ImmediateTestLocator1 = "ImmediateTestLocator1"
 	ImmediateTestLocator2 = "ImmediateTestLocator2"
 	ImmediateTestLocator3 = "ImmediateTestLocator3"
+	ImmediateTestLocator4 = "ImmediateTestLocator4"
 
 	ImmediateServiceName = "ImmediateService"
 )
@@ -188,6 +189,51 @@ func TestManyStarted(t *testing.T) {
 	// Let the floodgates open
 	err = EnableImmediateScope(locator)
 	if !assert.Nil(t, err, "could not start immediate scope") {
+		return
+	}
+
+	for lcv := 0; lcv < 200; lcv++ {
+		value := atomic.AddInt32(&howManyStarted, 0)
+		if value == 100 {
+			break
+		}
+
+		time.Sleep(100 * time.Millisecond)
+	}
+
+	assert.Equal(t, int32(100), howManyStarted, "did not start expectee number")
+
+}
+
+func TestManyStartedAfterEnabled(t *testing.T) {
+	howManyStarted = 0
+
+	locator, err := CreateAndBind(ImmediateTestLocator4, func(binder Binder) error {
+		return nil
+	})
+	if !assert.Nil(t, err, "could not create locator") {
+		return
+	}
+
+	// Let the floodgates open
+	err = EnableImmediateScope(locator)
+	if !assert.Nil(t, err, "could not start immediate scope") {
+		return
+	}
+
+	if !assert.Equal(t, int32(0), howManyStarted, "should not be any started yet") {
+		return
+	}
+
+	err = BindIntoLocator(locator, func(binder Binder) error {
+		for lcv := 0; lcv < 100; lcv++ {
+			q := fmt.Sprintf("Qualifier%d", lcv)
+			binder.Bind(ImmediateServiceName, &CountingImmediateService{}).InScope(ImmediateScope).
+				QualifiedBy(q)
+		}
+		return nil
+	})
+	if !assert.Nil(t, err, "could not bind into locator") {
 		return
 	}
 
