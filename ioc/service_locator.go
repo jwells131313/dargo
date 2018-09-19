@@ -234,7 +234,7 @@ func (locator *serviceLocatorData) getServiceFor(toMe ServiceKey, forMe Descript
 		return nil, err
 	}
 
-	f := NewServiceKeyFilter(toMe)
+	f := NewSingleFilter(toMe.GetNamespace(), toMe.GetName(), toMe.GetQualifiers()...)
 
 	desc, err := locator.getBestDescriptorFor(f, forMe)
 	if err != nil {
