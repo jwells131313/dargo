@@ -48,7 +48,7 @@ Dargo services are scoped and are created and destroyed based on the defined lif
 scope.  For example services in the Singleton scope are only created once.  Services in the PerLookup
 scope are created every time they are injected.
 
-NOTE:  The current version of this API is 0.3.0.  This means that the API has
+NOTE:  The current version of this API is 0.4.0.  This means that the API has
 not settled completely and may change in future revisions.  Once the dargo
 team has decided the API is good as it is we will make the 1.0 version which
 will have some backward compatibility guarantees.  In the meantime, if you
