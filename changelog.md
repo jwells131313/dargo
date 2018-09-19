@@ -6,11 +6,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 ### Changed
+
+## [0.4.0] - 2018-09-19
+### Changed
 - Add ValidationService example to README
 - Add other improvements to README
 - Add API Inject to ServiceLocator
 - Some code refactoring
-- Binder.Bind method now takes a pointer to a struct as well as the struct itself
+- Binder.Bind method now takes a pointer to a struct
 - ConfigurationListener service
 - ImmediateScope implemented
 
