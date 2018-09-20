@@ -53,6 +53,10 @@ func newNameCache() *nameCache {
 	}
 }
 
+func (nc *nameCache) getAll() []Descriptor {
+	return nc.all
+}
+
 // add is add or replace
 func (nc *nameCache) add(desc Descriptor) {
 	nc.all = append(nc.all, desc)
@@ -74,73 +78,6 @@ func (nc *nameCache) add(desc Descriptor) {
 
 	ar = append(ar, desc)
 	internal[name] = ar
-}
-
-func getIndex(ar []Descriptor, desc Descriptor) int {
-	lid := desc.GetLocatorID()
-	sid := desc.GetServiceID()
-
-	for index, d := range ar {
-		dLid := d.GetLocatorID()
-		dSid := d.GetServiceID()
-
-		if dLid == lid && dSid == sid {
-			return index
-		}
-	}
-
-	return -1
-}
-
-func removeOneFromDescArray(ar []Descriptor, index int) []Descriptor {
-	oneLessSize := len(ar) - 1
-	oneLessAll := make([]Descriptor, oneLessSize)
-
-	for lcv := 0; lcv < oneLessSize; lcv++ {
-		if lcv < index {
-			oneLessAll[lcv] = ar[lcv]
-		} else {
-			oneLessAll[lcv] = ar[lcv+1]
-		}
-	}
-
-	return oneLessAll
-}
-
-func (nc *nameCache) remove(desc Descriptor) bool {
-	index := getIndex(nc.all, desc)
-	if index >= 0 {
-		nc.all = removeOneFromDescArray(nc.all, index)
-	}
-
-	space := desc.GetNamespace()
-	name := desc.GetName()
-
-	internal, found := nc.data[space]
-	if !found {
-		return false
-	}
-
-	ar, found := internal[name]
-	if !found {
-		return false
-	}
-
-	index = getIndex(ar, desc)
-	if index < 0 {
-		return false
-	}
-
-	ar = removeOneFromDescArray(ar, index)
-	if len(ar) == 0 {
-		delete(internal, name)
-
-		if len(internal) == 0 {
-			delete(nc.data, space)
-		}
-	}
-
-	return true
 }
 
 func (nc *nameCache) clone() *nameCache {
@@ -168,7 +105,16 @@ func (nc *nameCache) clone() *nameCache {
 	}
 }
 
+func (nc *nameCache) limitedLookup(filter Filter) []Descriptor {
+	return nc.internalLookup(filter, false)
+
+}
+
 func (nc *nameCache) lookup(filter Filter) []Descriptor {
+	return nc.internalLookup(filter, true)
+}
+
+func (nc *nameCache) internalLookup(filter Filter, runFilter bool) []Descriptor {
 	space := filter.GetNamespace()
 	name := filter.GetName()
 
@@ -186,6 +132,10 @@ func (nc *nameCache) lookup(filter Filter) []Descriptor {
 		} else {
 			candidates = []Descriptor{}
 		}
+	}
+
+	if !runFilter {
+		return candidates
 	}
 
 	retVal := make([]Descriptor, 0)

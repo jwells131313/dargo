@@ -68,13 +68,12 @@ func TestAddRemoveDescriptorStore(t *testing.T) {
 	cache.add(d2)
 	cache.add(d3)
 
-	assert.True(t, cache.remove(d2))
-	assert.True(t, cache.remove(d3))
-	assert.True(t, cache.remove(d1))
+	ds := cache.getAll()
+	assert.Equal(t, 3, len(ds))
 
-	assert.False(t, cache.remove(d2))
-	assert.False(t, cache.remove(d1))
-	assert.False(t, cache.remove(d3))
+	assert.Equal(t, d1, ds[0])
+	assert.Equal(t, d2, ds[1])
+	assert.Equal(t, d3, ds[2])
 }
 
 func TestLookupAllDescriptorStore(t *testing.T) {
@@ -158,15 +157,15 @@ func TestClone(t *testing.T) {
 	assert.Equal(t, 1, len(rv))
 	assert.Equal(t, d3, rv[0])
 
-	// Check that removal from clone does not affect original
-	assert.True(t, clone.remove(d1))
+	// Check that add to clone does not affect original
+	clone.add(d1)
 
 	rv = cache.lookup(filter1)
 	assert.Equal(t, 1, len(rv))
 	assert.Equal(t, d1, rv[0])
 
-	// Check that removal from original does not affect clone
-	assert.True(t, cache.remove(d2))
+	// Check that add to original does not affect clone
+	cache.add(d2)
 
 	rv = clone.lookup(filter2)
 	assert.Equal(t, 1, len(rv))

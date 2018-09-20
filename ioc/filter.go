@@ -58,7 +58,8 @@ type Filter interface {
 }
 
 type serviceKeyFilter struct {
-	keys []ServiceKey
+	space, name string
+	keys        []ServiceKey
 }
 
 // NewServiceKeyFilter creates a filter for the given service key
@@ -66,8 +67,33 @@ func NewServiceKeyFilter(keys ...ServiceKey) Filter {
 	cpy := make([]ServiceKey, len(keys))
 	copy(cpy, keys)
 
+	space := ""
+	name := ""
+	if len(keys) == 1 {
+		space = keys[0].GetNamespace()
+		name = keys[0].GetName()
+	} else if len(keys) > 1 {
+		checkSpace := keys[0].GetNamespace()
+		checkName := keys[0].GetName()
+
+		allSame := true
+		for _, key := range keys {
+			if checkSpace != key.GetNamespace() || checkName != key.GetName() {
+				allSame = false
+				break
+			}
+		}
+
+		if allSame {
+			space = checkSpace
+			name = checkName
+		}
+	}
+
 	return &serviceKeyFilter{
-		cpy,
+		space: space,
+		name:  name,
+		keys:  cpy,
 	}
 }
 
@@ -82,11 +108,11 @@ func (filter *serviceKeyFilter) Filter(desc Descriptor) bool {
 }
 
 func (filter *serviceKeyFilter) GetNamespace() string {
-	return ""
+	return filter.space
 }
 
 func (filter *serviceKeyFilter) GetName() string {
-	return ""
+	return filter.name
 }
 
 func filterOne(key ServiceKey, desc Descriptor) bool {
