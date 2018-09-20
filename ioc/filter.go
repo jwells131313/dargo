@@ -173,10 +173,6 @@ type idFilterData struct {
 	serviceID int64
 }
 
-func (ifd *idFilterData) String() string {
-	return fmt.Sprintf("idFileterData(%d,%d)", ifd.locatorID, ifd.serviceID)
-}
-
 // NewIDFilter is a filter specific to a descriptor with
 // the exact locatorID and serviceID given
 func NewIDFilter(locatorID, serviceID int64) Filter {
@@ -196,6 +192,10 @@ func (idFilter *idFilterData) GetNamespace() string {
 
 func (idFilter *idFilterData) GetName() string {
 	return ""
+}
+
+func (idFilter *idFilterData) String() string {
+	return fmt.Sprintf("idFileterData(%d,%d)", idFilter.locatorID, idFilter.serviceID)
 }
 
 type namedFilterData struct {
