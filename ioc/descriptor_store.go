@@ -180,7 +180,11 @@ func (nc *nameCache) lookup(filter Filter) []Descriptor {
 			dArray, found := internal[name]
 			if found {
 				candidates = dArray
+			} else {
+				candidates = []Descriptor{}
 			}
+		} else {
+			candidates = []Descriptor{}
 		}
 	}
 

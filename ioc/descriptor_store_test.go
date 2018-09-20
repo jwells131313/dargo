@@ -49,9 +49,11 @@ const (
 	FOO = "foo"
 	BAR = "bar"
 	BAZ = "baz"
+	QUX = "qux"
 
 	NS1 = "ns1"
 	NS2 = "ns2"
+	NS3 = "ns3"
 )
 
 func TestAddRemoveDescriptorStore(t *testing.T) {
@@ -171,6 +173,33 @@ func TestClone(t *testing.T) {
 	assert.Equal(t, d2, rv[0])
 }
 
+func TestFilterNotCalled(t *testing.T) {
+	cache := newNameCache()
+	assert.NotNil(t, cache, "should not be nil")
+
+	d1 := createDescriptor(NS1, FOO, 0, 0)
+	d2 := createDescriptor(NS2, BAR, 0, 1)
+	d3 := createDescriptor(NS2, BAZ, 0, 2)
+
+	cache.add(d1)
+	cache.add(d2)
+	cache.add(d3)
+
+	filter := &panicyFilter{space: NS3, name: FOO}
+
+	dNone := cache.lookup(filter)
+	if !assert.Equal(t, 0, len(dNone)) {
+		return
+	}
+
+	filter = &panicyFilter{space: NS2, name: QUX}
+
+	dNone = cache.lookup(filter)
+	if !assert.Equal(t, 0, len(dNone)) {
+		return
+	}
+}
+
 func createDescriptor(space, name string, lid, sid int64) Descriptor {
 	key, err := NewServiceKey(space, name)
 	if err != nil {
@@ -184,4 +213,20 @@ func createDescriptor(space, name string, lid, sid int64) Descriptor {
 	}
 
 	return retVal
+}
+
+type panicyFilter struct {
+	space, name string
+}
+
+func (pf *panicyFilter) GetNamespace() string {
+	return pf.space
+}
+
+func (pf *panicyFilter) GetName() string {
+	return pf.name
+}
+
+func (pf *panicyFilter) Filter(Descriptor) bool {
+	panic("should not be called")
 }
