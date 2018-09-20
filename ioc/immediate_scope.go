@@ -278,3 +278,11 @@ func (filter *immediateFilterData) Filter(desc Descriptor) bool {
 
 	return false
 }
+
+func (filter *immediateFilterData) GetNamespace() string {
+	return ""
+}
+
+func (filter *immediateFilterData) GetName() string {
+	return ""
+}

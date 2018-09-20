@@ -135,7 +135,7 @@ type serviceLocatorData struct {
 	glock              goethe.Lock
 	name               string
 	ID                 int64
-	allDescriptors     []Descriptor
+	descriptorData     *nameCache
 	nextServiceID      int64
 	perLookupContext   ContextualScope
 	singletonContext   ContextualScope
@@ -181,7 +181,7 @@ func NewServiceLocator(name string, qos int) (ServiceLocator, error) {
 		glock:              threadManager.NewGoetheLock(),
 		name:               name,
 		ID:                 ID,
-		allDescriptors:     make([]Descriptor, 0),
+		descriptorData:     newNameCache(),
 		perLookupContext:   newPerLookupContext(),
 		state:              LocatorStateRunning,
 		errorServices:      make([]ErrorService, 0),
@@ -206,8 +206,8 @@ func NewServiceLocator(name string, qos int) (ServiceLocator, error) {
 		return nil, err
 	}
 
-	retVal.allDescriptors = append(retVal.allDescriptors, serviceLocatorSystemDescriptor)
-	retVal.allDescriptors = append(retVal.allDescriptors, dcsSystemDescriptor)
+	retVal.descriptorData.add(serviceLocatorSystemDescriptor)
+	retVal.descriptorData.add(dcsSystemDescriptor)
 
 	retVal.nextServiceID = 2
 
@@ -234,7 +234,7 @@ func (locator *serviceLocatorData) getServiceFor(toMe ServiceKey, forMe Descript
 		return nil, err
 	}
 
-	f := NewServiceKeyFilter(toMe)
+	f := NewSingleFilter(toMe.GetNamespace(), toMe.GetName(), toMe.GetQualifiers()...)
 
 	desc, err := locator.getBestDescriptorFor(f, forMe)
 	if err != nil {
@@ -440,47 +440,47 @@ func (locator *serviceLocatorData) internalGetDescriptors(filter Filter, forMe D
 	defer locator.glock.ReadUnlock()
 
 	retVal := make([]Descriptor, 0)
-	for _, desc := range locator.allDescriptors {
-		if filter.Filter(desc) {
-			passedValidation := true
+	candidates := locator.descriptorData.limitedLookup(filter)
 
-			vi := newValidationInformation(LookupOperation, desc, forMe, filter)
+	for _, desc := range candidates {
+		passedValidation := true
 
-			for _, validationService := range locator.validationServices {
+		vi := newValidationInformation(LookupOperation, desc, forMe, filter)
+
+		for _, validationService := range locator.validationServices {
+			errRet := &errorReturn{}
+
+			validationFilter := safeGetFilter(validationService, errRet)
+			if errRet.err != nil {
+				return nil, errRet.err
+			}
+
+			if validationFilter.Filter(desc) {
 				errRet := &errorReturn{}
 
-				validationFilter := safeGetFilter(validationService, errRet)
+				validator := safeGetValidator(validationService, errRet)
 				if errRet.err != nil {
 					return nil, errRet.err
 				}
 
-				if validationFilter.Filter(desc) {
-					errRet := &errorReturn{}
-
-					validator := safeGetValidator(validationService, errRet)
-					if errRet.err != nil {
-						return nil, errRet.err
+				safeValidate(validator, vi, errRet)
+				valError := errRet.err
+				if valError != nil {
+					_, ok := valError.(MultiError)
+					if !ok {
+						valError = NewMultiError(valError)
 					}
 
-					safeValidate(validator, vi, errRet)
-					valError := errRet.err
-					if valError != nil {
-						_, ok := valError.(MultiError)
-						if !ok {
-							valError = NewMultiError(valError)
-						}
+					locator.runErrorHandlers(LookupValidationFailure, desc, nil, forMe, valError)
 
-						locator.runErrorHandlers(LookupValidationFailure, desc, nil, forMe, valError)
-
-						passedValidation = false
-					}
+					passedValidation = false
 				}
-
 			}
 
-			if passedValidation {
-				retVal = append(retVal, desc)
-			}
+		}
+
+		if passedValidation && filter.Filter(desc) {
+			retVal = append(retVal, desc)
 		}
 	}
 
@@ -600,21 +600,21 @@ func (locator *serviceLocatorData) update(newDescs []Descriptor,
 		return false, fmt.Errorf("there was an update to the ServiceLocator after this DynamicConfiguration was created")
 	}
 
-	newAllDescs := make([]Descriptor, 0)
+	newDescriptorData := newNameCache()
 
 	var errorServiceUpdate bool
 	var validationServiceUpdate bool
 
 	removedDescriptors := make([]Descriptor, 0)
-	for _, myDesc := range locator.allDescriptors {
+	for _, myDesc := range locator.descriptorData.getAll() {
 		removeMe := false
 
 		for _, removeFilter := range removers {
-			removeMe = removeMe || removeFilter.Filter(myDesc)
+			removeMe = removeMe || checkFilter(removeFilter, myDesc)
 		}
 
 		if !removeMe {
-			newAllDescs = append(newAllDescs, myDesc)
+			newDescriptorData.add(myDesc)
 		} else {
 			errorServiceUpdate = errorServiceUpdate || isErrorService(myDesc)
 			validationServiceUpdate = validationServiceUpdate || isValidationService(myDesc)
@@ -696,17 +696,17 @@ func (locator *serviceLocatorData) update(newDescs []Descriptor,
 			}
 		}
 
-		newAllDescs = append(newAllDescs, newDesc)
+		newDescriptorData.add(newDesc)
 	}
 
 	var success bool
 
 	// Get old services
-	oldDescriptors := locator.allDescriptors
+	oldDescriptorData := locator.descriptorData
 	oldErrorServices := locator.errorServices
 	oldValidationServices := locator.validationServices
 
-	locator.allDescriptors = newAllDescs
+	locator.descriptorData = newDescriptorData
 
 	defer func() {
 		if success {
@@ -716,7 +716,7 @@ func (locator *serviceLocatorData) update(newDescs []Descriptor,
 
 		locator.validationServices = oldValidationServices
 		locator.errorServices = oldErrorServices
-		locator.allDescriptors = oldDescriptors
+		locator.descriptorData = oldDescriptorData
 	}()
 
 	if errorServiceUpdate {

@@ -44,11 +44,22 @@ import "fmt"
 
 // Filter is used to filter descriptors for matching services
 type Filter interface {
+	// Filter returns true if the descriptor should be included in the result
 	Filter(Descriptor) bool
+
+	// GetNamespace returns a non-empty string if all results from this filter
+	// should come from a particular namespace
+	GetNamespace() string
+
+	// GetName returns a non-empty string if all results from this filter
+	// should have the particular name.  If this method returns a non-empty
+	// string then GetNamespace must also return a non-empty string
+	GetName() string
 }
 
 type serviceKeyFilter struct {
-	keys []ServiceKey
+	space, name string
+	keys        []ServiceKey
 }
 
 // NewServiceKeyFilter creates a filter for the given service key
@@ -56,8 +67,33 @@ func NewServiceKeyFilter(keys ...ServiceKey) Filter {
 	cpy := make([]ServiceKey, len(keys))
 	copy(cpy, keys)
 
+	space := ""
+	name := ""
+	if len(keys) == 1 {
+		space = keys[0].GetNamespace()
+		name = keys[0].GetName()
+	} else if len(keys) > 1 {
+		checkSpace := keys[0].GetNamespace()
+		checkName := keys[0].GetName()
+
+		allSame := true
+		for _, key := range keys {
+			if checkSpace != key.GetNamespace() || checkName != key.GetName() {
+				allSame = false
+				break
+			}
+		}
+
+		if allSame {
+			space = checkSpace
+			name = checkName
+		}
+	}
+
 	return &serviceKeyFilter{
-		cpy,
+		space: space,
+		name:  name,
+		keys:  cpy,
 	}
 }
 
@@ -69,6 +105,14 @@ func (filter *serviceKeyFilter) Filter(desc Descriptor) bool {
 	}
 
 	return true
+}
+
+func (filter *serviceKeyFilter) GetNamespace() string {
+	return filter.space
+}
+
+func (filter *serviceKeyFilter) GetName() string {
+	return filter.name
 }
 
 func filterOne(key ServiceKey, desc Descriptor) bool {
@@ -116,13 +160,17 @@ func (allFilterData) Filter(Descriptor) bool {
 	return true
 }
 
+func (allFilterData) GetNamespace() string {
+	return ""
+}
+
+func (allFilterData) GetName() string {
+	return ""
+}
+
 type idFilterData struct {
 	locatorID int64
 	serviceID int64
-}
-
-func (ifd *idFilterData) String() string {
-	return fmt.Sprintf("idFileterData(%d,%d)", ifd.locatorID, ifd.serviceID)
 }
 
 // NewIDFilter is a filter specific to a descriptor with
@@ -136,4 +184,52 @@ func NewIDFilter(locatorID, serviceID int64) Filter {
 
 func (idFilter *idFilterData) Filter(desc Descriptor) bool {
 	return (desc.GetLocatorID() == idFilter.locatorID) && (desc.GetServiceID() == idFilter.serviceID)
+}
+
+func (idFilter *idFilterData) GetNamespace() string {
+	return ""
+}
+
+func (idFilter *idFilterData) GetName() string {
+	return ""
+}
+
+func (idFilter *idFilterData) String() string {
+	return fmt.Sprintf("idFileterData(%d,%d)", idFilter.locatorID, idFilter.serviceID)
+}
+
+type namedFilterData struct {
+	namespace  string
+	name       string
+	qualifiers []string
+}
+
+// NewSingleFilter returns a filter for a service with the given namespace, name
+// and qualifiers
+func NewSingleFilter(namespace string, name string, qualifiers ...string) Filter {
+	qCopy := make([]string, len(qualifiers))
+	copy(qCopy, qualifiers)
+
+	return &namedFilterData{
+		namespace:  namespace,
+		name:       name,
+		qualifiers: qCopy,
+	}
+}
+
+func (nfd *namedFilterData) Filter(d Descriptor) bool {
+	key, err := NewServiceKey(nfd.namespace, nfd.name, nfd.qualifiers...)
+	if err != nil {
+		panic(err)
+	}
+
+	return filterOne(key, d)
+}
+
+func (nfd *namedFilterData) GetNamespace() string {
+	return nfd.namespace
+}
+
+func (nfd *namedFilterData) GetName() string {
+	return nfd.name
 }

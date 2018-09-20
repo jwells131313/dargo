@@ -293,6 +293,18 @@ func TestInjectValidationErrorService(t *testing.T) {
 }
 
 func TestPanicyValidationService(t *testing.T) {
+	done := make(chan bool)
+
+	threadManager.Go(internalTestPanicyValidationService, t, done)
+
+	<-done
+}
+
+func internalTestPanicyValidationService(t *testing.T, done chan bool) {
+	defer func() {
+		done <- false
+	}()
+
 	lastValidationErrorInformation = nil
 
 	locator, err := CreateAndBind(ValidationTestLocatorName6, func(binder Binder) error {
