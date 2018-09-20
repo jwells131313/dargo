@@ -204,6 +204,8 @@ type namedFilterData struct {
 	qualifiers []string
 }
 
+// NewSingleFilter returns a filter for a service with the given namespace, name
+// and qualifiers
 func NewSingleFilter(namespace string, name string, qualifiers ...string) Filter {
 	qCopy := make([]string, len(qualifiers))
 	copy(qCopy, qualifiers)
