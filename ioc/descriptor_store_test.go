@@ -200,6 +200,29 @@ func TestFilterNotCalled(t *testing.T) {
 	}
 }
 
+func TestCheckFilter(t *testing.T) {
+	d1 := createDescriptor(NS1, FOO, 0, 0)
+	d2 := createDescriptor(NS2, BAR, 0, 1)
+	d3 := createDescriptor(NS2, BAZ, 0, 2)
+
+	filter1 := NewSingleFilter(NS1, FOO)
+	filter2 := NewSingleFilter(NS2, BAR)
+	filter3 := NewSingleFilter(NS2, BAZ)
+	filter4 := NewIDFilter(0, 2)
+
+	assert.True(t, checkFilter(filter1, d1))
+	assert.True(t, checkFilter(filter2, d2))
+	assert.True(t, checkFilter(filter3, d3))
+
+	assert.False(t, checkFilter(filter2, d1))
+	assert.False(t, checkFilter(filter3, d2))
+	assert.False(t, checkFilter(filter1, d3))
+
+	assert.False(t, checkFilter(filter4, d1))
+	assert.False(t, checkFilter(filter4, d2))
+	assert.True(t, checkFilter(filter4, d3))
+}
+
 func createDescriptor(space, name string, lid, sid int64) Descriptor {
 	key, err := NewServiceKey(space, name)
 	if err != nil {

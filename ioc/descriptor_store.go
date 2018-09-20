@@ -197,3 +197,16 @@ func (nc *nameCache) lookup(filter Filter) []Descriptor {
 
 	return retVal
 }
+
+func checkFilter(filter Filter, desc Descriptor) bool {
+	filterNamespace := filter.GetNamespace()
+	filterName := filter.GetName()
+
+	if filterNamespace != "" && filterName != "" {
+		if desc.GetNamespace() != filterNamespace || desc.GetName() != filterName {
+			return false
+		}
+	}
+
+	return filter.Filter(desc)
+}

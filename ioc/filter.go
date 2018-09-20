@@ -178,10 +178,6 @@ type namedFilterData struct {
 	qualifiers []string
 }
 
-func NewDefaultFilter(name string, qualifiers ...string) Filter {
-	return NewSingleFilter(DefaultNamespace, name, qualifiers...)
-}
-
 func NewSingleFilter(namespace string, name string, qualifiers ...string) Filter {
 	qCopy := make([]string, len(qualifiers))
 	copy(qCopy, qualifiers)
