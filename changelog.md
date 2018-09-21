@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 ### Changed
 - BACKWARD BREAK:  Filter interface, two methods added for lookup optimization
+- Fixes bug where providers were not recoginized in vendor directory
 
 ## [0.4.0] - 2018-09-19
 ### Changed
