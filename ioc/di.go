@@ -87,7 +87,8 @@ func isProvider(ty reflect.Type) bool {
 		return false
 	}
 
-	return "github.com/jwells131313/dargo/ioc" == ty.PkgPath() && "Provider" == ty.Name()
+	providerType := reflect.TypeOf((*Provider)(nil)).Elem()
+	return ty.AssignableTo(providerType)
 }
 
 func safeSet(v reflect.Value, to reflect.Value, ret *errorReturn) {
