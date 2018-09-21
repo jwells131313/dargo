@@ -55,6 +55,7 @@ const (
 	DILocator5 = "DITestLocator5"
 	DILocator6 = "DITestLocator6"
 	DILocator7 = "DITestLocator7"
+	DILocator8 = "DITestLocator8"
 
 	AServiceName = "A"
 	BServiceName = "B"
@@ -272,6 +273,50 @@ func TestProviderQualifiedBy(t *testing.T) {
 			return
 		}
 	}
+}
+
+func TestNoCurrentServiceProvider(t *testing.T) {
+	locator, err := CreateAndBind(DILocator8, func(binder Binder) error {
+		binder.Bind(RainbowName, RainbowServiceData{})
+
+		return nil
+	})
+	if !assert.Nil(t, err, "couldn't create locator %s", DILocator8) {
+		return
+	}
+
+	rainbowRaw, err := locator.GetDService(RainbowName)
+	if !assert.Nil(t, err, "couldn't create RainbowService") {
+		fmt.Println("", err)
+		return
+	}
+
+	rainbow, ok := rainbowRaw.(*RainbowServiceData)
+	if !assert.True(t, ok, "Invalid type for RainbowService") {
+		return
+	}
+
+	_, err = rainbow.ColorProvider.Get()
+	if !assert.NotNil(t, err, "Get should have failed, there is no service in the locator yet") {
+		return
+	}
+
+	err = BindIntoLocator(locator, func(binder Binder) error {
+		binder.Bind(ColorServiceName, colorServiceData{}).QualifiedBy(BRed)
+
+		return nil
+	})
+	if !assert.Nil(t, err, "error adding color service") {
+		return
+	}
+
+	raw, err := rainbow.ColorProvider.Get()
+	if !assert.Nil(t, err, "service should now be available") {
+		return
+	}
+
+	_, ok = raw.(ColorService)
+	assert.True(t, ok, "Incorrect type")
 }
 
 func TestInitializerPanics(t *testing.T) {
