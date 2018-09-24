@@ -57,6 +57,7 @@ const (
 	ValidationTestLocatorName6 = "ValidationTestLocator6"
 	ValidationTestLocatorName7 = "ValidationTestLocator7"
 	ValidationTestLocatorName8 = "ValidationTestLocator8"
+	ValidationTestLocatorName9 = "ValidationTestLocator9"
 
 	DoNotBindService   = "DoNotBindService"
 	NeverUnbindService = "NeverUnbindService"
@@ -419,6 +420,66 @@ func TestPanicyGetValidatorValidationService(t *testing.T) {
 	}
 
 	assert.True(t, strings.Contains(err.Error(), BrokenGetValidatorMessage), "unexpected error %s", err.Error())
+}
+
+func TestFilterDoesNotGetDescriptorsItShouldNotSee(t *testing.T) {
+
+	locator, err := CreateAndBind(ValidationTestLocatorName9, func(binder Binder) error {
+		binder.Bind(ValidationServiceName, ValidationServiceData{}).InNamespace(UserServicesNamespace)
+		binder.Bind(ClientOrServerService, ClientService{}).QualifiedBy(Client).InScope(PerLookup)
+		return nil
+	})
+	if !assert.Nil(t, err, "could not create the locator") {
+		return
+	}
+
+	isServer = true
+
+	filter := &RecordingFilter{}
+
+	returnedDescriptors, err := locator.GetDescriptors(filter)
+	if !assert.Nil(t, err, "could not create the locator") {
+		return
+	}
+
+	if !checkDoesNotHaveClientService(t, returnedDescriptors) {
+		return
+	}
+
+	checkDoesNotHaveClientService(t, filter.givenDescriptors)
+}
+
+func checkDoesNotHaveClientService(t *testing.T, descriptors []Descriptor) bool {
+	for _, descriptor := range descriptors {
+		if !assert.NotEqual(t, ClientOrServerService, descriptor.GetName(),
+			"Found client descriptor %v", descriptor) {
+			return false
+		}
+	}
+
+	return true
+}
+
+type RecordingFilter struct {
+	givenDescriptors []Descriptor
+}
+
+func (rf *RecordingFilter) Filter(desc Descriptor) bool {
+	if rf.givenDescriptors == nil {
+		rf.givenDescriptors = make([]Descriptor, 0)
+	}
+
+	rf.givenDescriptors = append(rf.givenDescriptors, desc)
+
+	return true
+}
+
+func (rf *RecordingFilter) GetNamespace() string {
+	return ""
+}
+
+func (rf *RecordingFilter) GetName() string {
+	return ""
 }
 
 func getClientService(t *testing.T, locator ServiceLocator) (*ClientService, error) {
