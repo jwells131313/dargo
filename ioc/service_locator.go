@@ -143,6 +143,7 @@ type serviceLocatorData struct {
 	state              string
 	errorServices      []ErrorService
 	validationServices []ValidationService
+	injectionResolvers []InjectionResolver
 }
 
 // NewServiceLocator this will find or create a service locator with the given name, and
@@ -206,10 +207,24 @@ func NewServiceLocator(name string, qos int) (ServiceLocator, error) {
 		return nil, err
 	}
 
+	ir := &systemInjectionResolver{}
+	injecteeResolverDescriptor := NewConstantDescriptor(
+		USK(InjectionResolverName, SystemInjectionResolverQualifierName), ir)
+	injecteeResolverSystemDescriptor, err := NewDescriptor(injecteeResolverDescriptor, 2, ID)
+	if err != nil {
+		return nil, err
+	}
+
+	injectionResolvers := make([]InjectionResolver, 1)
+	injectionResolvers[0] = ir
+
+	retVal.injectionResolvers = injectionResolvers
+
 	retVal.descriptorData.add(serviceLocatorSystemDescriptor)
 	retVal.descriptorData.add(dcsSystemDescriptor)
+	retVal.descriptorData.add(injecteeResolverSystemDescriptor)
 
-	retVal.nextServiceID = 2
+	retVal.nextServiceID = 3
 
 	locators[name] = retVal
 

@@ -78,6 +78,12 @@ func TestGetSystemServices(t *testing.T) {
 	_, ok = foundService.(DynamicConfigurationService)
 	assert.True(t, ok, "does not implement DynamicConfigurationService")
 
+	foundService, err = locator.GetService(USK(InjectionResolverName, SystemInjectionResolverQualifierName))
+	assert.Nil(t, err, "Could not find system injection resolver")
+
+	_, ok = foundService.(InjectionResolver)
+	assert.True(t, ok, "does not implement InjectionResolver")
+
 	locator2, err := NewServiceLocator(testLocatorName2, FailIfPresent)
 	assert.Nil(t, err, "Could not create/find locator2")
 
