@@ -113,14 +113,22 @@ func (sir *systemInjectionResolver) Resolve(locator ServiceLocator, injectee Inj
 			return nil, false, err
 		}
 
-		dependency, err := iLocator.getServiceFor(serviceKey, desc)
+		fieldType := fieldVal.Type
+
+		var dependency interface{}
+		if !isProvider(fieldType) {
+			dependency, err = iLocator.getServiceFor(serviceKey, desc)
+		} else {
+			dependency = newProvider(iLocator, serviceKey, desc)
+		}
+
 		if err != nil {
 			return nil, false, err
 		}
 
 		dependencyAsValue := reflect.ValueOf(dependency)
 
-		return &dependencyAsValue, false, nil
+		return &dependencyAsValue, true, nil
 	}
 
 	return nil, false, nil

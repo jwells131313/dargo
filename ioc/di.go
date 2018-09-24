@@ -66,7 +66,7 @@ func newCreatorFunc(ty reflect.Type, parent *serviceLocatorData) func(ServiceLoc
 
 type indexAndValueOfDependency struct {
 	index int
-	value reflect.Value
+	value *reflect.Value
 }
 
 type errorReturn struct {
@@ -91,14 +91,14 @@ func isProvider(ty reflect.Type) bool {
 	return ty.AssignableTo(providerType)
 }
 
-func safeSet(v reflect.Value, to reflect.Value, ret *errorReturn) {
+func safeSet(v reflect.Value, to *reflect.Value, ret *errorReturn) {
 	defer func() {
 		if r := recover(); r != nil {
 			ret.err = fmt.Errorf("%v", r)
 		}
 	}()
 
-	v.Set(to)
+	v.Set(*to)
 }
 
 func safeDargoInitialize(dargoI DargoInitializer, desc Descriptor, ret *errorReturn) {
