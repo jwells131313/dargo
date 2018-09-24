@@ -298,6 +298,15 @@ func isConfigurationListener(desc Descriptor) bool {
 	return false
 }
 
+func isInjectionResolver(desc Descriptor) bool {
+	if UserServicesNamespace == desc.GetNamespace() &&
+		InjectionResolverName == desc.GetName() {
+		return true
+	}
+
+	return false
+}
+
 func descriptorToIDString(desc Descriptor) string {
 	return fmt.Sprintf("%d.%d", desc.GetLocatorID(), desc.GetServiceID())
 }

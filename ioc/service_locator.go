@@ -619,6 +619,7 @@ func (locator *serviceLocatorData) update(newDescs []Descriptor,
 
 	var errorServiceUpdate bool
 	var validationServiceUpdate bool
+	var injectionResolverUpdate bool
 
 	removedDescriptors := make([]Descriptor, 0)
 	for _, myDesc := range locator.descriptorData.getAll() {
@@ -633,6 +634,7 @@ func (locator *serviceLocatorData) update(newDescs []Descriptor,
 		} else {
 			errorServiceUpdate = errorServiceUpdate || isErrorService(myDesc)
 			validationServiceUpdate = validationServiceUpdate || isValidationService(myDesc)
+			injectionResolverUpdate = injectionResolverUpdate || isInjectionResolver(myDesc)
 
 			removedDescriptors = append(removedDescriptors, myDesc)
 		}
@@ -697,7 +699,8 @@ func (locator *serviceLocatorData) update(newDescs []Descriptor,
 			}
 		}
 
-		if isErrorService(newDesc) || isValidationService(newDesc) || isConfigurationListener(newDesc) {
+		if isErrorService(newDesc) || isValidationService(newDesc) || isConfigurationListener(newDesc) ||
+			isInjectionResolver(newDesc) {
 			if Singleton != newDesc.GetScope() {
 				return false, fmt.Errorf("implementations of %s must be in the singleton scope",
 					newDesc.GetName())
@@ -708,6 +711,9 @@ func (locator *serviceLocatorData) update(newDescs []Descriptor,
 			}
 			if isValidationService(newDesc) {
 				validationServiceUpdate = true
+			}
+			if isInjectionResolver(newDesc) {
+				injectionResolverUpdate = true
 			}
 		}
 
@@ -720,6 +726,7 @@ func (locator *serviceLocatorData) update(newDescs []Descriptor,
 	oldDescriptorData := locator.descriptorData
 	oldErrorServices := locator.errorServices
 	oldValidationServices := locator.validationServices
+	oldInjectionResolvers := locator.injectionResolvers
 
 	locator.descriptorData = newDescriptorData
 
@@ -732,6 +739,7 @@ func (locator *serviceLocatorData) update(newDescs []Descriptor,
 		locator.validationServices = oldValidationServices
 		locator.errorServices = oldErrorServices
 		locator.descriptorData = oldDescriptorData
+		locator.injectionResolvers = oldInjectionResolvers
 	}()
 
 	if errorServiceUpdate {
@@ -784,6 +792,32 @@ func (locator *serviceLocatorData) update(newDescs []Descriptor,
 		}
 
 		locator.validationServices = newValidationServices
+	}
+
+	if injectionResolverUpdate {
+		// Must get all validation services again
+		irServiceKey, err := NewServiceKey(UserServicesNamespace, InjectionResolverName)
+		if err != nil {
+			return false, errors.Wrap(err, "creation of injection resolver service key failed")
+		}
+
+		raws, err := locator.GetAllServices(irServiceKey)
+		if err != nil {
+			return false, errors.Wrap(err, "creation of error services failed")
+		}
+
+		newIRServices := make([]InjectionResolver, 0)
+		for _, irServiceRaw := range raws {
+			irService, ok := irServiceRaw.(InjectionResolver)
+			if !ok {
+				return false, fmt.Errorf("a service %v with injection resolver service key does not implement error service",
+					irServiceRaw)
+			}
+
+			newIRServices = append(newIRServices, irService)
+		}
+
+		locator.injectionResolvers = newIRServices
 	}
 
 	success = true
