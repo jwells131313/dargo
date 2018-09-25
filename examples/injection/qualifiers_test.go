@@ -60,8 +60,3 @@ func TestExample(t *testing.T) {
 	scale := musicService.PlayCScale()
 	assert.Equal(t, "<<<cdefgab>>>", scale, "scale didn't match")
 }
-
-func TestExperiment(t *testing.T) {
-	err := runExample()
-	assert.Nil(t, err, "experiment failure")
-}
