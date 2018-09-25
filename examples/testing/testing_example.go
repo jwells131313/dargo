@@ -38,51 +38,53 @@
  * holder.
  */
 
-package example
+package testing
 
 import (
 	"github.com/jwells131313/dargo/ioc"
-	"testing"
+	"time"
 )
 
-type MockExpensiveService struct {
+var globalLocator ioc.ServiceLocator
+
+// AnExpensiveService is a service that is expensive in some way
+type AnExpensiveService interface {
+	// DoExpensiveThing does some expensive operation
+	DoExpensiveThing(string) (string, error)
 }
 
-func (mock *MockExpensiveService) DoExpensiveThing(thingToDo string) (string, error) {
-	return "Mock", nil
+// NormalExpensiveServiceData is an implementation of AnExpensiveService in the normal code
+type NormalExpensiveServiceData struct {
 }
 
-func putMocksIn() error {
-	return ioc.BindIntoLocator(globalLocator, func(binder ioc.Binder) error {
-		binder.Bind("AnExpensiveService", MockExpensiveService{}).Ranked(1)
+// SomeOtherServiceData is another user service which injects the expensive service
+type SomeOtherServiceData struct {
+	// ExpensiveService is the expensive service, injected by Dargo
+	ExpensiveService AnExpensiveService `inject:"AnExpensiveService"`
+}
+
+// DoExpensiveThing implements the interface with a long sleep and returns "Normal"
+func (nesd *NormalExpensiveServiceData) DoExpensiveThing(thingToDo string) (string, error) {
+	time.Sleep(5 * time.Second)
+
+	return "Normal", nil
+}
+
+func init() {
+	myLocator, err := ioc.CreateAndBind("TestingExampleLocator", func(binder ioc.Binder) error {
+		binder.Bind("UserService", SomeOtherServiceData{})
+		binder.Bind("AnExpensiveService", NormalExpensiveServiceData{})
 
 		return nil
 	})
+	if err != nil {
+		panic(err)
+	}
+
+	globalLocator = myLocator
 }
 
-func TestWithAMock(t *testing.T) {
-	err := putMocksIn()
-	if err != nil {
-		t.Error(err.Error())
-		return
-	}
-
-	raw, err := globalLocator.GetDService("UserService")
-	if err != nil {
-		t.Error(err.Error())
-		return
-	}
-
-	userService := raw.(*SomeOtherServiceData)
-
-	result, err := userService.DoSomeUserCode()
-	if err != nil {
-		t.Error(err.Error())
-		return
-	}
-
-	if result != "Mock" {
-		t.Errorf("Was expecting mock service but got %s", result)
-		return
-	}
+// DoSomeUserCode is the user code that uses the injected service
+func (other *SomeOtherServiceData) DoSomeUserCode() (string, error) {
+	return other.ExpensiveService.DoExpensiveThing("foo")
 }
