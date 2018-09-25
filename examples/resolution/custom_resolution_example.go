@@ -97,7 +97,12 @@ type AService struct {
 	BService *BService
 }
 
-func runAutomaticResolverExample() error {
+// CustomResolution is a method that will create a locator, binding in the
+// custom resolver and the A and B Services.  It will then get the AService
+// and use the injected BService.  This example shows how a custom resolver
+// can use whatever resources it has available to choose injection points
+// in a service
+func CustomResolution() error {
 	locator, err := ioc.CreateAndBind("AutomaticResolverLocator", func(binder ioc.Binder) error {
 		binder.Bind(ioc.InjectionResolverName, &AutomaticResolver{}).InNamespace(ioc.UserServicesNamespace)
 		binder.Bind("AService", &AService{})

@@ -43,7 +43,7 @@ package resolution
 import "fmt"
 
 func ExampleCustomResolution() {
-	err := runAutomaticResolverExample()
+	err := CustomResolution()
 	if err != nil {
 		fmt.Printf("%s\n", err.Error())
 	}
