@@ -38,7 +38,7 @@
  * holder.
  */
 
-package example
+package dcontext
 
 import (
 	"context"

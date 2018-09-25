@@ -38,31 +38,14 @@
  * holder.
  */
 
-package example
+package errors
 
-import "testing"
+import (
+	"github.com/stretchr/testify/assert"
+	"testing"
+)
 
-func TestExample2(t *testing.T) {
-	locator, err := CreateEchoLocator()
-	if err != nil {
-		t.Error("could not create locator")
-		return
-	}
-
-	rawService, err := locator.GetDService(EchoServiceName)
-	if err != nil {
-		t.Errorf("could not find echo service %v", err)
-		return
-	}
-
-	echoService, ok := rawService.(EchoService)
-	if !ok {
-		t.Errorf("raw echo service was not the correct type %v", rawService)
-		return
-	}
-
-	ret := echoService.Echo("hi")
-	if ret != "hi" {
-		t.Errorf("did not get expected reply: %s", ret)
-	}
+func TestErrorServiceExample(t *testing.T) {
+	err := runErrorServiceExample()
+	assert.Nil(t, err, "error service example failure")
 }

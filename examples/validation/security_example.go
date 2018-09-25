@@ -38,7 +38,7 @@
  * holder.
  */
 
-package example
+package validation
 
 import (
 	"fmt"

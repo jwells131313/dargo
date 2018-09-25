@@ -38,64 +38,14 @@
  * holder.
  */
 
-package example
+package immediate
 
 import (
-	"github.com/jwells131313/dargo/ioc"
-	"github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/assert"
+	"testing"
 )
 
-const (
-	// Example2LocatorName is the name given to the locators defined in example2
-	Example2LocatorName = "Example2Locator"
-	// EchoServiceName is the name of the echo service
-	EchoServiceName = "EchoService_Name"
-	// LoggerServiceName is the name of the logger service
-	LoggerServiceName = "LoggerService_Name"
-)
-
-// EchoService is a service that logs the incoming string and
-// then returns the string it was given (echo!)
-type EchoService interface {
-	Echo(string) string
-}
-
-type echoServiceData struct {
-	logger *logrus.Logger
-}
-
-// CreateEchoLocator returns a ServiceLocator with the EchoService bound
-// into it as well as a PerLookup logger service
-func CreateEchoLocator() (ioc.ServiceLocator, error) {
-	return ioc.CreateAndBind(Example2LocatorName, func(binder ioc.Binder) error {
-		// binds the echo service into the locator in Singleton scope
-		binder.BindWithCreator(EchoServiceName, newEchoService)
-
-		// binds the logger service into the locator in PerLookup scope
-		binder.BindWithCreator(LoggerServiceName, newLogger).InScope(ioc.PerLookup)
-
-		return nil
-	})
-}
-
-func newEchoService(locator ioc.ServiceLocator, key ioc.Descriptor) (interface{}, error) {
-	logger, err := locator.GetDService(LoggerServiceName)
-	if err != nil {
-		return nil, err
-	}
-
-	return &echoServiceData{
-		logger: logger.(*logrus.Logger),
-	}, nil
-
-}
-
-func newLogger(ioc.ServiceLocator, ioc.Descriptor) (interface{}, error) {
-	return logrus.New(), nil
-}
-
-func (echo *echoServiceData) Echo(in string) string {
-	echo.logger.Printf("Echo got a string to log: %s", in)
-
-	return in
+func TestImmediateExample(t *testing.T) {
+	err := runImmediateExample()
+	assert.Nil(t, err, "immediate example failure")
 }

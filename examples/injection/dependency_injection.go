@@ -38,53 +38,52 @@
  * holder.
  */
 
-package example
+package injection
 
 import (
+	"fmt"
 	"github.com/jwells131313/dargo/ioc"
-	"time"
+	"github.com/sirupsen/logrus"
 )
 
-var globalLocator ioc.ServiceLocator
-
-// AnExpensiveService is a service that is expensive in some way
-type AnExpensiveService interface {
-	// DoExpensiveThing does some expensive operation
-	DoExpensiveThing(string) (string, error)
+// SimpleService is a test service
+type SimpleService interface {
+	// CallMe logs a message to the logger!
+	CallMe()
 }
 
-// NormalExpensiveServiceData is an implementation of AnExpensiveService in the normal code
-type NormalExpensiveServiceData struct {
+// SimpleServiceData is a struct implementing SimpleService
+// and which injects its logger
+type SimpleServiceData struct {
+	Log *logrus.Logger `inject:"LoggerService_Name"`
 }
 
-// SomeOtherServiceData is another user service which injects the expensive service
-type SomeOtherServiceData struct {
-	// ExpensiveService is the expensive service, injected by Dargo
-	ExpensiveService AnExpensiveService `inject:"AnExpensiveService"`
+// CallMe implements the SimpleService method
+func (ss *SimpleServiceData) CallMe() {
+	ss.Log.Info("This logger was injected!")
 }
 
-// DoExpensiveThing implements the interface with a long sleep and returns "Normal"
-func (nesd *NormalExpensiveServiceData) DoExpensiveThing(thingToDo string) (string, error) {
-	time.Sleep(5 * time.Second)
-
-	return "Normal", nil
-}
-
-func init() {
-	myLocator, err := ioc.CreateAndBind("TestingExampleLocator", func(binder ioc.Binder) error {
-		binder.Bind("UserService", SomeOtherServiceData{})
-		binder.Bind("AnExpensiveService", NormalExpensiveServiceData{})
-
+func runExample() error {
+	locator, err := ioc.CreateAndBind("example", func(binder ioc.Binder) error {
+		binder.Bind("SimpleService", SimpleServiceData{})
+		binder.BindWithCreator(LoggerServiceName, newLogger).InScope(ioc.PerLookup)
 		return nil
 	})
 	if err != nil {
-		panic(err)
+		return err
 	}
 
-	globalLocator = myLocator
-}
+	raw, err := locator.GetDService("SimpleService")
+	if err != nil {
+		return err
+	}
 
-// DoSomeUserCode is the user code that uses the injected service
-func (other *SomeOtherServiceData) DoSomeUserCode() (string, error) {
-	return other.ExpensiveService.DoExpensiveThing("foo")
+	ss, ok := raw.(SimpleService)
+	if !ok {
+		return fmt.Errorf("Invalid type for simple service %v", ss)
+	}
+
+	ss.CallMe()
+
+	return nil
 }

@@ -38,51 +38,14 @@
  * holder.
  */
 
-package example
+package resolution
 
-import (
-	"github.com/jwells131313/dargo/ioc"
-	"testing"
-)
+import "fmt"
 
-type MockExpensiveService struct {
-}
-
-func (mock *MockExpensiveService) DoExpensiveThing(thingToDo string) (string, error) {
-	return "Mock", nil
-}
-
-func putMocksIn() error {
-	return ioc.BindIntoLocator(globalLocator, func(binder ioc.Binder) error {
-		binder.Bind("AnExpensiveService", MockExpensiveService{}).Ranked(1)
-
-		return nil
-	})
-}
-
-func TestWithAMock(t *testing.T) {
-	err := putMocksIn()
+func ExampleCustomResolution() {
+	err := CustomResolution()
 	if err != nil {
-		t.Error(err.Error())
-		return
+		fmt.Printf("%s\n", err.Error())
 	}
-
-	raw, err := globalLocator.GetDService("UserService")
-	if err != nil {
-		t.Error(err.Error())
-		return
-	}
-
-	userService := raw.(*SomeOtherServiceData)
-
-	result, err := userService.DoSomeUserCode()
-	if err != nil {
-		t.Error(err.Error())
-		return
-	}
-
-	if result != "Mock" {
-		t.Errorf("Was expecting mock service but got %s", result)
-		return
-	}
+	// Output: Hello, World
 }
