@@ -40,12 +40,12 @@
 
 package resolution
 
-import (
-	"github.com/stretchr/testify/assert"
-	"testing"
-)
+import "fmt"
 
-func TestCustomResolution(t *testing.T) {
+func ExampleCustomResolution() {
 	err := runAutomaticResolverExample()
-	assert.Nil(t, err, "Failure to run automatic resolution %v", err)
+	if err != nil {
+		fmt.Printf("%s\n", err.Error())
+	}
+	// Output: Hello, World
 }

@@ -83,9 +83,15 @@ func (ar *AutomaticResolver) Resolve(locator ioc.ServiceLocator, injectee ioc.In
 	return &rVal, true, nil
 }
 
+// BService is a service injected into AService that just prints Hello, World
 type BService struct {
 }
 
+func (b *BService) run() {
+	fmt.Println("Hello, World")
+}
+
+// AService is injected using the custom injector
 type AService struct {
 	// BService will be magically injected, even without an indicator on the struct
 	BService *BService
@@ -110,9 +116,7 @@ func runAutomaticResolverExample() error {
 
 	aService := aServiceRaw.(*AService)
 
-	if aService.BService == nil {
-		return fmt.Errorf("AService should have been injected with BService")
-	}
+	aService.BService.run()
 
 	return nil
 }
