@@ -88,11 +88,18 @@ const (
 	// ErrorServiceName the name implementations of ErrorService must have
 	ErrorServiceName = "ErrorService"
 
-	// ValidationServiceName the name implementations of ValidationService must have
+	// ValidationServiceName the name an implementation of ValidationService must have
 	ValidationServiceName = "ValidationService"
 
-	// ConfigurationListenerName the name implementation of ConfigurationListener must have
+	// ConfigurationListenerName the name an implementation of ConfigurationListener must have
 	ConfigurationListenerName = "ConfigurationListener"
+
+	// InjectionResolver the name an an implementation of InjectionResolver must have
+	InjectionResolverName = "InjectionResolver"
+
+	// SystemInjectionResolverQualifierName A qualifier that is put on the system injection
+	// resolver for the "inject" field annotation
+	SystemInjectionResolverQualifierName = "SystemInjectResolverQualifier"
 
 	// FailIfPresent Return an error if a service locator with that name exists
 	FailIfPresent = 0

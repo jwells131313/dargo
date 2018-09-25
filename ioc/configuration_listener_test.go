@@ -70,7 +70,7 @@ func TestListenerCalledForAddAndRemove(t *testing.T) {
 	}
 
 	cListenerRaw, err := locator.GetService(key)
-	if !assert.Nil(t, err, "could not get listener") {
+	if !assert.Nil(t, err, "could not get listener %v", err) {
 		return
 	}
 

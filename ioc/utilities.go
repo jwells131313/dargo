@@ -117,33 +117,19 @@ func createAndInject(locator *serviceLocatorData, desc Descriptor, dity reflect.
 	for lcv := 0; lcv < numFields; lcv++ {
 		fieldVal := dity.Field(lcv)
 
-		injectString := fieldVal.Tag.Get("inject")
+		injectee := newInjectee(desc, dity, fieldVal)
 
-		if injectString != "" {
-			serviceKey, err := parseInjectString(injectString)
+		for _, resolver := range locator.injectionResolvers {
+			dependencyAsValue, gotValue, err := resolver.Resolve(locator, injectee)
 			if err != nil {
 				depErrors.AddError(err)
-			} else {
-				fieldType := fieldVal.Type
+			} else if gotValue {
+				dependencies = append(dependencies, &indexAndValueOfDependency{
+					index: lcv,
+					value: dependencyAsValue,
+				})
 
-				var dependency interface{}
-				var err error
-				if !isProvider(fieldType) {
-					dependency, err = locator.getServiceFor(serviceKey, desc)
-				} else {
-					dependency = newProvider(locator, serviceKey, desc)
-				}
-
-				if err != nil {
-					depErrors.AddError(err)
-				} else {
-					dependencyAsValue := reflect.ValueOf(dependency)
-
-					dependencies = append(dependencies, &indexAndValueOfDependency{
-						index: lcv,
-						value: dependencyAsValue,
-					})
-				}
+				break
 			}
 		}
 	}
@@ -306,6 +292,15 @@ func isValidationService(desc Descriptor) bool {
 func isConfigurationListener(desc Descriptor) bool {
 	if UserServicesNamespace == desc.GetNamespace() &&
 		ConfigurationListenerName == desc.GetName() {
+		return true
+	}
+
+	return false
+}
+
+func isInjectionResolver(desc Descriptor) bool {
+	if UserServicesNamespace == desc.GetNamespace() &&
+		InjectionResolverName == desc.GetName() {
 		return true
 	}
 
