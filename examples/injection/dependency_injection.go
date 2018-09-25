@@ -38,31 +38,52 @@
  * holder.
  */
 
-package example
+package injection
 
-import "testing"
+import (
+	"fmt"
+	"github.com/jwells131313/dargo/ioc"
+	"github.com/sirupsen/logrus"
+)
 
-func TestExample2(t *testing.T) {
-	locator, err := CreateEchoLocator()
+// SimpleService is a test service
+type SimpleService interface {
+	// CallMe logs a message to the logger!
+	CallMe()
+}
+
+// SimpleServiceData is a struct implementing SimpleService
+// and which injects its logger
+type SimpleServiceData struct {
+	Log *logrus.Logger `inject:"LoggerService_Name"`
+}
+
+// CallMe implements the SimpleService method
+func (ss *SimpleServiceData) CallMe() {
+	ss.Log.Info("This logger was injected!")
+}
+
+func runExample() error {
+	locator, err := ioc.CreateAndBind("example", func(binder ioc.Binder) error {
+		binder.Bind("SimpleService", SimpleServiceData{})
+		binder.BindWithCreator(LoggerServiceName, newLogger).InScope(ioc.PerLookup)
+		return nil
+	})
 	if err != nil {
-		t.Error("could not create locator")
-		return
+		return err
 	}
 
-	rawService, err := locator.GetDService(EchoServiceName)
+	raw, err := locator.GetDService("SimpleService")
 	if err != nil {
-		t.Errorf("could not find echo service %v", err)
-		return
+		return err
 	}
 
-	echoService, ok := rawService.(EchoService)
+	ss, ok := raw.(SimpleService)
 	if !ok {
-		t.Errorf("raw echo service was not the correct type %v", rawService)
-		return
+		return fmt.Errorf("Invalid type for simple service %v", ss)
 	}
 
-	ret := echoService.Echo("hi")
-	if ret != "hi" {
-		t.Errorf("did not get expected reply: %s", ret)
-	}
+	ss.CallMe()
+
+	return nil
 }

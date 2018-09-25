@@ -38,7 +38,7 @@
  * holder.
  */
 
-package example
+package error_service
 
 import (
 	"errors"

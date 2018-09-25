@@ -38,52 +38,30 @@
  * holder.
  */
 
-package example
+package injection
 
 import (
-	"fmt"
-	"github.com/jwells131313/dargo/ioc"
-	"github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/assert"
+	"testing"
 )
 
-// SimpleService is a test service
-type SimpleService interface {
-	// CallMe logs a message to the logger!
-	CallMe()
+func TestExample(t *testing.T) {
+	locator, err := start()
+	assert.Nil(t, err, "could not start the player")
+
+	err = bindPlayer(locator)
+	assert.Nil(t, err, "could not bind the player")
+
+	rawService, err := locator.GetDService(MusicServiceName)
+	assert.Nil(t, err, "could not find music service")
+
+	musicService := rawService.(MusicService)
+
+	scale := musicService.PlayCScale()
+	assert.Equal(t, "<<<cdefgab>>>", scale, "scale didn't match")
 }
 
-// SimpleServiceData is a struct implementing SimpleService
-// and which injects its logger
-type SimpleServiceData struct {
-	Log *logrus.Logger `inject:"LoggerService_Name"`
-}
-
-// CallMe implements the SimpleService method
-func (ss *SimpleServiceData) CallMe() {
-	ss.Log.Info("This logger was injected!")
-}
-
-func runExample() error {
-	locator, err := ioc.CreateAndBind("example", func(binder ioc.Binder) error {
-		binder.Bind("SimpleService", SimpleServiceData{})
-		binder.BindWithCreator(LoggerServiceName, newLogger).InScope(ioc.PerLookup)
-		return nil
-	})
-	if err != nil {
-		return err
-	}
-
-	raw, err := locator.GetDService("SimpleService")
-	if err != nil {
-		return err
-	}
-
-	ss, ok := raw.(SimpleService)
-	if !ok {
-		return fmt.Errorf("Invalid type for simple service %v", ss)
-	}
-
-	ss.CallMe()
-
-	return nil
+func TestExperiment(t *testing.T) {
+	err := runExample()
+	assert.Nil(t, err, "experiment failure")
 }
