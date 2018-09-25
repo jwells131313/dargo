@@ -69,6 +69,7 @@ is intentional.  The plan is to port many of the features of hk2 to this library
 8.  [Error Service](#error-service)
 9.  [Security](#validation-service)
 10.  [Configuration Listener](#configuration-listener)
+11.  [Custom Injection](#custom-injection)
 
 ## Basic Usage
 
@@ -913,9 +914,120 @@ The rest of the security example is found in the examples/security_example.go fi
 the reader to modify the implementation of the Validator to also disallow people from Unbinding the
 ValidationService itself, since if someone could do that they could disable the security checks!
 
-### Configuration Listener
+## Configuration Listener
 
 A user may register an implementation of ConfigurationListener to be notified whenever the set of
 Descriptors in a ServiceLocator has changed. The ConfigurationListener must be in the Singleton scope,
 be named _ConfigurationListener_ (ioc.ConfigurationListenerName) and be in the _user/services_
 (ioc.UserServicesNamespace) namespace.
+
+## Custom Injection
+
+Dargo allows users to choose their own injection scheme.  The default scheme
+provided by the system uses the `inject:"whatever"` annotation on structures.
+However, Dargo allows the use of any other injection scheme.  For example,
+instead of having tag _inject_ mean something instead you could use
+_alternate_, or you can have some external file providing information about
+injection points.
+
+### Custom Injection Example
+
+The following example does magic injection by simply using the name of the struct or
+interface as the name of the service to inject.  If the example resolver finds a service in
+the default namespace with that name it uses it.  Otherwise it simply returns false
+so other resolvers can take a look.
+
+[embedmd]:# (examples/resolution/custom_resolution_example.go /^package.*/ $)
+```go
+package resolution
+
+import (
+	"fmt"
+	"github.com/jwells131313/dargo/ioc"
+	"reflect"
+)
+
+// AutomaticResolver will resolve any field of a struct that has
+// a type with a service with a name that equals that type
+type AutomaticResolver struct {
+}
+
+// Resolve looks at the type of the field and if it is a pointer or an interface
+// gets the simple name of that type and uses that as the name of the service
+// to look up (in the default namespace).  Doing this creates a "magic" injector
+// that works even without use of annotations in the structure being injected into
+func (ar *AutomaticResolver) Resolve(locator ioc.ServiceLocator, injectee ioc.Injectee) (*reflect.Value, bool, error) {
+	field := injectee.GetField()
+	typ := field.Type
+
+	var name string
+	switch typ.Kind() {
+	case reflect.Ptr:
+		itype := typ.Elem()
+
+		name = itype.Name()
+		break
+	case reflect.Interface:
+		name = typ.Name()
+		break
+	default:
+		return nil, false, nil
+	}
+
+	if name == "" {
+		return nil, false, nil
+	}
+
+	svc, err := locator.GetDService(name)
+	if err != nil {
+		return nil, false, nil
+	}
+
+	rVal := reflect.ValueOf(svc)
+
+	return &rVal, true, nil
+}
+
+// BService is a service injected into AService that just prints Hello, World
+type BService struct {
+}
+
+func (b *BService) run() {
+	fmt.Println("Hello, World")
+}
+
+// AService is injected using the custom injector
+type AService struct {
+	// BService will be magically injected, even without an indicator on the struct
+	BService *BService
+}
+
+// CustomResolution is a method that will create a locator, binding in the
+// custom resolver and the A and B Services.  It will then get the AService
+// and use the injected BService.  This example shows how a custom resolver
+// can use whatever resources it has available to choose injection points
+// in a service
+func CustomResolution() error {
+	locator, err := ioc.CreateAndBind("AutomaticResolverLocator", func(binder ioc.Binder) error {
+		binder.Bind(ioc.InjectionResolverName, &AutomaticResolver{}).InNamespace(ioc.UserServicesNamespace)
+		binder.Bind("AService", &AService{})
+		binder.Bind("BService", &BService{})
+
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	aServiceRaw, err := locator.GetDService("AService")
+	if err != nil {
+		return err
+	}
+
+	aService := aServiceRaw.(*AService)
+
+	aService.BService.run()
+
+	return nil
+}
+```
