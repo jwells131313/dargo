@@ -48,13 +48,15 @@ import (
 
 const (
 	injectionResolverTest1 = "InjectionResolverTest1"
+	injectionResolverTest2 = "InjectionResolverTest2"
 
 	alternateServiceName = "AlternateService"
+	normalServiceName    = "NormalService"
 )
 
 func TestAlternateInject(t *testing.T) {
 	locator, err := CreateAndBind(injectionResolverTest1, func(binder Binder) error {
-		binder.Bind(InjectionResolverName, &AlternateInjectionResolver{})
+		binder.Bind(InjectionResolverName, &AlternateInjectionResolver{}).InNamespace(UserServicesNamespace)
 		binder.Bind(SimpleServiceName, &SimpleService{})
 		binder.Bind(alternateServiceName, &AlternateService{})
 
@@ -72,6 +74,44 @@ func TestAlternateInject(t *testing.T) {
 	alt := raw.(*AlternateService)
 
 	assert.NotNil(t, alt.SS, "Did not have alternate injection point")
+}
+
+func TestOverrideSystemInject(t *testing.T) {
+	locator, err := CreateAndBind(injectionResolverTest2, func(binder Binder) error {
+		binder.Bind(InjectionResolverName, &OverrideInjectResolver{}).Ranked(1).InNamespace(UserServicesNamespace)
+		binder.Bind(SimpleServiceName, &SimpleService{})
+		binder.Bind(normalServiceName, &NormalService{})
+
+		return nil
+	})
+	if !assert.Nil(t, err, "could not create locator") {
+		return
+	}
+
+	raw, err := locator.GetDService(normalServiceName)
+	if !assert.Nil(t, err, "could not find normal service %v", err) {
+		return
+	}
+
+	norm := raw.(*NormalService)
+
+	assert.NotNil(t, norm.SS, "Did not have alternate injection point")
+
+	rawResolver, err := locator.GetService(USK(InjectionResolverName))
+	if !assert.Nil(t, err, "could not find resolver service") {
+		return
+	}
+
+	override := rawResolver.(*OverrideInjectResolver)
+
+	if !assert.Equal(t, 1, len(override.injectees), "should have been one resolution") {
+		return
+	}
+
+	injectee := override.injectees[0]
+	desc := injectee.GetDescriptor()
+
+	assert.Equal(t, normalServiceName, desc.GetName())
 }
 
 type AlternateInjectionResolver struct {
@@ -104,5 +144,24 @@ func (air *AlternateInjectionResolver) Resolve(locator ServiceLocator, injectee 
 }
 
 type AlternateService struct {
-	SS SimpleService `alternate:"SimpleService"`
+	SS *SimpleService `alternate:"SimpleService"`
+}
+
+type OverrideInjectResolver struct {
+	SystemResolver InjectionResolver `inject:"user/services#InjectionResolver@SystemInjectResolverQualifier"`
+	injectees      []Injectee
+}
+
+func (oir *OverrideInjectResolver) Resolve(locator ServiceLocator, injectee Injectee) (*reflect.Value, bool, error) {
+	if oir.injectees == nil {
+		oir.injectees = make([]Injectee, 0)
+	}
+
+	oir.injectees = append(oir.injectees, injectee)
+
+	return oir.SystemResolver.Resolve(locator, injectee)
+}
+
+type NormalService struct {
+	SS *SimpleService `inject:"SimpleService"`
 }
