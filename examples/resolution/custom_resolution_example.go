@@ -51,6 +51,10 @@ import (
 type AutomaticResolver struct {
 }
 
+// Resolve looks at the type of the field and if it is a pointer or an interface
+// gets the simple name of that type and uses that as the name of the service
+// to look up (in the default namespace).  Doing this creates a "magic" injector
+// that works even without use of annotations in the structure being injected into
 func (ar *AutomaticResolver) Resolve(locator ioc.ServiceLocator, injectee ioc.Injectee) (*reflect.Value, bool, error) {
 	field := injectee.GetField()
 	typ := field.Type
