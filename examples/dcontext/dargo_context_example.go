@@ -38,7 +38,7 @@
  * holder.
  */
 
-package dargo_context
+package dcontext
 
 import (
 	"context"

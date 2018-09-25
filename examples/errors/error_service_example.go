@@ -38,14 +38,49 @@
  * holder.
  */
 
-package error_service
+package errors
 
 import (
-	"github.com/stretchr/testify/assert"
-	"testing"
+	"errors"
+	"github.com/jwells131313/dargo/ioc"
+	"github.com/sirupsen/logrus"
 )
 
-func TestErrorServiceExample(t *testing.T) {
-	err := runErrorServiceExample()
-	assert.Nil(t, err, "error service example failure")
+func loggerServiceCreator(ioc.ServiceLocator, ioc.Descriptor) (interface{}, error) {
+	return logrus.New(), nil
+}
+
+// ErrorService is an example implementation of ErrorService
+type ErrorService struct {
+	Logger *logrus.Logger `inject:"Logger"`
+}
+
+// OnFailure is the one method of ErrorService
+func (es *ErrorService) OnFailure(info ioc.ErrorInformation) error {
+	es.Logger.WithField("FailureType", info.GetType()).
+		WithField("ErrorString", info.GetAssociatedError().Error()).
+		WithField("ErrorInjectee", info.GetInjectee()).
+		Errorf("Descriptor %v failed", info.GetDescriptor())
+	return nil
+}
+
+func runErrorServiceExample() error {
+	locator, err := ioc.CreateAndBind("ErrorServiceExample", func(binder ioc.Binder) error {
+		binder.BindWithCreator("Logger", loggerServiceCreator)
+		binder.BindWithCreator("WonkyService", wonkyServiceCreator)
+		binder.Bind(ioc.ErrorServiceName, ErrorService{}).InNamespace(ioc.UserServicesNamespace)
+
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	locator.GetDService("WonkyService")
+
+	return nil
+}
+
+func wonkyServiceCreator(ioc.ServiceLocator, ioc.Descriptor) (interface{}, error) {
+	return nil, errors.New("wonky service error")
 }

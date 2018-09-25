@@ -38,14 +38,14 @@
  * holder.
  */
 
-package dargo_context
+package errors
 
 import (
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
 
-func TestDargoContextExample(t *testing.T) {
-	err := runContextExample()
-	assert.Nil(t, err, "dargo context example failure")
+func TestErrorServiceExample(t *testing.T) {
+	err := runErrorServiceExample()
+	assert.Nil(t, err, "error service example failure")
 }
