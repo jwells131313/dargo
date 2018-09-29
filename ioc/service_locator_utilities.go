@@ -120,7 +120,7 @@ func EnableImmediateScope(locator ServiceLocator) error {
 	// TODO: Need idempotent semantics
 	_, err := locator.GetBestDescriptor(filter)
 	if err != nil {
-		if isServiceNotFound(err) {
+		if IsServiceNotFound(err) {
 			return nil
 		}
 
@@ -167,7 +167,7 @@ func EnableDargoContextScope(locator ServiceLocator) error {
 	// TODO: Need idempotent semantics
 	_, err := locator.GetBestDescriptor(filter)
 	if err != nil {
-		if isServiceNotFound(err) {
+		if IsServiceNotFound(err) {
 			return nil
 		}
 
@@ -190,7 +190,12 @@ func UnbindDServices(locator ServiceLocator, serviceNames ...string) error {
 		keys[index] = DSK(serviceName)
 	}
 
-	filter := NewServiceKeyFilter(keys...)
+	return UnbindServices(locator, keys...)
+}
+
+// UnbindServices unbinds the services with the given keys
+func UnbindServices(locator ServiceLocator, serviceKeys ...ServiceKey) error {
+	filter := NewServiceKeyFilter(serviceKeys...)
 
 	dcs, err := getDCS(locator)
 	if err != nil {

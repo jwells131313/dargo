@@ -124,6 +124,10 @@ func (sir *systemInjectionResolver) Resolve(locator ServiceLocator, injectee Inj
 		}
 
 		if err != nil {
+			if pd.isOptional && IsServiceNotFound(err) {
+				return nil, false, nil
+			}
+
 			return nil, false, err
 		}
 

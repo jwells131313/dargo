@@ -53,8 +53,30 @@ type stack interface {
 	Peek() (interface{}, bool)
 }
 
-func isServiceNotFound(e error) bool {
-	return strings.Contains(e.Error(), "service was not found: ")
+// IsServiceNotFound returns true if the given error is due to a service
+// not being found in the locator.  If the incoming error is a MultiError
+// this will return true if any of the contained errors is ServiceNotFoundError
+func IsServiceNotFound(e error) bool {
+	if e == nil {
+		return false
+	}
+
+	_, ok := e.(ServiceNotFoundInfo)
+	if ok {
+		return true
+	}
+
+	multi, ok := e.(MultiError)
+	if ok {
+		for _, e := range multi.GetErrors() {
+			_, ok = e.(ServiceNotFoundInfo)
+			if ok {
+				return true
+			}
+		}
+	}
+
+	return false
 }
 
 type stackData struct {
