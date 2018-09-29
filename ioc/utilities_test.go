@@ -107,3 +107,141 @@ func TestStack(t *testing.T) {
 	assert.False(t, found, "empty stack pop should return false")
 	assert.Nil(t, retNil, "empty stack must return nil value")
 }
+
+func TestParseSimpleInjectString(t *testing.T) {
+	pd, err := parseInjectString("foo")
+	if !assert.Nil(t, err) {
+		return
+	}
+	if !checkParseData(t, pd, DefaultNamespace, "foo", nil, false) {
+		return
+	}
+}
+
+func TestParseInjectStringWithNamespace(t *testing.T) {
+	pd, err := parseInjectString("space#foo")
+	if !assert.Nil(t, err) {
+		return
+	}
+	if !checkParseData(t, pd, "space", "foo", nil, false) {
+		return
+	}
+}
+
+func TestParseInjectStringWithNamespaceAndOneQualifier(t *testing.T) {
+	pd, err := parseInjectString("space#foo@bar")
+	if !assert.Nil(t, err) {
+		return
+	}
+	if !checkParseData(t, pd, "space", "foo", []string{"bar"}, false) {
+		return
+	}
+}
+
+func TestParseInjectStringWithNamespaceAndThreeQualifiers(t *testing.T) {
+	pd, err := parseInjectString("space#foo@bar@baz@qux")
+	if !assert.Nil(t, err) {
+		return
+	}
+	if !checkParseData(t, pd, "space", "foo", []string{"bar", "baz", "qux"}, false) {
+		return
+	}
+}
+
+func TestParseInjectStringWithThreeQualifiers(t *testing.T) {
+	pd, err := parseInjectString("foo@bar@baz@qux")
+	if !assert.Nil(t, err) {
+		return
+	}
+	if !checkParseData(t, pd, DefaultNamespace, "foo", []string{"bar", "baz", "qux"}, false) {
+		return
+	}
+}
+
+func TestParseOptional(t *testing.T) {
+	pd, err := parseInjectString("foo,optional")
+	if !assert.Nil(t, err) {
+		return
+	}
+	if !checkParseData(t, pd, DefaultNamespace, "foo", nil, true) {
+		return
+	}
+}
+
+func TestParseOptionalNamespace(t *testing.T) {
+	pd, err := parseInjectString("space#foo,optional")
+	if !assert.Nil(t, err) {
+		return
+	}
+	if !checkParseData(t, pd, "space", "foo", nil, true) {
+		return
+	}
+}
+
+func TestParseOptionalNamespaceOneQualifier(t *testing.T) {
+	pd, err := parseInjectString("space#foo@bar,optional")
+	if !assert.Nil(t, err) {
+		return
+	}
+	if !checkParseData(t, pd, "space", "foo", []string{"bar"}, true) {
+		return
+	}
+}
+
+func TestParseOptionalNamespaceQualifiers(t *testing.T) {
+	pd, err := parseInjectString("space#foo@bar@baz@qux@quux,optional")
+	if !assert.Nil(t, err) {
+		return
+	}
+	if !checkParseData(t, pd, "space", "foo", []string{"bar", "baz", "qux", "quux"}, true) {
+		return
+	}
+}
+
+func TestParseOptionalQualifiers(t *testing.T) {
+	pd, err := parseInjectString("foo@bar@baz,optional")
+	if !assert.Nil(t, err) {
+		return
+	}
+	if !checkParseData(t, pd, DefaultNamespace, "foo", []string{"bar", "baz"}, true) {
+		return
+	}
+}
+
+func TestParseInvalidOption(t *testing.T) {
+	_, err := parseInjectString("foo@bar@baz,required")
+	if !assert.NotNil(t, err) {
+		return
+	}
+}
+
+func checkParseData(t *testing.T, pd *parseData, space, name string, qualifiers []string, optional bool) bool {
+	if !assert.NotNil(t, pd) {
+		return false
+	}
+	if !assert.NotNil(t, pd.serviceKey) {
+		return false
+	}
+
+	retVal1 := assert.Equal(t, space, pd.serviceKey.GetNamespace(), "namespace does not match")
+	retVal2 := assert.Equal(t, name, pd.serviceKey.GetName(), "names did not match")
+
+	retVal3 := true
+	if qualifiers != nil {
+		skQualifiers := pd.serviceKey.GetQualifiers()
+
+		if !assert.Equal(t, len(skQualifiers), len(qualifiers), "number of qualifiers differs") {
+			retVal3 = false
+		} else {
+			for index, qualifier := range qualifiers {
+				if !assert.Equal(t, qualifier, skQualifiers[index], "qualifier at index %d was not equal", index) {
+					retVal3 = false
+				}
+			}
+		}
+	}
+
+	retVal4 := assert.Equal(t, optional, pd.isOptional, "optional value does not match")
+
+	return retVal1 && retVal2 && retVal3 && retVal4
+}

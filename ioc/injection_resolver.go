@@ -108,10 +108,11 @@ func (sir *systemInjectionResolver) Resolve(locator ServiceLocator, injectee Inj
 	injectString := fieldVal.Tag.Get("inject")
 
 	if injectString != "" {
-		serviceKey, err := parseInjectString(injectString)
+		pd, err := parseInjectString(injectString)
 		if err != nil {
 			return nil, false, err
 		}
+		serviceKey := pd.serviceKey
 
 		fieldType := fieldVal.Type
 

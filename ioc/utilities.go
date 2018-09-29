@@ -310,3 +310,61 @@ func isInjectionResolver(desc Descriptor) bool {
 func descriptorToIDString(desc Descriptor) string {
 	return fmt.Sprintf("%d.%d", desc.GetLocatorID(), desc.GetServiceID())
 }
+
+type parseData struct {
+	serviceKey ServiceKey
+	isOptional bool
+}
+
+func parseInjectString(parseMe string) (*parseData, error) {
+	if parseMe == "" {
+		return nil, fmt.Errorf("no injection string to parse")
+	}
+
+	isOptional := false
+
+	namespaceAndName := []string{}
+
+	namespaceNameQualifiersOptions := strings.Split(parseMe, ",")
+	for index, value := range namespaceNameQualifiersOptions {
+		if index == 0 {
+			namespaceAndName = strings.SplitN(value, "#", 2)
+		} else {
+			if value != "optional" {
+				return nil, fmt.Errorf("unknown option %s", value)
+			}
+
+			isOptional = true
+		}
+	}
+
+	var namespace, name string
+	if len(namespaceAndName) == 2 {
+		namespace = namespaceAndName[0]
+		name = namespaceAndName[1]
+	} else {
+		namespace = DefaultNamespace
+		name = namespaceAndName[0]
+	}
+
+	qualifiers := make([]string, 0)
+	nameAndQualifiers := strings.Split(name, "@")
+
+	for index, val := range nameAndQualifiers {
+		if index == 0 {
+			name = val
+		} else {
+			qualifiers = append(qualifiers, val)
+		}
+	}
+
+	sk, err := NewServiceKey(namespace, name, qualifiers...)
+	if err != nil {
+		return nil, err
+	}
+
+	return &parseData{
+		serviceKey: sk,
+		isOptional: isOptional,
+	}, nil
+}
