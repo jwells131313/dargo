@@ -53,12 +53,8 @@ build:
         exclude: "^vendor"
 
     - script:
-        name: install dep
-        code: go get -u github.com/golang/dep/cmd/dep
-
-    - script:
-        name: get dependencies
-        code: dep ensure
+        name: turn on modules
+        code: export GO111MODULE=on
 
     # Build the project
     - script:
