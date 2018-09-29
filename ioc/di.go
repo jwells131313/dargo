@@ -43,7 +43,6 @@ package ioc
 import (
 	"fmt"
 	"reflect"
-	"strings"
 )
 
 type diData struct {
@@ -109,36 +108,6 @@ func safeDargoInitialize(dargoI DargoInitializer, desc Descriptor, ret *errorRet
 	}()
 
 	ret.err = dargoI.DargoInitialize(desc)
-}
-
-func parseInjectString(parseMe string) (ServiceKey, error) {
-	if parseMe == "" {
-		return nil, fmt.Errorf("no injection string to parse")
-	}
-
-	namespaceAndName := strings.SplitN(parseMe, "#", 2)
-
-	var namespace, name string
-	if len(namespaceAndName) == 2 {
-		namespace = namespaceAndName[0]
-		name = namespaceAndName[1]
-	} else {
-		namespace = DefaultNamespace
-		name = namespaceAndName[0]
-	}
-
-	qualifiers := make([]string, 0)
-	nameAndQualifiers := strings.Split(name, "@")
-
-	for index, val := range nameAndQualifiers {
-		if index == 0 {
-			name = val
-		} else {
-			qualifiers = append(qualifiers, val)
-		}
-	}
-
-	return NewServiceKey(namespace, name, qualifiers...)
 }
 
 type hasRunErrorHandlersError interface {

@@ -123,10 +123,11 @@ func (air *AlternateInjectionResolver) Resolve(locator ServiceLocator, injectee 
 	injectString := fieldVal.Tag.Get("alternate")
 
 	if injectString != "" {
-		serviceKey, err := parseInjectString(injectString)
+		pd, err := parseInjectString(injectString)
 		if err != nil {
 			return nil, false, err
 		}
+		serviceKey := pd.serviceKey
 
 		var dependency interface{}
 		dependency, err = locator.GetService(serviceKey)

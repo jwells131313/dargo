@@ -257,7 +257,7 @@ func (locator *serviceLocatorData) getServiceFor(toMe ServiceKey, forMe Descript
 	}
 
 	if desc == nil {
-		return nil, fmt.Errorf(ServiceWithNameNotFoundExceptionString, toMe)
+		return nil, NewServiceNotFoundError(toMe)
 	}
 
 	return locator.createService(desc)

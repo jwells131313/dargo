@@ -56,6 +56,7 @@ const (
 	DILocator6 = "DITestLocator6"
 	DILocator7 = "DITestLocator7"
 	DILocator8 = "DITestLocator8"
+	DILocator9 = "DITestLocator9"
 
 	AServiceName = "A"
 	BServiceName = "B"
@@ -354,6 +355,62 @@ func checkColor(t *testing.T, rainbow *RainbowServiceData, color string) bool {
 	return assert.Equal(t, color, colorService.GetColor(), "color did not match")
 }
 
+func TestOptionalInject(t *testing.T) {
+	locator, err := CreateAndBind(DILocator9, func(binder Binder) error {
+		binder.Bind("OptionalService", &ServiceWithOptionalAndRequiredInjections{}).InScope(PerLookup)
+
+		// Bind A and C but not B
+		binder.Bind("SimpleService", &SimpleService{}).QualifiedBy("A")
+		binder.Bind("SimpleService", &SimpleService{}).QualifiedBy("C")
+		return nil
+	})
+	if !assert.Nil(t, err, "couldn't create locator %s", DILocator9) {
+		return
+	}
+
+	raw, err := locator.GetDService("OptionalService")
+	if !assert.Nil(t, err, "couldn't get optional service %v", err) {
+		return
+	}
+
+	optionalService := raw.(*ServiceWithOptionalAndRequiredInjections)
+
+	assert.NotNil(t, optionalService.SSa)
+	assert.Nil(t, optionalService.SSb)
+	assert.NotNil(t, optionalService.SSc)
+
+	// Now bind the missing service, make sure optional service do, like, actually show up when there
+	err = BindIntoLocator(locator, func(binder Binder) error {
+		binder.Bind("SimpleService", &SimpleService{}).QualifiedBy("B")
+		return nil
+	})
+
+	raw, err = locator.GetDService("OptionalService")
+	if !assert.Nil(t, err, "couldn't get optional service %v", err) {
+		return
+	}
+
+	optionalService = raw.(*ServiceWithOptionalAndRequiredInjections)
+
+	assert.NotNil(t, optionalService.SSa)
+	assert.NotNil(t, optionalService.SSb)
+	assert.NotNil(t, optionalService.SSc)
+
+	// Now unbind one of the other services and make sure they aren't somehow optional
+	err = UnbindServices(locator, DSK("SimpleService", "C"))
+	if !assert.Nil(t, err, "couldn't unbind existing service") {
+		return
+	}
+
+	_, err = locator.GetDService("OptionalService")
+	if !assert.NotNil(t, err, "should not have been able to get service", err) {
+		return
+	}
+
+	assert.True(t, IsServiceNotFound(err), "should have been ServiceNotFound %v", err)
+
+}
+
 type BSimpleService struct {
 	initialized bool
 }
@@ -434,4 +491,10 @@ type PanicyInitializerData struct {
 
 func (pid *PanicyInitializerData) DargoInitialize(desc Descriptor) error {
 	panic(ExpectedPanicMessage)
+}
+
+type ServiceWithOptionalAndRequiredInjections struct {
+	SSa *SimpleService `inject:"SimpleService@A"`
+	SSb *SimpleService `inject:"SimpleService@B,optional"`
+	SSc *SimpleService `inject:"SimpleService@C"`
 }

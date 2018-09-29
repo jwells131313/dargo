@@ -40,48 +40,34 @@
 
 package ioc
 
-type perLookupContext struct {
+import "fmt"
+
+// ServiceNotFoundInfo is implemented if an error indicates a service
+// was not found
+type ServiceNotFoundInfo interface {
+	// GetServiceKey returns the key of the service that was not found
+	GetServiceKey() ServiceKey
 }
 
-func newPerLookupContext() ContextualScope {
-	return &perLookupContext{}
+type serviceNotFoundError struct {
+	key ServiceKey
 }
 
-// GetScope always returns PerLookup
-func (context *perLookupContext) GetScope() string {
-	return PerLookup
+// NewServiceNotFoundError returns an error that also implements ServiceNotFoundInfo
+func NewServiceNotFoundError(key ServiceKey) error {
+	if key == nil {
+		panic("can not have a service not found without a key")
+	}
+
+	return &serviceNotFoundError{
+		key: key,
+	}
 }
 
-// FindOrCreate always returns a new instance for PerLookup
-func (context *perLookupContext) FindOrCreate(locator ServiceLocator, desc Descriptor) (interface{}, error) {
-	return locator.CreateServiceFromDescriptor(desc)
-	// f := desc.GetCreateFunction()
-
-	// return f(locator, desc)
+func (snfe *serviceNotFoundError) Error() string {
+	return fmt.Sprintf("service was not found: %s", snfe.key)
 }
 
-// ContainsKey always returns false for PerLookup
-func (context *perLookupContext) ContainsKey(ServiceLocator, Descriptor) bool {
-	return false
-}
-
-// DestroyOne should always call the destructor
-func (context *perLookupContext) DestroyOne(ServiceLocator, Descriptor) error {
-	// do nothing, special case
-	return nil
-}
-
-// GetSupportsNilCreation returns true for PerLookup
-func (context *perLookupContext) GetSupportsNilCreation(ServiceLocator) bool {
-	return true
-}
-
-// IsActive always returns true for PerLookup
-func (context *perLookupContext) IsActive(ServiceLocator) bool {
-	return true
-}
-
-// Shutdown does nothing in the PerLookup scope
-func (context *perLookupContext) Shutdown(ServiceLocator) {
-	// do nothing
+func (snfe *serviceNotFoundError) GetServiceKey() ServiceKey {
+	return snfe.key
 }

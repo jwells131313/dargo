@@ -344,7 +344,7 @@ func internalTestPanicyValidationService(t *testing.T, done chan bool) {
 	if !assert.NotNil(t, err, "should have failed with expected exception") {
 		return
 	}
-	if !assert.True(t, isServiceNotFound(err), "unexpected error %s", err.Error()) {
+	if !assert.True(t, IsServiceNotFound(err), "unexpected error %s", err.Error()) {
 		return
 	}
 
@@ -352,7 +352,7 @@ func internalTestPanicyValidationService(t *testing.T, done chan bool) {
 	if !assert.NotNil(t, err, "should have failed with expected exception") {
 		return
 	}
-	if !assert.True(t, isServiceNotFound(err), "unexpected error %s", err.Error()) {
+	if !assert.True(t, IsServiceNotFound(err), "unexpected error %s", err.Error()) {
 		return
 	}
 

@@ -119,9 +119,6 @@ const (
 	// DargoContextCreationServiceName The name of the DargoCreationContextService
 	DargoContextCreationServiceName = "DargoContextCreationService"
 
-	// ServiceWithNameNotFoundExceptionString is the string used in the error when a service descriptor is not found
-	ServiceWithNameNotFoundExceptionString = "service was not found: %s"
-
 	// LocatorStateRunning This is the state when a locator is currently open and running
 	LocatorStateRunning = "Running"
 
