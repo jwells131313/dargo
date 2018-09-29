@@ -42,7 +42,10 @@ package ioc
 
 import "fmt"
 
+// ServiceNotFoundInfo is implemented if an error indicates a service
+// was not found
 type ServiceNotFoundInfo interface {
+	// GetServiceKey returns the key of the service that was not found
 	GetServiceKey() ServiceKey
 }
 
