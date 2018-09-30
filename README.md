@@ -512,21 +512,22 @@ type Service struct {
 
 ## Optional Injection
 
-There are times when it is not clear whether an injection point will be satisfyable at the time a service
-is created.  For cases like this optional injection may be an option.  An injection point may specify
-that the injection is optional.  When an injection point is optional and no matching service is found it
-will not cause an error and instead will not inject anything into the field.  The following structure has
-two required injection points and one optional one:
+Sometimes it is not certain whether an injection point will be satisfyable at the time a service
+is created.  For cases like this optional injection may be appropriate.  An injection point may specify
+that the injection is optional by adding the __optional__ directive to the injection string.  When an
+injection point is optional and no matching service is found it will not cause an error and instead will
+not inject anything into the field.  The following structure has two required injection points and one
+optional injection point:
 
 ```go
 type ServiceWithOptionalAndRequiredInjections struct {
-	SSa *SimpleService `inject:"SimpleService@A"`
-	SSb *SimpleService `inject:"SimpleService@B,optional"`
-	SSc *SimpleService `inject:"SimpleService@C"`
+	Foo *Foo `inject:"Foo"`
+	Bar *Bar `inject:"Bar,optional"`
+	Baz *Baz `inject:"Baz"`
 }
 ```
 
-The fields **SSa** and **SSc** are required, but the field **SSb** can either be available or not.  When a required
+The fields **Foo** and **Baz** are required, but the field **Bar** can either be available or not.  When a required
 injection point cannot be satisified it will cause an error, but when an optional injection point
 cannot be satisfied it will simply be left alone and the structure can still be created normally.
 
