@@ -385,6 +385,13 @@ func (locator *serviceLocatorData) Inject(input interface{}) error {
 }
 
 func (locator *serviceLocatorData) Shutdown() {
+	defer func() {
+		locatorsLock.Lock()
+		defer locatorsLock.Unlock()
+
+		delete(locators, locator.name)
+	}()
+
 	c := make(chan bool)
 
 	threadManager.Go(func() {
@@ -449,7 +456,6 @@ func (locator *serviceLocatorData) channelGetDescriptors(filter Filter, forMe De
 	retChan <- retVal
 }
 
-// TODO: This will one day need to keep caches
 func (locator *serviceLocatorData) internalGetDescriptors(filter Filter, forMe Descriptor) ([]Descriptor, error) {
 	locator.glock.ReadLock()
 	defer locator.glock.ReadUnlock()
