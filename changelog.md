@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixes bug where providers were not recoginized in vendor directory
 - Added Custom Injection Handler along with doc and example
 - Changed to use go modules
+- optional injection
 
 ## [0.4.0] - 2018-09-19
 ### Changed
