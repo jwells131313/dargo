@@ -63,13 +63,14 @@ is intentional.  The plan is to port many of the features of hk2 to this library
 2.  [Testing](#testing)
 3.  [Automatic Service Creation](#automatic-service-creation)
 4.  [Service Names](#service-names)
-5.  [Immediate Services](#immediate-scope)
-6.  [Context Scope](#context-scope)
-7.  [Provider](#provider)
-8.  [Error Service](#error-service)
-9.  [Security](#validation-service)
-10.  [Configuration Listener](#configuration-listener)
-11.  [Custom Injection](#custom-injection)
+5.  [Optional Injection](#optional-injection)
+6.  [Immediate Services](#immediate-scope)
+7.  [Context Scope](#context-scope)
+8.  [Provider](#provider)
+9.  [Error Service](#error-service)
+10.  [Security](#validation-service)
+11.  [Configuration Listener](#configuration-listener)
+12.  [Custom Injection](#custom-injection)
 
 ## Basic Usage
 
@@ -484,11 +485,20 @@ func SSK(name string, qualifiers ...string) ServiceKey {...}
 func CSK(name string, qualifiers ...string) ServiceKey {...}
 ```
 
-You can also use complex names in the inject key of structures.  The general format is:
+You can also use complex names in the injection description of structures.  The general format is:
 
 ```
-namespace#name@qualifier1@qualifier2
+[namespace#]name[@qualifier]*[,directive]*
 ```
+
+A valid example of an injection description could be something like this:
+
+```go
+my/user/namespace#LoggerService@Red@Green,optional
+```
+
+In the above example the namespace is _my/user/namespace_, the name is _LoggerService_, there are two qualifiers
+_Red_ and _Green_ and one directive, _optional_.  There is currently only one legal directive, which is "optional".
 
 Only the name part is required.  For example, if you wanted to inject a service
 named ColorService in the visible/light namespace with qualifier Green, you would do
@@ -499,6 +509,26 @@ type Service struct {
 	Green ColorService `inject:"visible/light#ColorService@Green"`
 }
 ```
+
+## Optional Injection
+
+There are times when it is not clear whether an injection point will be satisfyable at the time a service
+is created.  For cases like this optional injection may be an option.  An injection point may specify
+that the injection is optional.  When an injection point is optional and no matching service is found it
+will not cause an error and instead will not inject anything into the field.  The following structure has
+two required injection points and one optional one:
+
+```go
+type ServiceWithOptionalAndRequiredInjections struct {
+	SSa *SimpleService `inject:"SimpleService@A"`
+	SSb *SimpleService `inject:"SimpleService@B,optional"`
+	SSc *SimpleService `inject:"SimpleService@C"`
+}
+```
+
+The fields **SSa** and **SSc** are required, but the field **SSb** can either be available or not.  When a required
+injection point cannot be satisified it will cause an error, but when an optional injection point
+cannot be satisfied it will simply be left alone and the structure can still be created normally.
 
 ## Immediate Scope
 
