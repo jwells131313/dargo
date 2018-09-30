@@ -52,6 +52,7 @@ const (
 	testLocatorName3 = "TestLocator3"
 	testLocatorName4 = "TestLocator4"
 	testLocatorName5 = "TestLocator5"
+	testLocatorName6 = "TestLocator6"
 
 	ShutdownService = "ShutdownService"
 )
@@ -186,6 +187,20 @@ func TestInjectConstants(t *testing.T) {
 	assert.Equal(t, "EAGLES", wis.InjectArray[0], "incorrect zero array")
 	assert.Equal(t, 1, len(wis.InjectMap), "map wrong size")
 	assert.Equal(t, "EAGLES", wis.InjectMap["EAGLES"], "wrong value in map")
+}
+
+func TestShutdownRemovesName(t *testing.T) {
+	locator, err := NewServiceLocator(testLocatorName6, FailIfPresent)
+	if !assert.Nil(t, err) {
+		return
+	}
+
+	locator.Shutdown()
+
+	_, err = NewServiceLocator(testLocatorName6, FailIfPresent)
+	if !assert.Nil(t, err) {
+		return
+	}
 }
 
 type shuttableService struct {
