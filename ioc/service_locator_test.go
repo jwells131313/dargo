@@ -53,8 +53,11 @@ const (
 	testLocatorName4 = "TestLocator4"
 	testLocatorName5 = "TestLocator5"
 	testLocatorName6 = "TestLocator6"
+	testLocatorName7 = "TestLocator7"
 
 	ShutdownService = "ShutdownService"
+
+	ExpectedPanic = "Expected Panic"
 )
 
 func TestGetSystemServices(t *testing.T) {
@@ -203,6 +206,34 @@ func TestShutdownRemovesName(t *testing.T) {
 	}
 }
 
+func TestPanicyCreator(t *testing.T) {
+	locator, err := CreateAndBind(testLocatorName7, func(binder Binder) error {
+		binder.BindWithCreator("A", panicyCreator)
+		binder.BindWithCreator("B", panicyCreator).InScope(PerLookup)
+
+		return nil
+	})
+	if !assert.Nil(t, err) {
+		return
+	}
+
+	_, err = locator.GetDService("A")
+	if !assert.NotNil(t, err) {
+		return
+	}
+	if !assert.Equal(t, ExpectedPanicMessage, err.Error()) {
+		return
+	}
+
+	_, err = locator.GetDService("B")
+	if !assert.NotNil(t, err) {
+		return
+	}
+	if !assert.Equal(t, ExpectedPanicMessage, err.Error()) {
+		return
+	}
+}
+
 type shuttableService struct {
 	isShut bool
 }
@@ -235,4 +266,8 @@ type InjectsSomeWeirdThingsService struct {
 	InjectString string            `inject:"EAGLES"`
 	InjectArray  []string          `inject:"stringArray"`
 	InjectMap    map[string]string `inject:"map"`
+}
+
+func panicyCreator(ServiceLocator, Descriptor) (interface{}, error) {
+	panic(ExpectedPanicMessage)
 }

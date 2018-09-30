@@ -586,7 +586,13 @@ func (locator *serviceLocatorData) CreateServiceFromDescriptor(desc Descriptor) 
 
 	cf := desc.GetCreateFunction()
 
-	retVal, err := cf(locator, desc)
+	errRet := &errorReturn{}
+
+	retVal, err := safeCreatorFunctions(cf, locator, desc, errRet)
+	if errRet.err != nil {
+		err = errRet.err
+	}
+
 	if err != nil {
 		var hasRunHandlers bool
 

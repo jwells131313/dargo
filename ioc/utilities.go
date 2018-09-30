@@ -272,6 +272,17 @@ func safeGetValidator(validationService ValidationService, ret *errorReturn) Val
 	return validationService.GetValidator()
 }
 
+func safeCreatorFunctions(cf func(ServiceLocator, Descriptor) (interface{}, error),
+	l ServiceLocator, d Descriptor, ret *errorReturn) (interface{}, error) {
+	defer func() {
+		if r := recover(); r != nil {
+			ret.err = fmt.Errorf("%v", r)
+		}
+	}()
+
+	return cf(l, d)
+}
+
 // Pesky users can panic, lets not allow that
 func safeCallUserErrorService(errorService ErrorService, ei ErrorInformation) error {
 	defer func() {
