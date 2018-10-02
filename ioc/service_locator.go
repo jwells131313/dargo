@@ -43,6 +43,7 @@ package ioc
 import (
 	"fmt"
 	"github.com/jwells131313/goethe"
+	"github.com/jwells131313/goethe/cache"
 	"github.com/pkg/errors"
 	"reflect"
 	"sort"
@@ -144,6 +145,7 @@ type serviceLocatorData struct {
 	errorServices      []ErrorService
 	validationServices []ValidationService
 	injectionResolvers []InjectionResolver
+	contextCache       cache.Cache
 }
 
 // NewServiceLocator this will find or create a service locator with the given name, and
@@ -187,6 +189,13 @@ func NewServiceLocator(name string, qos int) (ServiceLocator, error) {
 		state:              LocatorStateRunning,
 		errorServices:      make([]ErrorService, 0),
 		validationServices: make([]ValidationService, 0),
+	}
+
+	retVal.contextCache, err = cache.NewComputeFunctionCARCache(10, func(key interface{}) (interface{}, error) {
+		return contextComputation(retVal, key)
+	})
+	if err != nil {
+		return nil, nil
 	}
 
 	retVal.singletonContext, err = newSingletonScope(retVal)
@@ -414,8 +423,7 @@ func (locator *serviceLocatorData) createService(desc Descriptor) (interface{}, 
 	} else if scope == Singleton {
 		cs = locator.singletonContext
 	} else {
-		csk := CSK(scope)
-		raw, err := locator.GetService(csk)
+		raw, err := locator.contextCache.Compute(scope)
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not get context %s for service %s", scope, desc)
 		}
@@ -442,6 +450,16 @@ func (locator *serviceLocatorData) createService(desc Descriptor) (interface{}, 
 type igsRet struct {
 	descriptors []Descriptor
 	err         error
+}
+
+func contextComputation(locator ServiceLocator, rawKey interface{}) (interface{}, error) {
+	scope, ok := rawKey.(string)
+	if !ok {
+		return nil, fmt.Errorf("key is not a string %v", rawKey)
+	}
+
+	csk := CSK(scope)
+	return locator.GetService(csk)
 }
 
 func (locator *serviceLocatorData) channelGetDescriptors(filter Filter, forMe Descriptor,
@@ -632,6 +650,7 @@ func (locator *serviceLocatorData) update(newDescs []Descriptor,
 	var errorServiceUpdate bool
 	var validationServiceUpdate bool
 	var injectionResolverUpdate bool
+	var contextScopeUpdate bool
 
 	removedDescriptors := make([]Descriptor, 0)
 	for _, myDesc := range locator.descriptorData.getAll() {
@@ -647,6 +666,7 @@ func (locator *serviceLocatorData) update(newDescs []Descriptor,
 			errorServiceUpdate = errorServiceUpdate || isErrorService(myDesc)
 			validationServiceUpdate = validationServiceUpdate || isValidationService(myDesc)
 			injectionResolverUpdate = injectionResolverUpdate || isInjectionResolver(myDesc)
+			contextScopeUpdate = contextScopeUpdate || isContextScope(myDesc)
 
 			removedDescriptors = append(removedDescriptors, myDesc)
 		}
@@ -727,6 +747,10 @@ func (locator *serviceLocatorData) update(newDescs []Descriptor,
 			if isInjectionResolver(newDesc) {
 				injectionResolverUpdate = true
 			}
+		}
+
+		if isContextScope(newDesc) {
+			contextScopeUpdate = true
 		}
 
 		newDescriptorData.add(newDesc)
