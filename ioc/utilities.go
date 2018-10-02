@@ -340,6 +340,14 @@ func isInjectionResolver(desc Descriptor) bool {
 	return false
 }
 
+func isContextScope(desc Descriptor) bool {
+	if ContextualScopeNamespace == desc.GetNamespace() {
+		return true
+	}
+
+	return false
+}
+
 func descriptorToIDString(desc Descriptor) string {
 	return fmt.Sprintf("%d.%d", desc.GetLocatorID(), desc.GetServiceID())
 }
