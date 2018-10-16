@@ -2,7 +2,7 @@ module github.com/jwells131313/dargo
 
 require (
 	github.com/davecgh/go-spew v1.1.1
-	github.com/jwells131313/goethe v1.1.0
+	github.com/jwells131313/goethe v1.2.0
 	github.com/pkg/errors v0.8.0
 	github.com/pmezard/go-difflib v1.0.0
 	github.com/sirupsen/logrus v1.0.6
