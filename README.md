@@ -97,8 +97,29 @@ The entire Dargo API is thread-safe.  You can call Dargo API from within callbac
 
 ### Injection Example
 
-In this example a service called SimpleService will inject a logger.  The logger itself is a dargo
-service that is bound with a creation method.  That creation method looks like this:
+In this example a service called SimpleService will inject a logger.
+
+```go
+// SimpleServiceData is a struct implementing SimpleService
+type SimpleServiceData struct {
+	Log *logrus.Logger `inject:"LoggerService_Name"`
+}
+
+// SimpleService is a test service
+type SimpleService interface {
+	// CallMe logs a message to the logger!
+	CallMe()
+}
+
+// CallMe implements the SimpleService method
+func (ss *SimpleServiceData) CallMe() {
+	ss.Log.Info("This logger was injected!")
+}
+```
+
+SimpleServiceData has a field annotated with _inject_ followed by the name of the service to inject.
+
+The logger is a dargo service that is bound with a creation method.  That creation method looks like this:
 
 ```go
 func newLogger(ioc.ServiceLocator, ioc.Descriptor) (interface{}, error) {
@@ -106,29 +127,9 @@ func newLogger(ioc.ServiceLocator, ioc.Descriptor) (interface{}, error) {
 }
 ```
 
-The binding of SimpleService will provide the struct that should be used to implement the interface.  The
-struct has a field annotated with _inject_ followed by the name of the service to inject.  This
-is the interface and the struct used to implement it:
-
-```go
-type SimpleService interface {
-	// CallMe logs a message to the logger!
-	CallMe()
-}
-
-// SimpleServiceData is a struct implementing SimpleService
-type SimpleServiceData struct {
-	Log *logrus.Logger `inject:"LoggerService_Name"`
-}
-
-// CallMe implements the SimpleService method
-func (ssd *SimpleServiceData) CallMe() {
-	ssd.Log.Info("This logger was injected!")
-}
-```
-
-Both the logger service and the SimpleService are bound into the ServiceLocator.  This is normally done near
-the start of your program:
+The binding of SimpleServiceData will provide the struct to create.  The binding of the Logger
+will provide the creation function.  Both the logger service and the SimpleService are bound into a
+ServiceLocator.  This is normally done near the start of your program:
 
 ```go
 locator, err := ioc.CreateAndBind("InjectionExampleLocator", func(binder ioc.Binder) error {
