@@ -4,6 +4,8 @@ github.com/jwells131313/goethe v1.1.0 h1:aBvQTNWUBjDzgjfAz1A6XcdriENZ8fyOJWrA12S
 github.com/jwells131313/goethe v1.1.0/go.mod h1:MBhZf/Es2IdWiZRpt5yxdLKxJM20I7TQqrIYvEApng8=
 github.com/jwells131313/goethe v1.2.0 h1:iKF0A5G2qMNmgYPUSbd+bZ4ipNUak85y3QihKpQGSNg=
 github.com/jwells131313/goethe v1.2.0/go.mod h1:MBhZf/Es2IdWiZRpt5yxdLKxJM20I7TQqrIYvEApng8=
+github.com/jwells131313/goethe v1.3.0 h1:JYUrgcJf3nikFk9aYkF+mDjwtYNIjxoOJ34rl7N6GcQ=
+github.com/jwells131313/goethe v1.3.0/go.mod h1:MBhZf/Es2IdWiZRpt5yxdLKxJM20I7TQqrIYvEApng8=
 github.com/pkg/errors v0.8.0 h1:WdK/asTD0HN+q6hsWO3/vpuAkAr+tw6aNJNDFFf0+qw=
 github.com/pkg/errors v0.8.0/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
