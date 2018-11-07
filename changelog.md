@@ -6,6 +6,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 ### Changed
+
+## [1.0.0] - 2018-11-07
+### Changed
 - Fixed issue with locator shutdown not removing name
 
 ## [0.5.0] - 2018-09-30
