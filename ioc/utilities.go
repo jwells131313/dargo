@@ -190,6 +190,8 @@ func createAndInject(locator *serviceLocatorData, desc Descriptor, dity reflect.
 
 		fieldValue := indirect.Field(index)
 		errRet := &errorReturn{}
+
+		findAssignableSubStruct(indirect, fieldValue, value)
 		safeSet(fieldValue, value, errRet)
 		if errRet.err != nil {
 			depErrors.AddError(errRet.err)
@@ -240,6 +242,39 @@ func createAndInject(locator *serviceLocatorData, desc Descriptor, dity reflect.
 	}
 
 	return iFace, nil
+}
+
+func findAssignableSubStruct(indirect, toField reflect.Value, fromFieldRef *reflect.Value) {
+	fromField := *fromFieldRef
+	if fromField.Kind() == reflect.Pointer {
+		fromField = reflect.Indirect(fromField)
+	}
+	fromKind := fromField.Kind()
+	fromType := fromField.Type()
+
+	if toField.Kind() == reflect.Pointer {
+		toField.Set(reflect.New(toField.Type().Elem()))
+		toField = toField.Elem()
+	}
+	// toKind := toField.Kind()
+	toType := toField.Type()
+
+	// Used for debugging
+	// fmt.Printf("FROM %s %s\n", fromKind, fromType.Name())
+	// fmt.Printf("TO   %s %s\n", toKind, toType.Name())
+
+	if fromKind == reflect.Struct {
+		fields := reflect.VisibleFields(fromType)
+		for _, field := range fields {
+			isAnonymous := field.Anonymous
+			isAssignable := field.Type.AssignableTo(toType)
+			if isAnonymous && isAssignable {
+				val := indirect.FieldByIndex(field.Index)
+				*fromFieldRef = val
+				return
+			}
+		}
+	}
 }
 
 func safeValidate(validator Validator, info ValidationInformation, ret *errorReturn) {

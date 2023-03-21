@@ -60,13 +60,33 @@ type Config struct {
 	ConfigB
 }
 
-type ServiceUsingConfigA struct {
+type ServiceUsingConfigAPtr struct {
 	ServiceConfig *ConfigA `inject:"Config"`
+}
+
+type ServiceUsingConfigA struct {
+	ServiceConfig ConfigA `inject:"Config"`
+}
+
+
+func TestSubStructPtr(t *testing.T) {
+	locator, err := CreateAndBind("testing", func(binder Binder) error {
+		binder.BindConstant("Config", &Config{ConfigA: ConfigA{1, 2}, ConfigB: ConfigB{3, 4}}).InScope(Singleton)
+		binder.Bind("ServiceA", &ServiceUsingConfigAPtr{}).InScope(Singleton)
+		return nil
+	})
+	if err != nil {
+		return
+	}
+
+	// The next line fails
+	_, err = locator.GetDService("ServiceA")
+	assert.Nil(t, err, "Could not hydrate Service with sub struct")
 }
 
 func TestSubStruct(t *testing.T) {
 	locator, err := CreateAndBind("testing", func(binder Binder) error {
-		binder.Bind("Config", &Config{}).InScope(Singleton)
+		binder.BindConstant("Config", &Config{ConfigA: ConfigA{1, 2}, ConfigB: ConfigB{3, 4}}).InScope(Singleton)
 		binder.Bind("ServiceA", &ServiceUsingConfigA{}).InScope(Singleton)
 		return nil
 	})
