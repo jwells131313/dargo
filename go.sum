@@ -1,11 +1,5 @@
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
-github.com/jwells131313/goethe v1.1.0 h1:aBvQTNWUBjDzgjfAz1A6XcdriENZ8fyOJWrA12Se+D0=
-github.com/jwells131313/goethe v1.1.0/go.mod h1:MBhZf/Es2IdWiZRpt5yxdLKxJM20I7TQqrIYvEApng8=
-github.com/jwells131313/goethe v1.2.0 h1:iKF0A5G2qMNmgYPUSbd+bZ4ipNUak85y3QihKpQGSNg=
-github.com/jwells131313/goethe v1.2.0/go.mod h1:MBhZf/Es2IdWiZRpt5yxdLKxJM20I7TQqrIYvEApng8=
-github.com/jwells131313/goethe v1.3.0 h1:JYUrgcJf3nikFk9aYkF+mDjwtYNIjxoOJ34rl7N6GcQ=
-github.com/jwells131313/goethe v1.3.0/go.mod h1:MBhZf/Es2IdWiZRpt5yxdLKxJM20I7TQqrIYvEApng8=
 github.com/jwells131313/goethe v1.4.0 h1:8f4f2VAE11gPhNWOWNQo+I8jLhOfwuHwkp65sn2xWyA=
 github.com/jwells131313/goethe v1.4.0/go.mod h1:MBhZf/Es2IdWiZRpt5yxdLKxJM20I7TQqrIYvEApng8=
 github.com/pkg/errors v0.8.0 h1:WdK/asTD0HN+q6hsWO3/vpuAkAr+tw6aNJNDFFf0+qw=
@@ -20,3 +14,7 @@ golang.org/x/crypto v0.0.0-20180910181607-0e37d006457b h1:2b9XGzhjiYsYPnKXoEfL7k
 golang.org/x/crypto v0.0.0-20180910181607-0e37d006457b/go.mod h1:6SG95UA2DQfeDnfUPMdvaQW0Q7yPrPDi9nlGo2tz2b4=
 golang.org/x/sys v0.0.0-20180909124046-d0be0721c37e h1:o3PsSEY8E4eXWkXrIP9YJALUkVZqzHJT5DOasTyn8Vs=
 golang.org/x/sys v0.0.0-20180909124046-d0be0721c37e/go.mod h1:STP8DvDyc/dI5b8T5hshtkjS+E42TnysNCUPdjciGhY=
+gopkg.in/airbrake/gobrake.v2 v2.0.9 h1:7z2uVWwn7oVeeugY1DtlPAy5H+KYgB1KeKTnqjNatLo=
+gopkg.in/airbrake/gobrake.v2 v2.0.9/go.mod h1:/h5ZAUhDkGaJfjzjKLSjv6zCL6O0LLBxU4K+aSYdM/U=
+gopkg.in/gemnasium/logrus-airbrake-hook.v2 v2.1.2 h1:OAj3g0cR6Dx/R07QgQe8wkA9RNjB2u4i700xBkIT4e0=
+gopkg.in/gemnasium/logrus-airbrake-hook.v2 v2.1.2/go.mod h1:Xk6kEKp8OKb+X14hQBKWaSkCsqBpgog8nAV2xsGOxlo=
